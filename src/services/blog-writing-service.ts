@@ -101,7 +101,7 @@ ${guidelines.key_points.map(point => `  • ${point}`).join('\n')}
    * 블로그 글쓰기용 프롬프트 생성 (레거시 모델 기반)
    */
   private static generateWritingPrompt(request: BlogWritingRequest): string {
-    // 역할 설정
+    // 역할 설정 - 빈 값일 때만 기본값 사용
     const roleDescription = request.bloggerIdentity && request.bloggerIdentity.trim()
       ? `당신은 네이버 블로그에서 ${request.bloggerIdentity.trim()} 블로그를 운영하고 있습니다. 독자들이 진짜 도움이 되고 재미있게 읽을 수 있는 글을 쓰는 것이 목표입니다.`
       : "당신은 네이버 블로그에서 인기 있는 글을 쓰는 블로거입니다. 독자들이 진짜 도움이 되고 재미있게 읽을 수 있는 글을 쓰는 것이 목표입니다.";

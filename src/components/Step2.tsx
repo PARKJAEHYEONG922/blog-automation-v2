@@ -299,7 +299,7 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
         contentType: getContentTypeName(data.contentType || ''),
         tone: getToneName(data.tone || ''),
         reviewType: data.reviewType ? getReviewTypeName(data.reviewType) : undefined,
-        bloggerIdentity: data.bloggerIdentity,
+        bloggerIdentity: data.blogDescription,
         subKeywords: data.subKeywords,
         blogAnalysisResult: collectedData.contentSummary,
         youtubeAnalysisResult: collectedData.youtubeAnalysis,

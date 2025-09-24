@@ -20,7 +20,7 @@ const Step1: React.FC<Step1Props> = ({ data, onNext, isBackFromStep2 }) => {
   const [tone, setTone] = useState(data.tone || '');
   const [customPrompt, setCustomPrompt] = useState(data.customPrompt || '');
   const [blogDescription, setBlogDescription] = useState(
-    data.blogDescription || '당신은 네이버 블로그에서 인기 있는 글을 쓰는 블로거입니다. 독자들이 진짜 도움이 되고 재미있게 읽을 수 있는 글을 쓰는 것이 목표입니다.'
+    data.blogDescription || ''
   );
   // 더미 데이터 추가 (테스트용)
   const dummyTitlesWithSearch: TitleWithSearch[] = [
