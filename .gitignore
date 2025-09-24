@@ -94,3 +94,26 @@ out/
 # Electron Builder
 release/
 dist/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# NPM and Yarn
+.yarn/
+.pnp.*
+
+# Temporary files
+*.tmp
+*.temp
