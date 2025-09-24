@@ -513,41 +513,18 @@ const setupIpcHandlers = () => {
       
       console.log(`📹 [메인 프로세스] 최신 yt-dlp로 메타데이터 추출: ${videoId}`);
       
-      // 시스템 yt-dlp 사용 (2025.09.23 버전)
-      const metadata = await new Promise((resolve, reject) => {
-        const ytdlp = spawn('yt-dlp', [
-          videoUrl,
-          '--dump-json',
-          '--no-download'
-        ]);
-        
-        let stdout = '';
-        let stderr = '';
-        
-        ytdlp.stdout.on('data', (data) => {
-          stdout += data.toString();
-        });
-        
-        ytdlp.stderr.on('data', (data) => {
-          stderr += data.toString();
-        });
-        
-        ytdlp.on('close', (code) => {
-          if (code === 0 && stdout.trim()) {
-            try {
-              const parsed = JSON.parse(stdout.trim());
-              resolve(parsed);
-            } catch (e) {
-              reject(new Error('JSON 파싱 실패: ' + e.message));
-            }
-          } else {
-            reject(new Error('yt-dlp 실행 실패: ' + stderr));
-          }
-        });
-        
-        ytdlp.on('error', (error) => {
-          reject(new Error('yt-dlp 실행 오류: ' + error.message));
-        });
+      // yt-dlp-wrap을 사용하여 빌드된 앱에서도 작동하도록 함
+      const ytDlpWrap = new YTDlpWrap();
+      const metadata = await ytDlpWrap.execPromise([
+        videoUrl,
+        '--dump-json',
+        '--no-download'
+      ]).then((stdout: string) => {
+        try {
+          return JSON.parse(stdout.trim());
+        } catch (e) {
+          throw new Error('JSON 파싱 실패: ' + e.message);
+        }
       });
       
       // 한국어 자막 먼저 시도 (수동 업로드)
