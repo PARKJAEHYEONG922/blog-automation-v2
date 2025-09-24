@@ -781,19 +781,28 @@ const createWindow = (): void => {
 
 // 자동 업데이트 설정
 function setupAutoUpdater() {
+  console.log('🔄 AutoUpdater 설정 시작...');
+  console.log('현재 환경:', process.env.NODE_ENV);
+  console.log('현재 버전:', app.getVersion());
+  
   // 개발 환경에서는 업데이트 체크하지 않음
   if (process.env.NODE_ENV === 'development') {
+    console.log('⚠️ 개발 환경이므로 자동 업데이트를 건너뜁니다.');
     return;
   }
 
   // GitHub Releases를 업데이트 서버로 설정
+  console.log('📡 GitHub Releases 설정 중...');
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'PARKJAEHYEONG922',
     repo: 'blog-automation-v2'
   });
+  
+  console.log('✅ 자동 업데이트 설정 완료');
 
   // 앱 시작 후 업데이트 체크
+  console.log('🔍 업데이트 확인 시작...');
   autoUpdater.checkForUpdatesAndNotify();
 
   // 업데이트 이벤트 처리

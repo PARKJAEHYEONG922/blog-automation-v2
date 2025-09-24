@@ -1,7 +1,7 @@
 {
   "name": "blog-automation-v2",
   "productName": "블로그 자동화",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "유튜브 영상을 분석하여 블로그 글을 자동으로 생성하고 발행하는 애플리케이션",
   "homepage": "https://github.com/PARKJAEHYEONG922/blog-automation-v2",
   "repository": {
