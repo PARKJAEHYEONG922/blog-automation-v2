@@ -21,6 +21,12 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
     password: ''
   });
   
+  // 게시판 카테고리 상태
+  const [boardCategory, setBoardCategory] = useState<string>('');
+  
+  // 실제로 선택된 게시판명 (성공 시에만 설정됨)
+  const [selectedBoardCategory, setSelectedBoardCategory] = useState<string>('');
+  
   // 자격 증명 저장 상태
   const [saveCredentials, setSaveCredentials] = useState<boolean>(false);
   
@@ -103,6 +109,257 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       setShowImageConfirmDialog(true);
     } else {
       publishAction();
+    }
+  };
+  
+  // 카테고리 자동 선택 함수
+  const selectCategoryIfSpecified = async (): Promise<{ success: boolean; selectedCategory?: string }> => {
+    try {
+      console.log('📂 카테고리 확인 및 선택 시작...');
+      
+      // 사용자가 카테고리를 입력하지 않은 경우 - 현재 선택된 카테고리만 확인
+      if (!boardCategory.trim()) {
+        console.log('📂 사용자 입력 카테고리 없음, 현재 선택된 카테고리만 확인...');
+        
+        const currentCategoryResult = await window.electronAPI.playwrightEvaluateInFrames(`
+          (function() {
+            try {
+              // 현재 선택된 카테고리 텍스트 찾기 (버튼에 표시된 텍스트)
+              const categoryButton = document.querySelector('button.selectbox_button__jb1Dt');
+              if (categoryButton) {
+                const buttonText = categoryButton.textContent?.trim() || '';
+                console.log('카테고리 버튼 텍스트:', buttonText);
+                return { success: true, selectedCategory: buttonText };
+              }
+              
+              return { success: false, error: '카테고리 버튼을 찾을 수 없음' };
+            } catch (error) {
+              return { success: false, error: error.message };
+            }
+          })()
+        `, 'PostWriteForm.naver');
+        
+        if (currentCategoryResult?.result?.success) {
+          console.log(`📂 현재 기본 카테고리: "${currentCategoryResult.result.selectedCategory}"`);
+          return { 
+            success: true, 
+            selectedCategory: currentCategoryResult.result.selectedCategory || '기본 카테고리' 
+          };
+        } else {
+          console.log('⚠️ 현재 카테고리 확인 실패');
+          return { success: true, selectedCategory: '기본 카테고리' };
+        }
+      }
+      
+      // 사용자가 카테고리를 입력한 경우만 드롭다운 열기
+      console.log(`📂 사용자 입력 카테고리: "${boardCategory}" - 드롭다운 열어서 찾기...`);
+      
+      // 1. 카테고리 버튼 클릭하여 드롭다운 열기
+      console.log('🔘 카테고리 버튼 클릭 중...');
+      const categoryButtonResult = await window.electronAPI.playwrightClickInFrames(
+        'button.selectbox_button__jb1Dt', 
+        'PostWriteForm.naver'
+      );
+      
+      if (!categoryButtonResult.success) {
+        console.log('⚠️ 카테고리 버튼 클릭 실패');
+        return { success: true, selectedCategory: '알 수 없음' };
+      }
+      
+      // 2. 드롭다운 로딩 대기
+      console.log('⏳ 카테고리 목록 로딩 대기...');
+      await window.electronAPI.playwrightWaitTimeout(3000);
+      
+      // 3. 사용자 입력 카테고리 찾기/선택 (드롭다운이 열린 상태)
+      const categoryResult = await window.electronAPI.playwrightEvaluateInFrames(`
+        (function() {
+          try {
+            const userInputCategory = "${boardCategory.trim()}";
+            const normalizedUserInput = userInputCategory.replace(/\\s+/g, '');
+            
+            // 현재 선택된 카테고리 확인 (드롭다운에서 체크된 라디오 버튼)
+            let currentSelectedCategory = '';
+            const selectedLabel = document.querySelector('label input[type="radio"]:checked')?.parentElement;
+            if (selectedLabel) {
+              const textSpan = selectedLabel.querySelector('span[data-testid*="categoryItemText"]');
+              if (textSpan) {
+                currentSelectedCategory = textSpan.textContent?.trim() || '';
+                console.log('드롭다운에서 현재 선택된 카테고리:', currentSelectedCategory);
+              }
+            }
+            
+            console.log('사용자 입력 카테고리 검색:', userInputCategory, '(정규화:', normalizedUserInput + ')');
+            
+            // 모든 카테고리 라벨에서 정확히 일치하는 것 찾기
+            const allLabels = document.querySelectorAll('label[for*="_"]');
+            console.log('전체 카테고리 개수:', allLabels.length);
+            
+            for (let i = 0; i < allLabels.length; i++) {
+              const label = allLabels[i];
+              const textSpan = label.querySelector('span[data-testid*="categoryItemText"]');
+              if (textSpan) {
+                // 하위 카테고리의 경우 아이콘 텍스트 제거
+                let labelText = textSpan.textContent?.trim() || '';
+                // "하위 카테고리" 텍스트 제거
+                labelText = labelText.replace('하위 카테고리', '').trim();
+                const normalizedLabelText = labelText.replace(/\\s+/g, '');
+                
+                console.log('카테고리 비교:', {
+                  labelText: labelText,
+                  normalizedLabel: normalizedLabelText,
+                  userInput: normalizedUserInput,
+                  matches: normalizedLabelText === normalizedUserInput
+                });
+                
+                // 정확히 일치하는 경우 클릭
+                if (normalizedLabelText === normalizedUserInput) {
+                  console.log('일치하는 카테고리 발견, 클릭:', labelText);
+                  label.click();
+                  return { 
+                    success: true, 
+                    selectedCategory: labelText,
+                    wasChanged: true,
+                    userInput: userInputCategory
+                  };
+                }
+              }
+            }
+            
+            // 일치하는 카테고리를 찾지 못한 경우
+            console.log('일치하는 카테고리를 찾지 못함. 드롭다운 닫고 원래 카테고리 유지:', currentSelectedCategory);
+            return { 
+              success: false, // 찾지 못했으므로 드롭다운을 닫아야 함
+              selectedCategory: currentSelectedCategory || '기본 카테고리',
+              wasChanged: false,
+              userInput: userInputCategory,
+              notFound: true
+            };
+            
+          } catch (error) {
+            console.error('카테고리 처리 중 오류:', error);
+            return { success: false, error: error.message };
+          }
+        })()
+      `, 'PostWriteForm.naver');
+      
+      if (categoryResult?.result?.success) {
+        const result = categoryResult.result;
+        
+        if (result.wasChanged) {
+          console.log(`✅ 카테고리 변경 완료: "${result.selectedCategory}" (입력: "${result.userInput}")`);
+        } else if (result.notFound) {
+          console.log(`⚠️ "${result.userInput}" 카테고리를 찾을 수 없어서 "${result.selectedCategory}"에 발행됩니다.`);
+        } else {
+          console.log(`📂 기본 카테고리 "${result.selectedCategory}"에 발행됩니다.`);
+        }
+        
+        await window.electronAPI.playwrightWaitTimeout(500);
+        return { 
+          success: true, 
+          selectedCategory: result.selectedCategory,
+          userInput: result.userInput,
+          notFound: result.notFound
+        };
+      } else if (categoryResult?.result?.notFound) {
+        // 카테고리를 찾지 못한 경우 - 드롭다운 버튼 다시 클릭해서 닫기
+        const result = categoryResult.result;
+        console.log(`⚠️ "${result.userInput}" 카테고리를 찾을 수 없음. 드롭다운 닫는 중...`);
+        
+        const closeDropdownResult = await window.electronAPI.playwrightClickInFrames(
+          'button.selectbox_button__jb1Dt', 
+          'PostWriteForm.naver'
+        );
+        
+        if (closeDropdownResult.success) {
+          console.log('✅ 드롭다운 닫기 완료');
+          
+          // 드롭다운 닫은 후 실제 선택된 카테고리 다시 확인 (카테고리 입력 안했을 때와 동일 로직)
+          await window.electronAPI.playwrightWaitTimeout(500);
+          
+          const finalCategoryResult = await window.electronAPI.playwrightEvaluateInFrames(`
+            (function() {
+              try {
+                // 현재 선택된 카테고리 텍스트 찾기 (버튼에 표시된 텍스트)
+                const categoryButton = document.querySelector('button.selectbox_button__jb1Dt');
+                if (categoryButton) {
+                  const buttonText = categoryButton.textContent?.trim() || '';
+                  console.log('드롭다운 닫은 후 카테고리 버튼 텍스트:', buttonText);
+                  return { success: true, selectedCategory: buttonText };
+                }
+                
+                return { success: false, error: '카테고리 버튼을 찾을 수 없음' };
+              } catch (error) {
+                return { success: false, error: error.message };
+              }
+            })()
+          `, 'PostWriteForm.naver');
+          
+          const finalCategoryName = finalCategoryResult?.result?.success 
+            ? finalCategoryResult.result.selectedCategory 
+            : '기본 카테고리';
+            
+          console.log(`📂 최종 선택된 카테고리: "${finalCategoryName}"`);
+          
+          return { 
+            success: true, 
+            selectedCategory: finalCategoryName,
+            userInput: result.userInput,
+            notFound: result.notFound
+          };
+        } else {
+          console.log('⚠️ 드롭다운 닫기 실패');
+          return { 
+            success: true, 
+            selectedCategory: result.selectedCategory,
+            userInput: result.userInput,
+            notFound: result.notFound
+          };
+        }
+      } else {
+        console.error('카테고리 확인 실패:', categoryResult?.result?.error);
+        
+        // 오류 발생 시에도 드롭다운 닫기 시도
+        console.log('오류 발생으로 드롭다운 닫는 중...');
+        const closeResult = await window.electronAPI.playwrightClickInFrames(
+          'button.selectbox_button__jb1Dt', 
+          'PostWriteForm.naver'
+        );
+        
+        if (closeResult.success) {
+          // 드롭다운 닫은 후 현재 카테고리 확인
+          await window.electronAPI.playwrightWaitTimeout(500);
+          
+          const currentCategoryResult = await window.electronAPI.playwrightEvaluateInFrames(`
+            (function() {
+              try {
+                // 현재 선택된 카테고리 텍스트 찾기 (버튼에 표시된 텍스트)
+                const categoryButton = document.querySelector('button.selectbox_button__jb1Dt');
+                if (categoryButton) {
+                  const buttonText = categoryButton.textContent?.trim() || '';
+                  console.log('오류 후 드롭다운 닫은 후 카테고리 버튼 텍스트:', buttonText);
+                  return { success: true, selectedCategory: buttonText };
+                }
+                
+                return { success: false, error: '카테고리 버튼을 찾을 수 없음' };
+              } catch (error) {
+                return { success: false, error: error.message };
+              }
+            })()
+          `, 'PostWriteForm.naver');
+          
+          const finalCategoryName = currentCategoryResult?.result?.success 
+            ? currentCategoryResult.result.selectedCategory 
+            : '기본 카테고리';
+            
+          return { success: true, selectedCategory: finalCategoryName };
+        }
+        
+        return { success: true, selectedCategory: '알 수 없음' };
+      }
+      
+    } catch (error) {
+      console.error('카테고리 선택 중 오류:', error);
+      return { success: true, selectedCategory: '알 수 없음' };
     }
   };
   
@@ -2119,7 +2376,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         console.log('✅ 발행 설정 팝업 열기 완료');
         await window.electronAPI.playwrightWaitTimeout(1000); // 팝업 로딩 대기
         
-        // 공통: 공감허용 라벨 클릭 (모든 발행 타입에서 필수)
+        // 1.5단계: 공감허용 라벨 클릭 먼저 (카테고리 드롭박스에 가려지지 않도록)
         console.log('💝 공감허용 라벨 클릭...');
         const sympathyLabelResult = await window.electronAPI.playwrightClickInFrames('label[for="publish-option-sympathy"]', 'PostWriteForm.naver');
         
@@ -2130,6 +2387,18 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         }
         
         await window.electronAPI.playwrightWaitTimeout(300); // 체크박스 처리 후 잠시 대기
+        
+        // 2단계: 카테고리 자동 선택 (공감허용 후에 처리)
+        if (publishOption !== 'temp') {
+          console.log('📂 카테고리 선택 시작...');
+          const categoryResult = await selectCategoryIfSpecified();
+          if (categoryResult.success) {
+            console.log('📂 카테고리 선택 완료');
+            if (categoryResult.selectedCategory) {
+              setSelectedBoardCategory(categoryResult.selectedCategory);
+            }
+          }
+        }
         
         if (publishOption === 'immediate') {
           // 즉시 발행: 기본값이 현재이므로 별도 설정 불필요
@@ -2294,6 +2563,9 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       isPublishing: true
     }));
     
+    // 발행 시작 시 선택된 카테고리 초기화
+    setSelectedBoardCategory('');
+    
     try {
       console.log('네이버 로그인 시도:', { username: naverCredentials.username });
       
@@ -2354,6 +2626,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         if (!contentSuccess) {
           console.warn('⚠️ 본문 및 이미지 자동 입력 실패, 수동으로 진행해주세요.');
         }
+        
         
         // 5단계: 발행 옵션에 따른 처리
         setPublishStatus(prev => ({
@@ -2490,18 +2763,12 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <h4 className="font-medium text-blue-800 mb-3">네이버 블로그 발행</h4>
-      
       {!publishStatus.success ? (
         <div className="space-y-3">
           {/* 로그인 정보와 발행 옵션을 나란히 배치 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 왼쪽: 로그인 정보 */}
             <div className="flex flex-col justify-center space-y-4">
-              <div className="text-center mb-2">
-                <h5 className="text-sm font-medium text-gray-700 mb-1">네이버 로그인</h5>
-                <p className="text-xs text-gray-500">블로그에 자동 발행하려면 로그인이 필요해요</p>
-              </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2554,6 +2821,24 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                   disabled={publishStatus.isPublishing}
                   onKeyPress={(e) => e.key === 'Enter' && publishToNaverBlog()}
                 />
+              </div>
+              
+              {/* 게시판 카테고리 입력 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  게시판 (선택사항)
+                </label>
+                <input
+                  type="text"
+                  value={boardCategory}
+                  onChange={(e) => setBoardCategory(e.target.value)}
+                  placeholder="예: 일상, 강아지건강, 취미생활"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  disabled={publishStatus.isPublishing}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 입력하신 게시판명과 일치하는 카테고리를 찾아서 자동으로 선택합니다.
+                </p>
               </div>
               
               {/* 자격 증명 저장 체크박스 */}
@@ -3000,9 +3285,11 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="text-green-600 text-xl">✅</div>
+              <div className="text-green-600 text-xl">
+                {publishOption === 'temp' ? '📝' : publishOption === 'immediate' ? '✅' : '⏰'}
+              </div>
               <h4 className="font-medium text-green-800">
-                발행 완료: {naverCredentials.username}
+                {publishOption === 'temp' ? '임시저장' : publishOption === 'immediate' ? '즉시발행' : '예약발행'} 완료: {naverCredentials.username}
               </h4>
             </div>
             <button
@@ -3013,9 +3300,56 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
             </button>
           </div>
           
-          <p className="text-sm text-green-700">
-            네이버 블로그에 성공적으로 발행되었습니다!
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-green-700">
+              {publishOption === 'temp' 
+                ? '네이버 블로그에 임시저장되었습니다!'
+                : publishOption === 'immediate'
+                ? '네이버 블로그에 즉시 발행되었습니다!'
+                : `네이버 블로그 예약발행이 설정되었습니다! (${scheduledDate ? scheduledDate.replace(/-/g, '. ') : '오늘'} ${scheduledHour}:${scheduledMinute})`
+              }
+            </p>
+            
+            {/* 게시판 정보 표시 */}
+            {selectedBoardCategory && selectedBoardCategory !== '알 수 없음' && (
+              <div className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                📂 발행된게시판: <span className="font-medium">{selectedBoardCategory}</span>
+                {boardCategory && boardCategory !== selectedBoardCategory && (
+                  <span className="text-xs text-orange-600 ml-2">
+                    ("{boardCategory}"를 찾지 못해서 "{selectedBoardCategory}"에 발행됨)
+                  </span>
+                )}
+                {boardCategory && boardCategory === selectedBoardCategory && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    (검색해서 선택됨)
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {/* 제목과 키워드 정보 */}
+            <div className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded px-3 py-2">
+              <div className="mb-1">
+                📝 <span className="font-medium">제목:</span> {data.selectedTitle}
+              </div>
+              {data.keyword && (
+                <div className="flex flex-wrap items-center gap-1">
+                  🏷️ <span className="font-medium">키워드:</span>
+                  <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs">
+                    {data.keyword}
+                  </span>
+                  {data.subKeyword && (
+                    <>
+                      <span className="mx-1">•</span>
+                      <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs">
+                        {data.subKeyword}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
       
