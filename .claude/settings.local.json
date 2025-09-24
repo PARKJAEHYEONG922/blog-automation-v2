@@ -43,7 +43,11 @@
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.3 \"release\\블로그 자동화 Setup 1.0.3.exe\" --title \"v1.0.3 - 도움말 메뉴 및 자동 업데이트 개선\" --notes \"## 새로운 기능\n- 도움말 메뉴 추가 (파일, 도움말)\n- 정보 대화상자에서 앱 버전 및 시스템 정보 확인 가능\n- 수동 업데이트 확인 기능 추가\n\n## 개선사항\n- 자동 업데이트 디버깅 로그 추가\n- 사용자가 쉽게 버전 확인 및 업데이트 가능\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.5 \"release\\블로그 자동화 Setup 1.0.5.exe\" \"release\\latest.yml\" --title \"v1.0.5 - 업데이트 다이얼로그 UI 추가\" --notes \"## 새로운 기능\n- 🎨 업데이트 다이얼로그 UI 추가\n- 📝 사용자가 업데이트 여부를 선택할 수 있음  \n- 📊 업데이트 다운로드 진행률 표시\n- ⚡ 업데이트 설치 전 사용자 확인\n\n## 개선사항\n- 자동 업데이트에서 사용자 선택형으로 변경\n- 더 나은 사용자 경험 제공\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" auth status)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.9 \"release\\블로그 자동화 Setup 1.0.9.exe\" \"release\\latest.yml\" --title \"v1.0.9 - 공감허용 체크 기능 제거 및 안정성 개선\" --notes \"## 개선사항\n- 🚫 공감허용 체크박스 클릭 기능 제거 (사용자 요청에 따른 간소화)\n- 🔧 유튜브 자막 추출 빌드 환경 문제 해결\n- 🛡️ GitHub 토큰 보안 문제 해결  \n- 📦 코드 정리 및 안정성 개선\n\n## 기능 변경사항\n- 네이버 블로그 발행 시 공감허용 체크박스를 더 이상 자동으로 클릭하지 않음\n- 발행 과정이 더욱 간소화됨\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.9 \"release\\블로그 자동화 Setup 1.0.9.exe\" \"release\\latest.yml\" --title \"v1.0.9 - 공감허용 체크 기능 제거 및 안정성 개선\" --notes \"## 개선사항\n- 🚫 공감허용 체크박스 클릭 기능 제거 (사용자 요청에 따른 간소화)\n- 🔧 유튜브 자막 추출 빌드 환경 문제 해결\n- 🛡️ GitHub 토큰 보안 문제 해결  \n- 📦 코드 정리 및 안정성 개선\n\n## 기능 변경사항\n- 네이버 블로그 발행 시 공감허용 체크박스를 더 이상 자동으로 클릭하지 않음\n- 발행 과정이 더욱 간소화됨\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release delete v1.0.9 --yes)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.9 \"release\\블로그 자동화 Setup 1.0.9.exe\" \"release\\latest.yml\" --title \"v1.0.9 - 공감허용 체크 기능 제거 및 안정성 개선\" --notes \"## 개선사항\n- 🚫 공감허용 체크박스 클릭 기능 제거 (사용자 요청에 따른 간소화)\n- 🔧 유튜브 자막 추출 빌드 환경 문제 해결\n- 🛡️ GitHub 토큰 보안 문제 해결  \n- 📦 코드 정리 및 안정성 개선\n\n## 기능 변경사항\n- 네이버 블로그 발행 시 공감허용 체크박스를 더 이상 자동으로 클릭하지 않음\n- 발행 과정이 더욱 간소화됨\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")"
     ],
     "deny": []
   }

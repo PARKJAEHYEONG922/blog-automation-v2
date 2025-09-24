@@ -508,7 +508,6 @@ const setupIpcHandlers = () => {
     console.log(`🔍 [메인 프로세스] yt-dlp로 자막 추출 시도: ${videoId} (우선 언어: ${language})`);
     
     try {
-      const { spawn } = require('child_process');
       const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
       
       console.log(`📹 [메인 프로세스] 최신 yt-dlp로 메타데이터 추출: ${videoId}`);
