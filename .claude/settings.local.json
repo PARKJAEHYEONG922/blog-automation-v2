@@ -17,7 +17,6 @@
       "Bash(git rm:*)",
       "Bash(npm version:*)",
       "Bash(npm run build:publish:*)",
-      "Bash(set GH_TOKEN=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)",
       "Bash(npm install:*)",
       "Bash(npm run dev:*)",
       "Bash(npm start)",
