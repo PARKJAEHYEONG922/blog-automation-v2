@@ -15,7 +15,18 @@
       "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git rm:*)",
-      "Bash(npm version:*)"
+      "Bash(npm version:*)",
+      "Bash(npm run build:publish:*)",
+      "Bash(set GH_TOKEN=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)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm start)",
+      "Bash(webpack:*)",
+      "Bash(npx webpack:*)",
+      "Bash(npx yt-dlp:*)",
+      "Bash(npm update:*)",
+      "Bash(yt-dlp:*)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

@@ -87,6 +87,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('file:saveFile', { defaultPath, filters, data }),
   copyImageToClipboard: (filePath: string) => 
     ipcRenderer.invoke('clipboard:copyImage', filePath),
+    
+  // 로그 수신 기능
+  onLogMessage: (callback: (log: { level: string; message: string; timestamp: Date }) => void) => {
+    ipcRenderer.on('log-message', (_, logData) => callback(logData));
+  },
+  removeLogListener: () => {
+    ipcRenderer.removeAllListeners('log-message');
+  }
 });
 
 // TypeScript 타입 정의
@@ -128,6 +136,8 @@ declare global {
       deleteTempFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       saveFile: (defaultPath: string, filters: Array<{ name: string; extensions: string[] }>, data: number[]) => Promise<{ success: boolean; filePath?: string; error?: string }>;
       copyImageToClipboard: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+      onLogMessage: (callback: (log: { level: string; message: string; timestamp: Date }) => void) => void;
+      removeLogListener: () => void;
     };
   }
 }

@@ -6,6 +6,7 @@ import Step1 from './components/Step1';
 import Step2 from './components/Step2';
 import Step3 from './components/Step3';
 import LLMSettings from './components/LLMSettings';
+import LogPanel from './components/LogPanel';
 
 // Context 제거 - 직접 상태 관리 사용
 
@@ -55,6 +56,7 @@ const App: React.FC = () => {
     return 1; // 기본값
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
   const [isBackFromStep2, setIsBackFromStep2] = useState(false);
   
   // 직접 AI 모델 상태 관리
@@ -239,6 +241,50 @@ const App: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="flex gap-2">
                 <button
+                  onClick={() => setShowLogs(!showLogs)}
+                  style={{
+                    background: showLogs ? '#059669' : 'white',
+                    color: showLogs ? 'white' : '#475569',
+                    border: showLogs ? 'none' : '2px solid #e2e8f0',
+                    borderRadius: '16px',
+                    padding: '12px 16px',
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)',
+                    boxShadow: showLogs 
+                      ? '0 0 0 1px rgba(5, 150, 105, 0.1), 0 2px 4px rgba(5, 150, 105, 0.2)'
+                      : '0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.06)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    minWidth: '80px',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!showLogs) {
+                      const target = e.target as HTMLElement;
+                      target.style.background = '#f0fdf4';
+                      target.style.borderColor = '#bbf7d0';
+                      target.style.color = '#059669';
+                      target.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!showLogs) {
+                      const target = e.target as HTMLElement;
+                      target.style.background = 'white';
+                      target.style.borderColor = '#e2e8f0';
+                      target.style.color = '#475569';
+                      target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  <span>📝</span>
+                  <span>로그</span>
+                </button>
+                <button
                   onClick={() => {
                     setShowSettings(!showSettings);
                     // API 설정 화면 진입 시 스크롤을 최상단으로 이동
@@ -304,8 +350,8 @@ const App: React.FC = () => {
       </header>
 
       {/* 메인 컨텐츠 - 스크롤 가능 */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="h-full">
+      <main className="flex-1 overflow-hidden flex">
+        <div className={`${showLogs ? 'flex-1' : 'w-full'} overflow-y-auto`}>
           {showSettings ? (
             <LLMSettings 
               onClose={() => {
@@ -320,6 +366,7 @@ const App: React.FC = () => {
             renderCurrentStep()
           )}
         </div>
+        <LogPanel isVisible={showLogs} />
       </main>
     </div>
   );

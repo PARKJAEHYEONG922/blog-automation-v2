@@ -14,6 +14,44 @@ const getConfigPath = (filename: string) => {
   return configPath;
 };
 
+
+// 로그 전송을 위한 전역 변수
+let mainWindow: BrowserWindow | null = null;
+
+// 로그를 렌더러로 전송하는 함수
+const sendLogToRenderer = (level: string, message: string, timestamp?: Date) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('log-message', {
+      level,
+      message,
+      timestamp: timestamp || new Date()
+    });
+  }
+};
+
+// console.log 오버라이드
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+console.log = (...args: any[]) => {
+  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  originalConsoleLog(...args);
+  sendLogToRenderer('info', message);
+};
+
+console.error = (...args: any[]) => {
+  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  originalConsoleError(...args);
+  sendLogToRenderer('error', message);
+};
+
+console.warn = (...args: any[]) => {
+  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  originalConsoleWarn(...args);
+  sendLogToRenderer('warning', message);
+};
+
 // IPC 핸들러 설정
 const setupIpcHandlers = () => {
   // 기본 설정 저장
@@ -435,11 +473,47 @@ const setupIpcHandlers = () => {
     console.log(`🔍 [메인 프로세스] yt-dlp로 자막 추출 시도: ${videoId} (우선 언어: ${language})`);
     
     try {
-      const ytDlpWrap = new YTDlpWrap();
+      const { spawn } = require('child_process');
       const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
       
-      console.log(`📹 [메인 프로세스] 비디오 메타데이터 가져오는 중: ${videoId}`);
-      const metadata = await ytDlpWrap.getVideoInfo(videoUrl);
+      console.log(`📹 [메인 프로세스] 최신 yt-dlp로 메타데이터 추출: ${videoId}`);
+      
+      // 시스템 yt-dlp 사용 (2025.09.23 버전)
+      const metadata = await new Promise((resolve, reject) => {
+        const ytdlp = spawn('yt-dlp', [
+          videoUrl,
+          '--dump-json',
+          '--no-download'
+        ]);
+        
+        let stdout = '';
+        let stderr = '';
+        
+        ytdlp.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        ytdlp.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        ytdlp.on('close', (code) => {
+          if (code === 0 && stdout.trim()) {
+            try {
+              const parsed = JSON.parse(stdout.trim());
+              resolve(parsed);
+            } catch (e) {
+              reject(new Error('JSON 파싱 실패: ' + e.message));
+            }
+          } else {
+            reject(new Error('yt-dlp 실행 실패: ' + stderr));
+          }
+        });
+        
+        ytdlp.on('error', (error) => {
+          reject(new Error('yt-dlp 실행 오류: ' + error.message));
+        });
+      });
       
       // 한국어 자막 먼저 시도 (수동 업로드)
       if (metadata.subtitles && metadata.subtitles.ko) {
@@ -610,9 +684,8 @@ const setupIpcHandlers = () => {
 };
 
 
-// Electron Builder 경로 설정
-const isDev = process.env.NODE_ENV === 'development';
-const MAIN_WINDOW_WEBPACK_ENTRY = isDev ? 'http://localhost:8080' : `file://${path.join(__dirname, 'index.html')}`;
+// Electron Builder 경로 설정 - 항상 파일 시스템 사용
+const MAIN_WINDOW_WEBPACK_ENTRY = `file://${path.join(__dirname, 'index.html')}`;
 const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY = path.join(__dirname, 'preload.js');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -622,29 +695,17 @@ if (require('electron-squirrel-startup')) {
 
 const createWindow = (): void => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     height: 800,
     width: 1200,
-    show: true,
+    show: false,
     center: true,
-    resizable: true,
-    minimizable: true,
-    maximizable: true,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
-      allowRunningInsecureContent: true,
     },
   });
-
-  // 창을 화면 중앙에 배치하고 포커스
-  mainWindow.center();
-  mainWindow.show();
-  mainWindow.focus();
-  
-  console.log('메인 윈도우 생성 및 표시 완료');
 
   // CSP 헤더 제거
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -656,13 +717,21 @@ const createWindow = (): void => {
     });
   });
 
+  // 페이지 로드 완료 후 창 표시
+  mainWindow.webContents.once('ready-to-show', () => {
+    mainWindow.show();
+    console.log('✅ 페이지 로드 완료 - 창 표시');
+    
+    // 개발 환경에서만 개발자 도구 활성화
+    console.log('🔧 NODE_ENV:', process.env.NODE_ENV);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 개발자 도구 열기 시도');
+      mainWindow.webContents.openDevTools();
+    }
+  });
+
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-
-  // 개발 환경에서만 개발자 도구 활성화
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
 };
 
 // 자동 업데이트 설정
