@@ -21,6 +21,9 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
     password: ''
   });
   
+  // 자격 증명 저장 상태
+  const [saveCredentials, setSaveCredentials] = useState<boolean>(false);
+  
   const [publishStatus, setPublishStatus] = useState<PublishStatus>({
     isPublishing: false,
     isLoggedIn: false,
@@ -55,6 +58,44 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
     setScheduledHour(hour);
     setScheduledMinute(minute.toString().padStart(2, '0'));
   }, []);
+  
+  // 저장된 자격 증명 로드
+  useEffect(() => {
+    try {
+      const savedCredentials = localStorage.getItem('naverCredentials');
+      if (savedCredentials) {
+        const credentials = JSON.parse(savedCredentials);
+        setNaverCredentials({
+          username: credentials.username || '',
+          password: credentials.password || ''
+        });
+        setSaveCredentials(true);
+      }
+    } catch (error) {
+      console.error('저장된 자격 증명 로드 실패:', error);
+    }
+  }, []);
+  
+  // 자격 증명 저장/삭제 함수
+  const handleCredentialSave = (save: boolean) => {
+    setSaveCredentials(save);
+    
+    if (save && naverCredentials.username && naverCredentials.password) {
+      // 자격 증명 저장
+      try {
+        localStorage.setItem('naverCredentials', JSON.stringify(naverCredentials));
+      } catch (error) {
+        console.error('자격 증명 저장 실패:', error);
+      }
+    } else {
+      // 자격 증명 삭제
+      try {
+        localStorage.removeItem('naverCredentials');
+      } catch (error) {
+        console.error('자격 증명 삭제 실패:', error);
+      }
+    }
+  };
   
   // 예약 시간 유효성 검사 및 남은 시간 계산
   const validateAndCalculateTime = useCallback((hour: string, minute: string) => {
@@ -2439,7 +2480,19 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                 <input
                   type="text"
                   value={naverCredentials.username}
-                  onChange={(e) => setNaverCredentials(prev => ({ ...prev, username: e.target.value }))}
+                  onChange={(e) => {
+                    const newCredentials = { ...naverCredentials, username: e.target.value };
+                    setNaverCredentials(newCredentials);
+                    
+                    // 체크박스가 선택되어 있으면 즉시 저장
+                    if (saveCredentials && newCredentials.username && newCredentials.password) {
+                      try {
+                        localStorage.setItem('naverCredentials', JSON.stringify(newCredentials));
+                      } catch (error) {
+                        console.error('자격 증명 저장 실패:', error);
+                      }
+                    }
+                  }}
                   placeholder="네이버 아이디"
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   disabled={publishStatus.isPublishing}
@@ -2453,7 +2506,19 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                 <input
                   type="password"
                   value={naverCredentials.password}
-                  onChange={(e) => setNaverCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) => {
+                    const newCredentials = { ...naverCredentials, password: e.target.value };
+                    setNaverCredentials(newCredentials);
+                    
+                    // 체크박스가 선택되어 있으면 즉시 저장
+                    if (saveCredentials && newCredentials.username && newCredentials.password) {
+                      try {
+                        localStorage.setItem('naverCredentials', JSON.stringify(newCredentials));
+                      } catch (error) {
+                        console.error('자격 증명 저장 실패:', error);
+                      }
+                    }
+                  }}
                   placeholder="비밀번호"
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   disabled={publishStatus.isPublishing}
@@ -2461,9 +2526,35 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                 />
               </div>
               
+              {/* 자격 증명 저장 체크박스 */}
+              <div className="flex items-center space-x-2 mt-3">
+                <div 
+                  onClick={() => !publishStatus.isPublishing && handleCredentialSave(!saveCredentials)}
+                  className={`w-4 h-4 border-2 rounded cursor-pointer flex items-center justify-center ${
+                    saveCredentials 
+                      ? 'bg-blue-600 border-blue-600' 
+                      : 'bg-white border-gray-400 hover:border-blue-500'
+                  } ${publishStatus.isPublishing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ minWidth: '16px', minHeight: '16px' }}
+                >
+                  {saveCredentials && (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <label 
+                  onClick={() => !publishStatus.isPublishing && handleCredentialSave(!saveCredentials)}
+                  className="text-sm text-gray-600 cursor-pointer select-none"
+                >
+                  아이디/비밀번호 저장 (다음에도 사용)
+                </label>
+              </div>
+              
               <div className="mt-2">
                 <div className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
-                  🔒 로그인 정보는 발행 목적으로만 사용되며<br/>저장되지 않습니다
+                  🔒 로그인 정보는 발행 목적으로만 사용됩니다
+                  {saveCredentials && <><br/>✅ 자격 증명이 로컬에 안전하게 저장됩니다</>}
                 </div>
               </div>
             </div>
@@ -2746,12 +2837,53 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
             </div>
           </div>
           
-          <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded p-3">
-            <strong>발행 정보:</strong>
-            <div className="ml-2 mt-1">
-              • 제목: {data.selectedTitle}
-              • 메인 키워드: {data.keyword || '없음'}
-              • 이미지: {Object.keys(imageUrls).length}개
+          <div className="text-sm bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center mb-3">
+              <span className="text-blue-700 font-semibold text-base">📋 발행 정보</span>
+            </div>
+            <div className="space-y-2">
+              {/* 제목 */}
+              <div className="flex items-start">
+                <span className="text-green-700 font-medium mr-2 flex-shrink-0">📝 제목:</span>
+                <span className="text-gray-800 font-medium">{data.selectedTitle}</span>
+              </div>
+              
+              {/* 키워드 */}
+              <div className="flex items-center flex-wrap gap-1">
+                <span className="text-orange-700 font-medium flex-shrink-0">🏷️ 메인 키워드:</span>
+                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
+                  {data.keyword || '없음'}
+                </span>
+                <span className="text-purple-700 font-medium mx-1">•</span>
+                <span className="text-purple-700 font-medium flex-shrink-0">서브 키워드:</span>
+                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">
+                  {data.subKeyword || '없음'}
+                </span>
+              </div>
+              
+              {/* 이미지수 & 글자수 */}
+              <div className="flex items-center flex-wrap gap-1">
+                <span className="text-blue-700 font-medium flex-shrink-0">🖼️ 이미지수:</span>
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                  {(() => {
+                    const imageRegex = /[\(\[\*_]이미지\d*[\)\]\*_]/g;
+                    const totalImages = (editedContent.match(imageRegex) || []).length;
+                    const generatedImages = Object.keys(imageUrls).length;
+                    return `${generatedImages}/${totalImages}개`;
+                  })()}
+                </span>
+                <span className="text-indigo-700 font-medium mx-1">•</span>
+                <span className="text-indigo-700 font-medium flex-shrink-0">📊 글자수:</span>
+                <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-medium">
+                  {(() => {
+                    // HTML 태그 제거 후 공백 문자 모두 제거 (Step3과 동일한 로직)
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = editedContent;
+                    const textContent = tempDiv.innerText || tempDiv.textContent || '';
+                    return `${textContent.replace(/\s+/g, '').length}자 (공백제거)`;
+                  })()}
+                </span>
+              </div>
             </div>
           </div>
           
