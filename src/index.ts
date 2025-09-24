@@ -726,6 +726,7 @@ const setupIpcHandlers = () => {
     }
   });
 
+
 };
 
 
@@ -801,9 +802,10 @@ function setupAutoUpdater() {
   
   console.log('✅ 자동 업데이트 설정 완료');
 
-  // 앱 시작 후 업데이트 체크
+  // 앱 시작 후 업데이트 체크 (자동 다운로드 비활성화)
+  autoUpdater.autoDownload = false;
   console.log('🔍 업데이트 확인 시작...');
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.checkForUpdates();
 
   // 업데이트 이벤트 처리
   autoUpdater.on('checking-for-update', () => {
@@ -811,27 +813,83 @@ function setupAutoUpdater() {
   });
 
   autoUpdater.on('update-available', (info) => {
-    console.log('업데이트 사용 가능:', info);
+    console.log('🚀 업데이트 사용 가능:', info.version);
+    
+    // 업데이트 다이얼로그 표시
+    const response = dialog.showMessageBoxSync(mainWindow, {
+      type: 'info',
+      title: '업데이트 알림',
+      message: `새로운 버전이 있습니다!`,
+      detail: `현재 버전: ${app.getVersion()}\n새 버전: ${info.version}\n\n지금 업데이트하시겠습니까?`,
+      buttons: ['예, 업데이트', '나중에'],
+      defaultId: 0,
+      cancelId: 1,
+      icon: nativeImage.createFromPath(path.join(__dirname, '../assets/icon.png'))
+    });
+
+    if (response === 0) {
+      console.log('📥 사용자가 업데이트를 선택했습니다. 다운로드 시작...');
+      autoUpdater.downloadUpdate();
+    } else {
+      console.log('⏭️ 사용자가 업데이트를 나중으로 미뤘습니다.');
+    }
   });
 
   autoUpdater.on('update-not-available', (info) => {
-    console.log('최신 버전입니다:', info);
+    console.log('✅ 최신 버전입니다:', info);
   });
 
   autoUpdater.on('error', (err) => {
-    console.log('자동 업데이트 오류:', err);
+    console.log('❌ 자동 업데이트 오류:', err);
+    
+    // 오류 다이얼로그 표시
+    dialog.showMessageBoxSync(mainWindow, {
+      type: 'error',
+      title: '업데이트 오류',
+      message: '업데이트 확인 중 오류가 발생했습니다.',
+      detail: err.message,
+      buttons: ['확인']
+    });
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
-    let log_message = "다운로드 속도: " + progressObj.bytesPerSecond;
-    log_message = log_message + ' - 다운로드됨 ' + progressObj.percent + '%';
-    log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
-    console.log(log_message);
+    const percent = Math.round(progressObj.percent);
+    const transferred = Math.round(progressObj.transferred / 1024 / 1024);
+    const total = Math.round(progressObj.total / 1024 / 1024);
+    
+    console.log(`📦 업데이트 다운로드 중: ${percent}% (${transferred}MB / ${total}MB)`);
+    
+    // 메인 윈도우가 있다면 프로그래스 표시
+    if (mainWindow) {
+      mainWindow.setProgressBar(progressObj.percent / 100);
+    }
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('업데이트 다운로드 완료:', info);
-    autoUpdater.quitAndInstall();
+    console.log('✅ 업데이트 다운로드 완료:', info.version);
+    
+    // 프로그래스 바 제거
+    if (mainWindow) {
+      mainWindow.setProgressBar(-1);
+    }
+    
+    // 업데이트 설치 확인 다이얼로그
+    const response = dialog.showMessageBoxSync(mainWindow, {
+      type: 'info',
+      title: '업데이트 준비 완료',
+      message: '업데이트가 다운로드되었습니다!',
+      detail: `버전 ${info.version}이 설치 준비되었습니다.\n앱을 재시작하여 업데이트를 적용하시겠습니까?`,
+      buttons: ['지금 재시작', '나중에 재시작'],
+      defaultId: 0,
+      cancelId: 1
+    });
+
+    if (response === 0) {
+      console.log('🔄 즉시 재시작하여 업데이트 적용...');
+      autoUpdater.quitAndInstall();
+    } else {
+      console.log('⏭️ 나중에 재시작하여 업데이트 적용 예정...');
+    }
   });
 }
 
@@ -858,22 +916,13 @@ function setupMenu() {
           click: () => {
             dialog.showMessageBox(mainWindow!, {
               type: 'info',
-              title: '블로그 자동화 정보',
+              title: '앱 정보',
               message: '블로그 자동화',
-              detail: `버전: ${app.getVersion()}\n` +
-                     `Electron: ${process.versions.electron}\n` +
-                     `Node.js: ${process.versions.node}\n` +
-                     `Chromium: ${process.versions.chrome}\n\n` +
-                     `유튜브 영상을 분석하여 블로그 글을 자동으로 생성하고 발행하는 애플리케이션입니다.\n\n` +
-                     `개발자: PARKJAEHYEONG922\n` +
-                     `GitHub: https://github.com/PARKJAEHYEONG922/blog-automation-v2`,
-              buttons: ['확인', '업데이트 확인']
-            }).then((result) => {
-              if (result.response === 1) {
-                // 업데이트 확인 버튼 클릭 시
-                console.log('수동 업데이트 확인 요청');
-                autoUpdater.checkForUpdatesAndNotify();
-              }
+              detail: `🚀 버전: ${app.getVersion()}\n` +
+                     `⚡ Electron: ${process.versions.electron}\n` +
+                     `🌐 Chromium: ${process.versions.chrome}\n` +
+                     `📦 Node.js: ${process.versions.node}`,
+              buttons: ['확인']
             });
           }
         },
@@ -881,13 +930,13 @@ function setupMenu() {
           label: '업데이트 확인',
           click: () => {
             console.log('수동 업데이트 확인 시작');
-            autoUpdater.checkForUpdatesAndNotify();
+            autoUpdater.checkForUpdates();
             
             dialog.showMessageBox(mainWindow!, {
               type: 'info',
               title: '업데이트 확인',
-              message: '업데이트를 확인하고 있습니다...',
-              detail: '새 버전이 있으면 자동으로 알림이 표시됩니다.',
+              message: '🔍 업데이트를 확인하고 있습니다...',
+              detail: `현재 버전: ${app.getVersion()}\n\n새 버전이 있으면 자동으로 알림이 표시됩니다.`,
               buttons: ['확인']
             });
           }
