@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:draft:*)",
+      "Bash(npm run pack:*)",
+      "Bash(npm run dist:*)",
+      "Bash(dir \"C:\\blog-automation-v2\\release\\*.exe\" /b)",
+      "Bash(ls:*)",
+      "Bash(start:*)",
+      "Bash(rm:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)"
+    ],
+    "deny": []
+  }
+}
