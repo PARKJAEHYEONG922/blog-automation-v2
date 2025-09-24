@@ -47,7 +47,10 @@
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.9 \"release\\블로그 자동화 Setup 1.0.9.exe\" \"release\\latest.yml\" --title \"v1.0.9 - 공감허용 체크 기능 제거 및 안정성 개선\" --notes \"## 개선사항\n- 🚫 공감허용 체크박스 클릭 기능 제거 (사용자 요청에 따른 간소화)\n- 🔧 유튜브 자막 추출 빌드 환경 문제 해결\n- 🛡️ GitHub 토큰 보안 문제 해결  \n- 📦 코드 정리 및 안정성 개선\n\n## 기능 변경사항\n- 네이버 블로그 발행 시 공감허용 체크박스를 더 이상 자동으로 클릭하지 않음\n- 발행 과정이 더욱 간소화됨\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.9 \"release\\블로그 자동화 Setup 1.0.9.exe\" \"release\\latest.yml\" --title \"v1.0.9 - 공감허용 체크 기능 제거 및 안정성 개선\" --notes \"## 개선사항\n- 🚫 공감허용 체크박스 클릭 기능 제거 (사용자 요청에 따른 간소화)\n- 🔧 유튜브 자막 추출 빌드 환경 문제 해결\n- 🛡️ GitHub 토큰 보안 문제 해결  \n- 📦 코드 정리 및 안정성 개선\n\n## 기능 변경사항\n- 네이버 블로그 발행 시 공감허용 체크박스를 더 이상 자동으로 클릭하지 않음\n- 발행 과정이 더욱 간소화됨\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release delete v1.0.9 --yes)",
-      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.9 \"release\\블로그 자동화 Setup 1.0.9.exe\" \"release\\latest.yml\" --title \"v1.0.9 - 공감허용 체크 기능 제거 및 안정성 개선\" --notes \"## 개선사항\n- 🚫 공감허용 체크박스 클릭 기능 제거 (사용자 요청에 따른 간소화)\n- 🔧 유튜브 자막 추출 빌드 환경 문제 해결\n- 🛡️ GitHub 토큰 보안 문제 해결  \n- 📦 코드 정리 및 안정성 개선\n\n## 기능 변경사항\n- 네이버 블로그 발행 시 공감허용 체크박스를 더 이상 자동으로 클릭하지 않음\n- 발행 과정이 더욱 간소화됨\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")"
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.9 \"release\\블로그 자동화 Setup 1.0.9.exe\" \"release\\latest.yml\" --title \"v1.0.9 - 공감허용 체크 기능 제거 및 안정성 개선\" --notes \"## 개선사항\n- 🚫 공감허용 체크박스 클릭 기능 제거 (사용자 요청에 따른 간소화)\n- 🔧 유튜브 자막 추출 빌드 환경 문제 해결\n- 🛡️ GitHub 토큰 보안 문제 해결  \n- 📦 코드 정리 및 안정성 개선\n\n## 기능 변경사항\n- 네이버 블로그 발행 시 공감허용 체크박스를 더 이상 자동으로 클릭하지 않음\n- 발행 과정이 더욱 간소화됨\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
+      "Bash(mkdir:*)",
+      "Bash(curl:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": []
   }

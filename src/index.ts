@@ -3,8 +3,19 @@ import { autoUpdater } from 'electron-updater';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-const YTDlpWrap = require('yt-dlp-wrap').default;
+const { spawn } = require('child_process');
 import { registerPlaywrightHandlers } from './main/playwright-handler';
+
+// yt-dlp 바이너리 경로 가져오기
+const getYtDlpPath = (): string => {
+  if (app.isPackaged) {
+    // 패키지된 앱에서는 resources 폴더에 있는 바이너리 사용
+    return path.join(process.resourcesPath, 'binaries', 'yt-dlp.exe');
+  } else {
+    // 개발 환경에서는 프로젝트 루트의 바이너리 사용
+    return path.join(__dirname, '..', 'binaries', 'yt-dlp.exe');
+  }
+};
 
 // 설정 파일 경로
 const getConfigPath = (filename: string) => {
@@ -512,18 +523,44 @@ const setupIpcHandlers = () => {
       
       console.log(`📹 [메인 프로세스] 최신 yt-dlp로 메타데이터 추출: ${videoId}`);
       
-      // yt-dlp-wrap을 사용하여 빌드된 앱에서도 작동하도록 함
-      const ytDlpWrap = new YTDlpWrap();
-      const metadata = await ytDlpWrap.execPromise([
-        videoUrl,
-        '--dump-json',
-        '--no-download'
-      ]).then((stdout: string) => {
-        try {
-          return JSON.parse(stdout.trim());
-        } catch (e) {
-          throw new Error('JSON 파싱 실패: ' + e.message);
-        }
+      // 직접 yt-dlp 바이너리를 사용
+      const ytDlpPath = getYtDlpPath();
+      console.log(`📹 [메인 프로세스] yt-dlp 바이너리 경로: ${ytDlpPath}`);
+      
+      const metadata = await new Promise((resolve, reject) => {
+        const ytDlpProcess = spawn(ytDlpPath, [
+          videoUrl,
+          '--dump-json',
+          '--no-download'
+        ]);
+        
+        let stdout = '';
+        let stderr = '';
+        
+        ytDlpProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        ytDlpProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        ytDlpProcess.on('close', (code) => {
+          if (code === 0) {
+            try {
+              const parsed = JSON.parse(stdout.trim());
+              resolve(parsed);
+            } catch (e) {
+              reject(new Error('JSON 파싱 실패: ' + e.message));
+            }
+          } else {
+            reject(new Error(`yt-dlp 실패 (코드 ${code}): ${stderr}`));
+          }
+        });
+        
+        ytDlpProcess.on('error', (error) => {
+          reject(new Error(`yt-dlp 실행 실패: ${error.message}`));
+        });
       });
       
       // 한국어 자막 먼저 시도 (수동 업로드)

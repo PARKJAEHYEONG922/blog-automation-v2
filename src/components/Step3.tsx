@@ -14,6 +14,20 @@ interface Step3Props {
 const Step3: React.FC<Step3Props> = ({ data, onComplete, onBack }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  
+  // 컴포넌트 마운트 시 스크롤을 최상단으로 이동
+  useEffect(() => {
+    const scrollableContainer = document.querySelector('main > div');
+    const mainElement = document.querySelector('main');
+    
+    if (scrollableContainer) {
+      scrollableContainer.scrollTop = 0;
+    } else if (mainElement) {
+      mainElement.scrollTop = 0;
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, []);
   const [editedContent, setEditedContent] = useState('');
   const [charCount, setCharCount] = useState(0);
   const [charCountWithSpaces, setCharCountWithSpaces] = useState(0);

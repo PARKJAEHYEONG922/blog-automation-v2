@@ -232,15 +232,6 @@ const App: React.FC = () => {
             onNext={(data) => {
               updateWorkflowData(data);
               setCurrentStep(3);
-              // 3단계로 이동 시 페이지 최상단으로 스크롤
-              setTimeout(() => {
-                const mainElement = document.querySelector('main');
-                if (mainElement) {
-                  mainElement.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }, 100);
             }}
             onDataUpdate={(data) => {
               updateWorkflowData(data);
