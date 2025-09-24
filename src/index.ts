@@ -819,10 +819,8 @@ function setupAutoUpdater() {
   
   console.log('✅ 자동 업데이트 설정 완료');
 
-  // 앱 시작 후 업데이트 체크 (자동 다운로드 비활성화)
+  // 자동 다운로드 비활성화 (수동 업데이트만 허용)
   autoUpdater.autoDownload = false;
-  console.log('🔍 업데이트 확인 시작...');
-  autoUpdater.checkForUpdates();
 
   // 업데이트 이벤트 처리
   autoUpdater.on('checking-for-update', () => {
@@ -854,19 +852,32 @@ function setupAutoUpdater() {
 
   autoUpdater.on('update-not-available', (info) => {
     console.log('✅ 최신 버전입니다:', info);
+    
+    // 수동 업데이트 확인 시에만 다이얼로그 표시
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: '업데이트 확인 완료',
+        message: '최신 버전을 사용 중입니다! ✅',
+        detail: `현재 버전: ${app.getVersion()}\n\n업데이트가 필요하지 않습니다.`,
+        buttons: ['확인']
+      });
+    }
   });
 
   autoUpdater.on('error', (err) => {
     console.log('❌ 자동 업데이트 오류:', err);
     
-    // 오류 다이얼로그 표시
-    dialog.showMessageBoxSync(mainWindow, {
-      type: 'error',
-      title: '업데이트 오류',
-      message: '업데이트 확인 중 오류가 발생했습니다.',
-      detail: err.message,
-      buttons: ['확인']
-    });
+    // 수동 업데이트 확인 시에만 오류 다이얼로그 표시
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: '업데이트 오류',
+        message: '업데이트 확인 중 오류가 발생했습니다.',
+        detail: `오류 내용: ${err.message}\n\n나중에 다시 시도해주세요.`,
+        buttons: ['확인']
+      });
+    }
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
