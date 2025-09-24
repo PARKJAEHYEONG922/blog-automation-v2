@@ -43,6 +43,10 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState<number>(0); // 현재 달부터의 상대적 개월 수
   
+  // 이미지 확인 다이얼로그 상태
+  const [showImageConfirmDialog, setShowImageConfirmDialog] = useState<boolean>(false);
+  const [pendingPublishAction, setPendingPublishAction] = useState<(() => void) | null>(null);
+  
   // 컴포넌트 마운트 시 기본 예약 시간 설정 (1시간 후)
   useEffect(() => {
     const now = new Date();
@@ -75,6 +79,32 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       console.error('저장된 자격 증명 로드 실패:', error);
     }
   }, []);
+  
+  // 이미지 상태 확인 함수 - 발행 정보와 동일한 로직 사용
+  const checkImageStatus = (): { hasIncompleteImages: boolean; incompleteCount: number; totalCount: number } => {
+    const imageRegex = /[\(\[\*_]이미지\d*[\)\]\*_]/g;
+    const totalImages = (editedContent.match(imageRegex) || []).length;
+    const generatedImages = Object.keys(imageUrls).length;
+    const incompleteCount = totalImages - generatedImages;
+    
+    return {
+      hasIncompleteImages: incompleteCount > 0,
+      incompleteCount,
+      totalCount: totalImages
+    };
+  };
+  
+  // 발행 전 이미지 확인 핸들러
+  const handlePublishWithImageCheck = (publishAction: () => void) => {
+    const { hasIncompleteImages, incompleteCount, totalCount } = checkImageStatus();
+    
+    if (hasIncompleteImages) {
+      setPendingPublishAction(() => publishAction);
+      setShowImageConfirmDialog(true);
+    } else {
+      publishAction();
+    }
+  };
   
   // 자격 증명 저장/삭제 함수
   const handleCredentialSave = (save: boolean) => {
@@ -2898,8 +2928,9 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
           )}
           
           
-          <button
-            onClick={publishToNaverBlog}
+          <div className="relative">
+            <button
+            onClick={() => handlePublishWithImageCheck(publishToNaverBlog)}
             disabled={publishStatus.isPublishing || !naverCredentials.username || !naverCredentials.password}
             className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
@@ -2907,6 +2938,56 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
               publishStatus.error ? `🚀 ${publishStatus.error}` : '🚀 네이버 블로그 발행 중...'
             ) : `${publishOption === 'temp' ? '📝 임시저장' : publishOption === 'immediate' ? '📤 즉시 발행' : '⏰ 예약 발행'}하기`}
           </button>
+          
+          {/* 이미지 확인 다이얼로그 - 버튼 위에 떠있는 작은 창 */}
+          {showImageConfirmDialog && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-orange-300 rounded-lg shadow-lg z-50 p-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <div className="text-orange-500 text-lg">⚠️</div>
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">
+                    이미지 생성이 완료되지 않았습니다
+                  </h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {(() => {
+                      const { incompleteCount, totalCount } = checkImageStatus();
+                      return `일부 이미지가 아직 생성되지 않았습니다. (${totalCount - incompleteCount}/${totalCount}개 완료)`;
+                    })()}
+                  </p>
+                  <p className="text-sm text-gray-700 mb-3">
+                    이미지 없이 발행하시겠습니까?
+                  </p>
+                  
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => {
+                        setShowImageConfirmDialog(false);
+                        setPendingPublishAction(null);
+                      }}
+                      className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowImageConfirmDialog(false);
+                        if (pendingPublishAction) {
+                          pendingPublishAction();
+                          setPendingPublishAction(null);
+                        }
+                      }}
+                      className="px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                    >
+                      이미지 없이 발행
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
           
           {publishStatus.isPublishing && (
             <div className="mt-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded p-2">
@@ -2941,6 +3022,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       <div className="mt-3 text-xs text-gray-500">
         ⚠️ 로그인 정보는 발행 목적으로만 사용되며 저장되지 않습니다.
       </div>
+      
     </div>
   );
 };

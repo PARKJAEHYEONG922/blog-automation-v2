@@ -771,9 +771,26 @@ const createWindow = (): void => {
     // 개발 환경에서만 개발자 도구 활성화
     console.log('🔧 NODE_ENV:', process.env.NODE_ENV);
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 개발자 도구 열기 시도');
+      console.log('🔧 개발자 도구 열기');
       mainWindow.webContents.openDevTools();
     }
+    
+    // 키보드 단축키 핸들러
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      // F12: 개발자 도구 토글
+      if (input.key === 'F12') {
+        const devToolsOpened = mainWindow?.webContents.isDevToolsOpened();
+        if (devToolsOpened) {
+          mainWindow?.webContents.closeDevTools();
+        } else {
+          mainWindow?.webContents.openDevTools();
+        }
+      }
+      // Ctrl+R: 새로고침
+      if (input.key === 'r' && input.control) {
+        mainWindow?.webContents.reload();
+      }
+    });
   });
 
   // and load the index.html of the app.
