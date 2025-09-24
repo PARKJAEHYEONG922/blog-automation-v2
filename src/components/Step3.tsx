@@ -1301,6 +1301,28 @@ const Step3: React.FC<Step3Props> = ({ data, onComplete, onBack }) => {
     console.log('이미지 생성 정지 요청됨');
   };
 
+  // 빈 이미지(미완성 이미지) 개수 확인 함수
+  const getEmptyImageCount = () => {
+    const imagePrompts = data.writingResult?.imagePrompts || [];
+    const imageRegex = /[\(\[\*_]이미지\d*[\)\]\*_]/g;
+    const imageCount = (editedContent.match(imageRegex) || []).length;
+    
+    let emptyCount = 0;
+    for (let i = 1; i <= imageCount; i++) {
+      const currentStatus = imageStatus[i];
+      const imagePrompt = imagePrompts.find(p => p.index === i);
+      
+      // completed가 아니고 프롬프트가 있으면 빈 이미지로 카운트
+      if (currentStatus !== 'completed' && imagePrompt) {
+        const currentPrompt = getCurrentPrompt(i);
+        if (currentPrompt && currentPrompt.trim() !== '') {
+          emptyCount++;
+        }
+      }
+    }
+    return emptyCount;
+  };
+
 
   const writingResult = data.writingResult as BlogWritingResult;
   const hasContent = writingResult && writingResult.success;
@@ -1826,11 +1848,11 @@ const Step3: React.FC<Step3Props> = ({ data, onComplete, onBack }) => {
                     {!isGeneratingAll ? (
                       <button
                         onClick={generateAllMissingImages}
-                        disabled={!hasImageClient || imagePrompts.length === 0 || Object.values(imageStatus).some(s => s === 'generating')}
+                        disabled={!hasImageClient || imagePrompts.length === 0 || Object.values(imageStatus).some(s => s === 'generating') || getEmptyImageCount() === 0}
                         className="px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        title={!hasImageClient ? '이미지 생성 AI가 설정되지 않았습니다' : ''}
+                        title={!hasImageClient ? '이미지 생성 AI가 설정되지 않았습니다' : getEmptyImageCount() === 0 ? '생성할 빈 이미지가 없습니다' : ''}
                       >
-                        🎨 빈 이미지 모두 AI로 생성
+                        🎨 빈 이미지 모두 AI로 생성 ({getEmptyImageCount()}개)
                       </button>
                     ) : (
                       <div className="flex gap-2">

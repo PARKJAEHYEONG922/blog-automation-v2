@@ -44,6 +44,28 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
   const [imagePromptError, setImagePromptError] = useState<string | null>(null);
   
   
+  // props 변경 시 상태 동기화
+  useEffect(() => {
+    console.log('📥 Step2 props 업데이트 감지:', {
+      hasCollectedData: !!data.collectedData,
+      hasWritingResult: !!data.writingResult,
+      searchKeyword: data.searchKeyword
+    });
+    
+    // collectedData 동기화
+    if (data.collectedData && !collectedData) {
+      console.log('🔄 collectedData 복원');
+      setCollectedData(data.collectedData as DataCollectionResult);
+    }
+    
+    // writingResult 동기화  
+    if (data.writingResult && !writingResult) {
+      console.log('🔄 writingResult 복원');
+      setWritingResult(data.writingResult);
+      setImagePromptsGenerated(!!(data.writingResult.imagePrompts && data.writingResult.imagePrompts.length > 0));
+    }
+  }, [data.collectedData, data.writingResult]);
+
   // 참고 검색어 관리 - 저장된 searchKeyword가 있으면 우선 사용
   const [searchKeyword, setSearchKeyword] = useState(() => {
     // 1. 이전에 Step2에서 수정한 searchKeyword가 있으면 그것을 사용
@@ -210,6 +232,15 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
       
       setCollectedData(result);
       console.log('✅ 데이터 수집 완료:', result);
+      
+      // 부모 컴포넌트에 데이터 업데이트 알림
+      if (onDataUpdate) {
+        console.log('📤 App으로 collectedData 전송');
+        onDataUpdate({ 
+          collectedData: result,
+          searchKeyword: searchKeyword 
+        });
+      }
 
     } catch (error) {
       console.error('❌ 데이터 수집 실패:', error);
@@ -308,6 +339,16 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
 
       const result = await BlogWritingService.generateBlogContent(writingRequest);
       setWritingResult(result);
+      
+      // 부모 컴포넌트에 글쓰기 결과 업데이트 알림
+      if (onDataUpdate) {
+        console.log('📤 App으로 writingResult 전송');
+        onDataUpdate({ 
+          writingResult: result,
+          collectedData: collectedData,
+          searchKeyword: searchKeyword 
+        });
+      }
 
       if (result.success) {
         console.log('✅ 블로그 글쓰기 완료');
@@ -399,7 +440,12 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
 
   const handleNext = () => {
     if (!collectedData) {
-      alert('분석을 완료해주세요.');
+      alert('먼저 정보 수집을 완료해주세요.');
+      return;
+    }
+
+    if (!writingResult || !writingResult.success) {
+      alert('글쓰기를 완료해주세요.');
       return;
     }
 
@@ -501,7 +547,7 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
                     </button>
                   )}
                 </div>
-                <p className="text-blue-400 text-xs">
+                <p className="text-blue-500 text-sm font-medium">
                   💡 이 서치키워드로 데이터를 수집합니다. 제목과 연관된 서치키워드가 아니면 수정해주세요.
                   {collectedData && " 키워드 변경 후 재분석 버튼을 눌러 새로운 데이터를 수집할 수 있습니다."}
                 </p>
@@ -1178,20 +1224,6 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
                           <div className="flex gap-2">
                             <button
                               onClick={() => {
-                                navigator.clipboard.writeText(BlogWritingService.processWritingResult(writingResult.content || ''));
-                                setDialog({
-                                  isOpen: true,
-                                  type: 'success',
-                                  title: '복사 완료',
-                                  message: '블로그 글이 클립보드에 복사되었습니다.'
-                                });
-                              }}
-                              className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
-                            >
-                              📋 복사하기
-                            </button>
-                            <button
-                              onClick={() => {
                                 setWritingResult(null);
                                 setIsGeneratingImagePrompts(false);
                                 setImagePromptsGenerated(false);
@@ -1356,15 +1388,22 @@ const Step2: React.FC<Step2Props> = ({ data, onNext, onDataUpdate, onBack, aiMod
             </button>
             <button
               onClick={handleNext}
-              disabled={!collectedData}
+              disabled={!collectedData || !writingResult || !writingResult.success}
               className={`ultra-btn px-4 py-2 text-sm ${
-                !collectedData ? 'opacity-50 cursor-not-allowed' : ''
+                (!collectedData || !writingResult || !writingResult.success) ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               style={{
-                background: collectedData ? '#2563eb' : '#94a3b8',
-                borderColor: collectedData ? '#2563eb' : '#94a3b8',
+                background: (collectedData && writingResult && writingResult.success) ? '#2563eb' : '#94a3b8',
+                borderColor: (collectedData && writingResult && writingResult.success) ? '#2563eb' : '#94a3b8',
                 color: 'white'
               }}
+              title={
+                !collectedData 
+                  ? '먼저 정보 수집을 완료해주세요' 
+                  : (!writingResult || !writingResult.success) 
+                    ? '글쓰기를 완료해주세요' 
+                    : '3단계로 이동'
+              }
             >
               <span>다음 단계</span>
               <span>→</span>

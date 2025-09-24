@@ -251,6 +251,68 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
     };
   }, []);
 
+  // 2단계 인증 페이지 감지 함수
+  const isTwoFactorAuthPage = async (currentUrl: string): Promise<boolean> => {
+    try {
+      // 이미 로그인 성공한 페이지라면 2단계 인증 아님
+      if (currentUrl.includes('www.naver.com') || 
+          currentUrl.includes('section.blog.naver.com') ||
+          (currentUrl.includes('naver.com') && !currentUrl.includes('nid.naver.com'))) {
+        return false;
+      }
+
+      // URL에 otp 또는 mode=otp가 포함된 경우
+      if (currentUrl.includes('mode=otp') || currentUrl.includes('otp')) {
+        return true;
+      }
+
+      // 2단계 인증 관련 HTML 요소들 확인
+      const twoFactorElements = [
+        'input[name="mode"][value="otp"]', // 숨겨진 mode 필드
+        '#push_title', // "2단계 인증 알림 발송 완료"
+        '#otp_title', // "OTP 인증번호를 입력해 주세요"
+        '#useotpBtn', // "OTP 인증번호를 입력하여 로그인 하기" 버튼
+        '#resendBtn', // "알림 다시 보내기" 버튼
+        '#push_case', // 푸시 인증 케이스 div
+        '#direct_case', // OTP 직접 입력 케이스 div
+        'input#otp[name="otp"]' // OTP 입력 필드
+      ];
+
+      // 여러 요소 중 하나라도 존재하면 2단계 인증 페이지
+      for (const selector of twoFactorElements) {
+        try {
+          const elementResult = await window.electronAPI.playwrightWaitSelector(selector, 1000); // 1초만 대기
+          if (elementResult.success) {
+            console.log(`🔍 2단계 인증 요소 발견: ${selector}`);
+            return true;
+          }
+        } catch (error) {
+          // 요소를 찾지 못한 경우 무시하고 계속
+        }
+      }
+
+      // 페이지 텍스트로도 확인
+      const bodyTextResult = await window.electronAPI.playwrightEvaluate('document.body.textContent');
+      if (bodyTextResult.success && bodyTextResult.result) {
+        const pageText = bodyTextResult.result;
+        if (
+          pageText.includes('2단계 인증') ||
+          pageText.includes('OTP 인증번호') ||
+          pageText.includes('알림 다시 보내기') ||
+          pageText.includes('설정한 기기에서 인증 알림을 확인하세요')
+        ) {
+          console.log('🔍 2단계 인증 관련 텍스트 발견');
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('2단계 인증 페이지 확인 중 오류:', error);
+      return false;
+    }
+  };
+
   // 네이버 로그인 헬퍼 함수들
   const performNaverLogin = async (credentials: NaverCredentials): Promise<'success' | 'two_factor' | 'device_registration' | 'failed'> => {
     // 네이버 로그인 페이지로 이동
@@ -304,6 +366,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
     const startTime = Date.now();
     const timeout = 90000;
     let deviceRegistrationAttempted = false;
+    let twoFactorDetected = false;
 
     while ((Date.now() - startTime) < timeout) {
       await window.electronAPI.playwrightWaitTimeout(2000);
@@ -338,16 +401,33 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         continue;
       }
       
-      // 로그인 성공 체크 (네이버 홈페이지)
-      if (currentUrl === 'https://www.naver.com' || currentUrl === 'https://www.naver.com/') {
-        console.log(`✅ 네이버 로그인 성공!`);
+      // 로그인 성공 체크 (네이버 홈페이지 또는 관련 페이지)
+      if (currentUrl.includes('www.naver.com') || 
+          currentUrl.includes('section.blog.naver.com') ||
+          (currentUrl.includes('naver.com') && !currentUrl.includes('nid.naver.com'))) {
+        console.log(`✅ 네이버 로그인 성공! 최종 URL: ${currentUrl}`);
         return 'success';
       }
       
-      // 2차 인증 감지
-      if (currentUrl.includes('auth') || currentUrl.includes('otp') || currentUrl.includes('verify')) {
-        console.log('🔐 2차 인증 페이지 감지!');
-        return 'two_factor';
+      // 2단계 인증 감지 (한 번만 감지하고 조용히 대기)
+      if (!twoFactorDetected && await isTwoFactorAuthPage(currentUrl)) {
+        console.log('🔐 2단계 인증 페이지 감지!');
+        console.log('📱 스마트폰에서 2단계 인증을 완료해 주세요. 90초까지 대기합니다...');
+        console.log('💡 네이버앱에서 인증 알림을 확인하거나 OTP를 입력해주세요.');
+        
+        // UI 상태 업데이트
+        setPublishStatus(prev => ({
+          ...prev,
+          error: '📱 스마트폰에서 2단계 인증을 완료해주세요'
+        }));
+        
+        twoFactorDetected = true;
+        continue; // 2단계 인증 감지 후 바로 다음 루프로
+      }
+      
+      // 2단계 인증 감지된 상태에서는 로그인 페이지 실패 체크 건너뛰기
+      if (twoFactorDetected && currentUrl.includes('nid.naver.com/nidlogin.login')) {
+        continue; // 조용히 대기
       }
       
       // 로그인 페이지에 계속 있으면 실패

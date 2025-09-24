@@ -18,8 +18,43 @@ const getConfigPath = (filename: string) => {
 // 로그 전송을 위한 전역 변수
 let mainWindow: BrowserWindow | null = null;
 
+// 사용자에게 보여줄 필요가 없는 로그 패턴들
+const logFilters = [
+  /🔍 \[파싱\]/, // 파싱 관련 세부 로그
+  /🔍.*텍스트:/, // 텍스트 파싱 로그
+  /📥 Step2 props 업데이트 감지/, // Step2 props 업데이트
+  /🔄 collectedData 복원/, // 데이터 복원 로그
+  /🔄 writingResult 복원/, // 글쓰기 결과 복원
+  /🔙 이후 단계에서 돌아옴/, // 단계 이동 세부 로그
+  /🔍 변경사항 분석/, // 변경사항 분석 세부
+  /📤 App으로.*전송/, // 데이터 전송 세부
+  /🔄.*불러옴/, // 더미 데이터 불러오기
+  /^📁 설정 파일 경로:/, // 설정 파일 경로
+  /^🔧.*시도:/, // 설정 저장 시도
+  /^📄 저장할 데이터:/, // 저장할 데이터 상세
+  /^🔍.*로드 시도:/, // 로드 시도
+  /^제목과 검색어:/, // 제목-검색어 매핑 상세 데이터
+  /^\[{\"title\":/, // JSON 형태의 제목 데이터
+  /^{\"title\":.*searchQuery/, // 제목-검색어 JSON 객체
+  /^🔍 updateWorkflowData 호출:/, // updateWorkflowData 세부 데이터
+  /^{\"updates\":.*collectedData/, // collectedData 업데이트 세부사항
+  /^✅ 데이터 수집 완료: \{\"blogs\":/, // 데이터 수집 완료 세부 결과
+  /^{\"blogs\":\[{\"rank\":/, // 블로그 수집 결과 JSON
+  /data:image\/\w+;base64,/, // 이미지 base64 데이터
+];
+
+// 로그 필터링 함수
+const shouldFilterLog = (message: string): boolean => {
+  return logFilters.some(pattern => pattern.test(message));
+};
+
 // 로그를 렌더러로 전송하는 함수
 const sendLogToRenderer = (level: string, message: string, timestamp?: Date) => {
+  // 불필요한 로그 필터링
+  if (shouldFilterLog(message)) {
+    return;
+  }
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('log-message', {
       level,
@@ -678,6 +713,16 @@ const setupIpcHandlers = () => {
         message: `자막 추출 중 오류: ${error.message}`,
         data: null
       };
+    }
+  });
+
+  // 렌더러 프로세스에서 로그 전송 받기
+  ipcMain.handle('log:send', async (event, { level, message, timestamp }) => {
+    try {
+      // 렌더러에서 온 로그를 다시 로그 패널로 전송
+      sendLogToRenderer(level, message, new Date(timestamp));
+    } catch (error) {
+      console.error('렌더러 로그 전송 실패:', error);
     }
   });
 

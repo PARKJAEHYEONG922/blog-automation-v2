@@ -94,6 +94,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   removeLogListener: () => {
     ipcRenderer.removeAllListeners('log-message');
+  },
+  
+  // 렌더러에서 로그 전송
+  sendLog: (level: string, message: string) => {
+    ipcRenderer.invoke('log:send', { level, message, timestamp: new Date() });
   }
 });
 
@@ -138,6 +143,7 @@ declare global {
       copyImageToClipboard: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       onLogMessage: (callback: (log: { level: string; message: string; timestamp: Date }) => void) => void;
       removeLogListener: () => void;
+      sendLog: (level: string, message: string) => Promise<void>;
     };
   }
 }

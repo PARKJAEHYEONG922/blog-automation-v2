@@ -57,7 +57,7 @@ const App: React.FC = () => {
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
-  const [isBackFromStep2, setIsBackFromStep2] = useState(false);
+  const [isReturningFromLaterStep, setIsReturningFromLaterStep] = useState(false);
   
   // 직접 AI 모델 상태 관리
   const [aiModelStatus, setAiModelStatus] = useState({
@@ -85,9 +85,37 @@ const App: React.FC = () => {
       isInitialized = true;
       
       try {
+        // 렌더러 프로세스 console.log 오버라이드 설정
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+
+        console.log = (...args: any[]) => {
+          const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+          originalConsoleLog(...args); // 원래 로그도 출력
+          // 메인 프로세스로 전송
+          window.electronAPI?.sendLog('info', message);
+        };
+
+        console.error = (...args: any[]) => {
+          const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+          originalConsoleError(...args); // 원래 로그도 출력
+          // 메인 프로세스로 전송
+          window.electronAPI?.sendLog('error', message);
+        };
+
+        console.warn = (...args: any[]) => {
+          const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+          originalConsoleWarn(...args); // 원래 로그도 출력
+          // 메인 프로세스로 전송
+          window.electronAPI?.sendLog('warning', message);
+        };
+
         await LLMClientFactory.loadDefaultSettings();
         // 로드 완료 후 상태 새로고침
         refreshModelStatus();
+        
+        console.log('🚀 렌더러 프로세스 로그 캡처 활성화됨');
       } catch (error) {
         console.error('초기화 실패:', error);
       }
@@ -133,10 +161,17 @@ const App: React.FC = () => {
 
   const updateWorkflowData = (updates: Partial<WorkflowData>) => {
     setWorkflowData(prev => {
+      console.log('🔍 updateWorkflowData 호출:', {
+        updates,
+        isReturningFromLaterStep,
+        hasCollectedData: !!prev.collectedData,
+        hasWritingResult: !!prev.writingResult
+      });
+      
       const newData = { ...prev, ...updates };
       
-      // Step1에서 핵심 정보가 변경된 경우 Step2 상태 초기화
-      const coreFieldsChanged = 
+      // Step1에서 핵심 정보가 변경된 경우에만 Step2 상태 초기화
+      const actuallyChanged = 
         (updates.platform && updates.platform !== prev.platform) ||
         (updates.keyword && updates.keyword !== prev.keyword) ||
         (updates.contentType && updates.contentType !== prev.contentType) ||
@@ -144,16 +179,32 @@ const App: React.FC = () => {
         (updates.tone && updates.tone !== prev.tone) ||
         (updates.selectedTitle && updates.selectedTitle !== prev.selectedTitle);
       
-      if (coreFieldsChanged) {
-        // 핵심 정보 변경 시 Step2 관련 상태 초기화
+      console.log('🔍 변경사항 분석:', {
+        actuallyChanged,
+        isReturningFromLaterStep,
+        platformChanged: updates.platform && updates.platform !== prev.platform,
+        keywordChanged: updates.keyword && updates.keyword !== prev.keyword,
+        selectedTitleChanged: updates.selectedTitle && updates.selectedTitle !== prev.selectedTitle
+      });
+      
+      // 이후 단계에서 돌아온 상황이 아니고, 실제로 값이 변경된 경우에만 초기화
+      if (actuallyChanged && !isReturningFromLaterStep) {
+        console.log('🔄 핵심 정보 실제 변경 감지 - Step2/Step3 상태 초기화');
         newData.collectedData = null;
-        newData.writingResult = undefined;
+        newData.writingResult = undefined;  // 글쓰기 결과도 초기화
         newData.searchKeyword = undefined;
         
         // Step3 이미지 상태도 초기화
         sessionStorage.removeItem('step3-image-urls');
         sessionStorage.removeItem('step3-image-status');
         console.log('🔄 핵심 정보 변경으로 인한 이미지 상태 초기화');
+      } else if (isReturningFromLaterStep) {
+        console.log('🔙 이후 단계에서 돌아옴 - 기존 데이터 모두 유지 (정보수집 + 글쓰기 결과)');
+        console.log('🔙 유지되는 데이터:', {
+          collectedData: !!newData.collectedData,
+          writingResult: !!newData.writingResult,
+          searchKeyword: newData.searchKeyword
+        });
       }
       
       return newData;
@@ -168,10 +219,10 @@ const App: React.FC = () => {
             data={workflowData}
             onNext={(data) => {
               updateWorkflowData(data);
-              setIsBackFromStep2(false); // Step1에서 다음으로 갈 때는 리셋
+              setIsReturningFromLaterStep(false); // Step1에서 다음으로 갈 때는 리셋
               setCurrentStep(2);
             }}
-            isBackFromStep2={isBackFromStep2}
+            isBackFromStep2={isReturningFromLaterStep}
           />
         );
       case 2:
@@ -181,12 +232,23 @@ const App: React.FC = () => {
             onNext={(data) => {
               updateWorkflowData(data);
               setCurrentStep(3);
+              // 3단계로 이동 시 페이지 최상단으로 스크롤
+              setTimeout(() => {
+                const mainElement = document.querySelector('main');
+                if (mainElement) {
+                  mainElement.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }, 100);
             }}
             onDataUpdate={(data) => {
               updateWorkflowData(data);
             }}
             onBack={() => {
-              setIsBackFromStep2(true); // Step2에서 돌아갈 때 플래그 설정
+              // Step2에서 돌아갈 때 현재 상태를 먼저 저장
+              console.log('🔙 Step2에서 돌아가기 - 현재 데이터 보존 시도');
+              setIsReturningFromLaterStep(true); // Step2에서 돌아갈 때 플래그 설정
               setCurrentStep(1);
             }}
             aiModelStatus={aiModelStatus}
@@ -356,7 +418,7 @@ const App: React.FC = () => {
             <LLMSettings 
               onClose={() => {
                 setShowSettings(false);
-                setIsBackFromStep2(false); // API 설정에서 나올 때 Step1 스크롤 플래그 리셋
+                setIsReturningFromLaterStep(false); // API 설정에서 나올 때 플래그 리셋
                 // 설정 변경 후 상태만 새로고침
                 refreshModelStatus();
               }}
