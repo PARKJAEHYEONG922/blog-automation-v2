@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, clipboard, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, clipboard, nativeImage, Menu, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -835,6 +835,71 @@ function setupAutoUpdater() {
   });
 }
 
+// 메뉴 설정
+function setupMenu() {
+  const template = [
+    {
+      label: '파일',
+      submenu: [
+        {
+          label: '종료',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    },
+    {
+      label: '도움말',
+      submenu: [
+        {
+          label: '정보',
+          click: () => {
+            dialog.showMessageBox(mainWindow!, {
+              type: 'info',
+              title: '블로그 자동화 정보',
+              message: '블로그 자동화',
+              detail: `버전: ${app.getVersion()}\n` +
+                     `Electron: ${process.versions.electron}\n` +
+                     `Node.js: ${process.versions.node}\n` +
+                     `Chromium: ${process.versions.chrome}\n\n` +
+                     `유튜브 영상을 분석하여 블로그 글을 자동으로 생성하고 발행하는 애플리케이션입니다.\n\n` +
+                     `개발자: PARKJAEHYEONG922\n` +
+                     `GitHub: https://github.com/PARKJAEHYEONG922/blog-automation-v2`,
+              buttons: ['확인', '업데이트 확인']
+            }).then((result) => {
+              if (result.response === 1) {
+                // 업데이트 확인 버튼 클릭 시
+                console.log('수동 업데이트 확인 요청');
+                autoUpdater.checkForUpdatesAndNotify();
+              }
+            });
+          }
+        },
+        {
+          label: '업데이트 확인',
+          click: () => {
+            console.log('수동 업데이트 확인 시작');
+            autoUpdater.checkForUpdatesAndNotify();
+            
+            dialog.showMessageBox(mainWindow!, {
+              type: 'info',
+              title: '업데이트 확인',
+              message: '업데이트를 확인하고 있습니다...',
+              detail: '새 버전이 있으면 자동으로 알림이 표시됩니다.',
+              buttons: ['확인']
+            });
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -843,6 +908,7 @@ app.on('ready', () => {
   setupIpcHandlers();
   registerPlaywrightHandlers();
   setupAutoUpdater();
+  setupMenu();
   createWindow();
   console.log('메인 윈도우 생성 완료.');
 });
