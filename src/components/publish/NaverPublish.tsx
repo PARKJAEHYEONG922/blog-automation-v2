@@ -30,6 +30,10 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
   // 자격 증명 저장 상태
   const [saveCredentials, setSaveCredentials] = useState<boolean>(false);
   
+  // 저장된 계정 목록 관리
+  const [savedAccounts, setSavedAccounts] = useState<Array<{id: string, username: string, lastUsed: number}>>([]);
+  const [showAccountSelector, setShowAccountSelector] = useState<boolean>(false);
+  
   const [publishStatus, setPublishStatus] = useState<PublishStatus>({
     isPublishing: false,
     isLoggedIn: false,
@@ -69,22 +73,132 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
     setScheduledMinute(minute.toString().padStart(2, '0'));
   }, []);
   
-  // 저장된 자격 증명 로드
-  useEffect(() => {
+  // 저장된 계정들 로드
+  const loadSavedAccounts = () => {
     try {
-      const savedCredentials = localStorage.getItem('naverCredentials');
-      if (savedCredentials) {
-        const credentials = JSON.parse(savedCredentials);
-        setNaverCredentials({
-          username: credentials.username || '',
-          password: credentials.password || ''
-        });
-        setSaveCredentials(true);
+      const saved = localStorage.getItem('naverAccounts');
+      if (saved) {
+        const accounts = JSON.parse(saved);
+        setSavedAccounts(accounts);
+        // 가장 최근 사용한 계정을 기본으로 설정
+        if (accounts.length > 0) {
+          const mostRecent = accounts.sort((a: any, b: any) => b.lastUsed - a.lastUsed)[0];
+          const savedPassword = localStorage.getItem(`naverPassword_${mostRecent.id}`);
+          if (savedPassword) {
+            setNaverCredentials({
+              username: mostRecent.username,
+              password: savedPassword
+            });
+            setSaveCredentials(true);
+          }
+        }
+      } else {
+        // 기존 단일 자격증명 마이그레이션
+        const oldCredentials = localStorage.getItem('naverCredentials');
+        if (oldCredentials) {
+          const credentials = JSON.parse(oldCredentials);
+          if (credentials.username && credentials.password) {
+            saveAccount(credentials.username, credentials.password);
+            setNaverCredentials(credentials);
+            setSaveCredentials(true);
+            localStorage.removeItem('naverCredentials'); // 기존 데이터 제거
+          }
+        }
       }
     } catch (error) {
-      console.error('저장된 자격 증명 로드 실패:', error);
+      console.error('저장된 계정 목록 로드 실패:', error);
     }
+  };
+
+  // 계정 저장 함수
+  const saveAccount = (username: string, password: string) => {
+    try {
+      const accountId = btoa(username); // username을 base64로 인코딩하여 ID로 사용
+      const accounts = [...savedAccounts];
+      const existingIndex = accounts.findIndex(acc => acc.id === accountId);
+      
+      const accountInfo = {
+        id: accountId,
+        username: username,
+        lastUsed: Date.now()
+      };
+
+      if (existingIndex >= 0) {
+        // 기존 계정 업데이트
+        accounts[existingIndex] = accountInfo;
+      } else {
+        // 새 계정 추가
+        accounts.push(accountInfo);
+      }
+
+      // 계정 목록 저장 (비밀번호 제외)
+      localStorage.setItem('naverAccounts', JSON.stringify(accounts));
+      // 비밀번호는 별도 저장
+      localStorage.setItem(`naverPassword_${accountId}`, password);
+      
+      setSavedAccounts(accounts);
+      console.log('💾 네이버 계정 저장됨:', username);
+    } catch (error) {
+      console.error('계정 저장 실패:', error);
+    }
+  };
+
+  // 계정 선택 함수
+  const selectAccount = (account: {id: string, username: string, lastUsed: number}) => {
+    try {
+      const savedPassword = localStorage.getItem(`naverPassword_${account.id}`);
+      if (savedPassword) {
+        setNaverCredentials({
+          username: account.username,
+          password: savedPassword
+        });
+        setSaveCredentials(true);
+        setShowAccountSelector(false);
+        
+        // 최근 사용 시간 업데이트
+        const accounts = savedAccounts.map(acc => 
+          acc.id === account.id ? {...acc, lastUsed: Date.now()} : acc
+        );
+        setSavedAccounts(accounts);
+        localStorage.setItem('naverAccounts', JSON.stringify(accounts));
+      }
+    } catch (error) {
+      console.error('계정 선택 실패:', error);
+    }
+  };
+
+  // 계정 삭제 함수
+  const deleteAccount = (accountId: string) => {
+    try {
+      const accounts = savedAccounts.filter(acc => acc.id !== accountId);
+      setSavedAccounts(accounts);
+      localStorage.setItem('naverAccounts', JSON.stringify(accounts));
+      localStorage.removeItem(`naverPassword_${accountId}`);
+      console.log('🗑️ 네이버 계정 삭제됨:', accountId);
+    } catch (error) {
+      console.error('계정 삭제 실패:', error);
+    }
+  };
+
+  // 저장된 자격 증명 로드
+  useEffect(() => {
+    loadSavedAccounts();
   }, []);
+
+  // 외부 클릭 시 계정 선택기 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showAccountSelector) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.account-selector-container')) {
+          setShowAccountSelector(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAccountSelector]);
   
   // 이미지 상태 확인 함수 - 발행 정보와 동일한 로직 사용
   const checkImageStatus = (): { hasIncompleteImages: boolean; incompleteCount: number; totalCount: number } => {
@@ -2592,7 +2706,12 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       const loginStatus = await performNaverLogin(naverCredentials);
       
       if (loginStatus === 'success') {
-        // 로그인 성공
+        // 로그인 성공 - 계정 자동 저장 (성공한 로그인만)
+        if (naverCredentials.username && naverCredentials.password) {
+          saveAccount(naverCredentials.username, naverCredentials.password);
+          setSaveCredentials(true);
+        }
+        
         setPublishStatus(prev => ({ 
           ...prev, 
           isLoggedIn: true,
@@ -2764,26 +2883,68 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   아이디
                 </label>
-                <input
-                  type="text"
-                  value={naverCredentials.username}
-                  onChange={(e) => {
-                    const newCredentials = { ...naverCredentials, username: e.target.value };
-                    setNaverCredentials(newCredentials);
-                    
-                    // 체크박스가 선택되어 있으면 즉시 저장
-                    if (saveCredentials && newCredentials.username && newCredentials.password) {
-                      try {
-                        localStorage.setItem('naverCredentials', JSON.stringify(newCredentials));
-                      } catch (error) {
-                        console.error('자격 증명 저장 실패:', error);
-                      }
+                <div className="relative account-selector-container">
+                  <input
+                    type="text"
+                    value={naverCredentials.username}
+                    onChange={(e) => {
+                      setNaverCredentials({ ...naverCredentials, username: e.target.value });
+                    }}
+                    placeholder="네이버 아이디"
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-10"
+                    disabled={publishStatus.isPublishing}
+                  />
+                  {savedAccounts.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAccountSelector(!showAccountSelector)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      disabled={publishStatus.isPublishing}
+                      title="저장된 계정 선택"
+                    >
+                      👤
+                    </button>
+                  )}
+                </div>
+                
+                {/* 계정 선택 드롭다운 */}
+                {showAccountSelector && savedAccounts.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div className="p-2 text-xs text-gray-500 bg-gray-50 border-b">
+                      저장된 계정 ({savedAccounts.length}개)
+                    </div>
+                    {savedAccounts
+                      .sort((a, b) => b.lastUsed - a.lastUsed)
+                      .map((account) => (
+                        <div key={account.id} className="flex items-center justify-between p-2 hover:bg-gray-50 border-b last:border-b-0">
+                          <button
+                            type="button"
+                            onClick={() => selectAccount(account)}
+                            className="flex-1 text-left text-sm text-gray-700 hover:text-gray-900"
+                          >
+                            <div className="font-medium">{account.username}</div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(account.lastUsed).toLocaleDateString()} 사용
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`계정 "${account.username}"을(를) 삭제하시겠습니까?`)) {
+                                deleteAccount(account.id);
+                              }
+                            }}
+                            className="ml-2 p-1 text-red-400 hover:text-red-600 transition-colors"
+                            title="계정 삭제"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      ))
                     }
-                  }}
-                  placeholder="네이버 아이디"
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  disabled={publishStatus.isPublishing}
-                />
+                  </div>
+                )}
               </div>
               
               <div>
@@ -2794,17 +2955,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                   type="password"
                   value={naverCredentials.password}
                   onChange={(e) => {
-                    const newCredentials = { ...naverCredentials, password: e.target.value };
-                    setNaverCredentials(newCredentials);
-                    
-                    // 체크박스가 선택되어 있으면 즉시 저장
-                    if (saveCredentials && newCredentials.username && newCredentials.password) {
-                      try {
-                        localStorage.setItem('naverCredentials', JSON.stringify(newCredentials));
-                      } catch (error) {
-                        console.error('자격 증명 저장 실패:', error);
-                      }
-                    }
+                    setNaverCredentials({ ...naverCredentials, password: e.target.value });
                   }}
                   placeholder="비밀번호"
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -2834,7 +2985,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
               {/* 자격 증명 저장 체크박스 */}
               <div className="flex items-center space-x-2 mt-3">
                 <div 
-                  onClick={() => !publishStatus.isPublishing && handleCredentialSave(!saveCredentials)}
+                  onClick={() => !publishStatus.isPublishing && setSaveCredentials(!saveCredentials)}
                   className={`w-4 h-4 border-2 rounded cursor-pointer flex items-center justify-center ${
                     saveCredentials 
                       ? 'bg-blue-600 border-blue-600' 
@@ -2849,17 +3000,17 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                   )}
                 </div>
                 <label 
-                  onClick={() => !publishStatus.isPublishing && handleCredentialSave(!saveCredentials)}
+                  onClick={() => !publishStatus.isPublishing && setSaveCredentials(!saveCredentials)}
                   className="text-sm text-gray-600 cursor-pointer select-none"
                 >
-                  아이디/비밀번호 저장 (다음에도 사용)
+                  성공한 로그인 계정 자동 저장
                 </label>
               </div>
               
               <div className="mt-2">
                 <div className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
                   🔒 로그인 정보는 발행 목적으로만 사용됩니다
-                  {saveCredentials && <><br/>✅ 자격 증명이 로컬에 안전하게 저장됩니다</>}
+                  {saveCredentials && <><br/>✅ 성공한 로그인 계정이 자동으로 저장됩니다</>}
                 </div>
               </div>
             </div>
