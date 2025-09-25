@@ -34,6 +34,11 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
   const [savedAccounts, setSavedAccounts] = useState<Array<{id: string, username: string, lastUsed: number}>>([]);
   const [showAccountSelector, setShowAccountSelector] = useState<boolean>(false);
   
+  // 계정별 게시판 목록 관리
+  const [accountBoards, setAccountBoards] = useState<{[accountId: string]: string[]}>({});
+  const [showBoardSelector, setShowBoardSelector] = useState<boolean>(false);
+  
+  
   const [publishStatus, setPublishStatus] = useState<PublishStatus>({
     isPublishing: false,
     isLoggedIn: false,
@@ -90,6 +95,8 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
               password: savedPassword
             });
             setSaveCredentials(true);
+            // 해당 계정의 게시판 목록 로드
+            loadAccountBoards(mostRecent.id);
           }
         }
       } else {
@@ -105,8 +112,40 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
           }
         }
       }
+      
+      // 전체 계정별 게시판 데이터 로드
+      loadAllAccountBoards();
     } catch (error) {
       console.error('저장된 계정 목록 로드 실패:', error);
+    }
+  };
+
+  // 모든 계정의 게시판 데이터 로드
+  const loadAllAccountBoards = () => {
+    try {
+      const saved = localStorage.getItem('accountBoards');
+      if (saved) {
+        const boards = JSON.parse(saved);
+        setAccountBoards(boards);
+      }
+    } catch (error) {
+      console.error('계정별 게시판 데이터 로드 실패:', error);
+    }
+  };
+
+  // 특정 계정의 게시판 목록 로드
+  const loadAccountBoards = (accountId: string) => {
+    try {
+      const saved = localStorage.getItem('accountBoards');
+      if (saved) {
+        const allBoards = JSON.parse(saved);
+        if (allBoards[accountId] && allBoards[accountId].length > 0) {
+          // 가장 최근 사용한 게시판을 기본값으로 설정 (선택사항)
+          // setBoardCategory(allBoards[accountId][0]);
+        }
+      }
+    } catch (error) {
+      console.error('계정 게시판 목록 로드 실패:', error);
     }
   };
 
@@ -161,6 +200,10 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         );
         setSavedAccounts(accounts);
         localStorage.setItem('naverAccounts', JSON.stringify(accounts));
+        
+        // 해당 계정의 게시판 목록 로드하고 게시판 필드 초기화
+        loadAccountBoards(account.id);
+        setBoardCategory('');
       }
     } catch (error) {
       console.error('계정 선택 실패:', error);
@@ -174,9 +217,112 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       setSavedAccounts(accounts);
       localStorage.setItem('naverAccounts', JSON.stringify(accounts));
       localStorage.removeItem(`naverPassword_${accountId}`);
+      
+      // 해당 계정의 게시판 데이터도 삭제
+      const newAccountBoards = {...accountBoards};
+      delete newAccountBoards[accountId];
+      setAccountBoards(newAccountBoards);
+      localStorage.setItem('accountBoards', JSON.stringify(newAccountBoards));
+      
       console.log('🗑️ 네이버 계정 삭제됨:', accountId);
     } catch (error) {
       console.error('계정 삭제 실패:', error);
+    }
+  };
+
+  // 계정별 게시판 저장 함수
+  const saveBoardForAccount = (accountId: string, boardName: string) => {
+    if (!boardName.trim()) return;
+    
+    try {
+      const trimmedBoardName = boardName.trim();
+      const currentBoards = accountBoards[accountId] || [];
+      
+      // 중복 체크 - 이미 있으면 맨 앞으로 이동, 없으면 추가
+      const filteredBoards = currentBoards.filter(board => board !== trimmedBoardName);
+      const newBoards = [trimmedBoardName, ...filteredBoards].slice(0, 10); // 최대 10개까지만 저장
+      
+      const newAccountBoards = {
+        ...accountBoards,
+        [accountId]: newBoards
+      };
+      
+      setAccountBoards(newAccountBoards);
+      localStorage.setItem('accountBoards', JSON.stringify(newAccountBoards));
+      console.log(`📋 계정 ${accountId}에 게시판 "${trimmedBoardName}" 저장됨`);
+    } catch (error) {
+      console.error('게시판 저장 실패:', error);
+    }
+  };
+
+  // 게시판 선택 함수
+  const selectBoard = (boardName: string) => {
+    console.log('📋 게시판 선택됨:', boardName);
+    setBoardCategory(boardName);
+    setShowBoardSelector(false);
+    console.log('📋 게시판 설정 완료, 드롭다운 닫기');
+  };
+
+
+  // 게시판 삭제 함수
+  const deleteBoardFromAccount = (accountId: string, boardName: string) => {
+    try {
+      const currentBoards = accountBoards[accountId] || [];
+      const newBoards = currentBoards.filter(board => board !== boardName);
+      
+      const newAccountBoards = {
+        ...accountBoards,
+        [accountId]: newBoards
+      };
+      
+      setAccountBoards(newAccountBoards);
+      localStorage.setItem('accountBoards', JSON.stringify(newAccountBoards));
+      console.log(`🗑️ 게시판 "${boardName}" 삭제됨`);
+    } catch (error) {
+      console.error('게시판 삭제 실패:', error);
+    }
+  };
+
+  // 게시판 순서 변경 함수 (위로)
+  const moveBoardUp = (accountId: string, index: number) => {
+    if (index === 0) return; // 이미 맨 위
+    
+    try {
+      const currentBoards = [...(accountBoards[accountId] || [])];
+      [currentBoards[index - 1], currentBoards[index]] = [currentBoards[index], currentBoards[index - 1]];
+      
+      const newAccountBoards = {
+        ...accountBoards,
+        [accountId]: currentBoards
+      };
+      
+      setAccountBoards(newAccountBoards);
+      localStorage.setItem('accountBoards', JSON.stringify(newAccountBoards));
+      console.log('📋 게시판 순서 변경: 위로 이동');
+    } catch (error) {
+      console.error('게시판 순서 변경 실패:', error);
+    }
+  };
+
+  // 게시판 순서 변경 함수 (아래로)
+  const moveBoardDown = (accountId: string, index: number) => {
+    const currentBoards = accountBoards[accountId] || [];
+    if (index === currentBoards.length - 1) return; // 이미 맨 아래
+    
+    try {
+      const newBoards = [...currentBoards];
+      [newBoards[index], newBoards[index + 1]] = [newBoards[index + 1], newBoards[index]];
+      
+      const newAccountBoards = {
+        ...accountBoards,
+        [accountId]: newBoards
+      };
+      
+      setAccountBoards(newAccountBoards);
+      localStorage.setItem('accountBoards', JSON.stringify(newAccountBoards));
+      console.log('📋 게시판 순서 변경: 아래로 이동');
+    } catch (error) {
+      console.error('게시판 순서 변경 실패:', error);
     }
   };
 
@@ -185,20 +331,35 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
     loadSavedAccounts();
   }, []);
 
-  // 외부 클릭 시 계정 선택기 닫기
+  // 게시판 선택 완료 시 저장
+  useEffect(() => {
+    if (selectedBoardCategory && selectedBoardCategory !== '알 수 없음' && naverCredentials.username && publishStatus.success) {
+      const accountId = btoa(naverCredentials.username);
+      console.log('📋 게시판 자동 저장:', selectedBoardCategory, 'for 계정:', naverCredentials.username);
+      saveBoardForAccount(accountId, selectedBoardCategory);
+    }
+  }, [selectedBoardCategory, naverCredentials.username, publishStatus.success]);
+
+
+  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showAccountSelector) {
-        const target = event.target as HTMLElement;
-        if (!target.closest('.account-selector-container')) {
-          setShowAccountSelector(false);
-        }
+      const target = event.target as HTMLElement;
+      
+      if (showAccountSelector && !target.closest('.account-selector-container')) {
+        console.log('👤 외부 클릭으로 계정 선택기 닫기');
+        setShowAccountSelector(false);
+      }
+      
+      if (showBoardSelector && !target.closest('.board-selector-container')) {
+        console.log('📋 외부 클릭으로 게시판 선택기 닫기');
+        setShowBoardSelector(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showAccountSelector]);
+  }, [showAccountSelector, showBoardSelector]);
   
   // 이미지 상태 확인 함수 - 발행 정보와 동일한 로직 사용
   const checkImageStatus = (): { hasIncompleteImages: boolean; incompleteCount: number; totalCount: number } => {
@@ -2499,8 +2660,14 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
           if (categoryResult.success) {
             console.log('📂 카테고리 선택 완료');
             if (categoryResult.selectedCategory) {
+              console.log('🔥 setSelectedBoardCategory 호출 중:', categoryResult.selectedCategory);
               setSelectedBoardCategory(categoryResult.selectedCategory);
+              console.log('🔥 setSelectedBoardCategory 호출 완료');
+            } else {
+              console.log('⚠️ categoryResult.selectedCategory가 없음:', categoryResult);
             }
+          } else {
+            console.log('⚠️ 카테고리 선택 실패:', categoryResult);
           }
         }
         
@@ -2667,8 +2834,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       isPublishing: true
     }));
     
-    // 발행 시작 시 선택된 카테고리 초기화
-    setSelectedBoardCategory('');
+    // 발행 시작 시 선택된 카테고리 초기화 (제거 - 카테고리 선택 후에 덮어써질 예정)
     
     try {
       console.log('네이버 로그인 시도:', { username: naverCredentials.username });
@@ -2809,6 +2975,8 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
           error: ''
         }));
         
+        // 게시판 저장은 발행 정보 표시 시점에 처리됨
+        
         const result: PublishResult = {
           success: true,
           message: '네이버 블로그에 로그인 완료! 브라우저에서 글을 작성해주세요.',
@@ -2909,18 +3077,23 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                 
                 {/* 계정 선택 드롭다운 */}
                 {showAccountSelector && savedAccounts.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="account-selector-container absolute z-10 mt-1 w-80 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     <div className="p-2 text-xs text-gray-500 bg-gray-50 border-b">
                       저장된 계정 ({savedAccounts.length}개)
                     </div>
                     {savedAccounts
                       .sort((a, b) => b.lastUsed - a.lastUsed)
                       .map((account) => (
-                        <div key={account.id} className="flex items-center justify-between p-2 hover:bg-gray-50 border-b last:border-b-0">
+                        <div key={account.id} className="flex items-center p-2 hover:bg-gray-50 border-b last:border-b-0 group">
                           <button
                             type="button"
-                            onClick={() => selectAccount(account)}
-                            className="flex-1 text-left text-sm text-gray-700 hover:text-gray-900"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('👤 계정 선택됨:', account.username);
+                              selectAccount(account);
+                            }}
+                            className="flex-1 text-left text-sm text-gray-700 hover:text-gray-900 pr-2"
                           >
                             <div className="font-medium">{account.username}</div>
                             <div className="text-xs text-gray-500">
@@ -2930,15 +3103,16 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                           <button
                             type="button"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
-                              if (confirm(`계정 "${account.username}"을(를) 삭제하시겠습니까?`)) {
+                              if (confirm(`계정 "${account.username}"을(를) 삭제하시겠습니까?\n\n삭제하면 저장된 비밀번호와 게시판 목록도 함께 삭제됩니다.`)) {
                                 deleteAccount(account.id);
                               }
                             }}
-                            className="ml-2 p-1 text-red-400 hover:text-red-600 transition-colors"
-                            title="계정 삭제"
+                            className="px-1 py-0.5 text-xs text-red-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                            title="삭제"
                           >
-                            🗑️
+                            ✕
                           </button>
                         </div>
                       ))
@@ -2969,16 +3143,119 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   게시판 (선택사항)
                 </label>
-                <input
-                  type="text"
-                  value={boardCategory}
-                  onChange={(e) => setBoardCategory(e.target.value)}
-                  placeholder="예: 일상, 강아지건강, 취미생활"
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  disabled={publishStatus.isPublishing}
-                />
+                <div className="relative board-selector-container">
+                  <input
+                    type="text"
+                    value={boardCategory}
+                    onChange={(e) => setBoardCategory(e.target.value)}
+                    placeholder="예: 일상, 강아지건강, 취미생활"
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-10"
+                    disabled={publishStatus.isPublishing}
+                  />
+                  {naverCredentials.username && accountBoards[btoa(naverCredentials.username)]?.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('📋 게시판 선택 버튼 클릭됨, 현재 상태:', showBoardSelector);
+                        console.log('📋 현재 계정의 게시판 목록:', accountBoards[btoa(naverCredentials.username)]);
+                        const newState = !showBoardSelector;
+                        console.log('📋 새로운 상태로 변경:', newState);
+                        setShowBoardSelector(newState);
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      disabled={publishStatus.isPublishing}
+                      title="저장된 게시판 선택"
+                    >
+                      📋
+                    </button>
+                  )}
+                </div>
+                
+                {/* 게시판 선택 드롭다운 */}
+                {showBoardSelector && naverCredentials.username && accountBoards[btoa(naverCredentials.username)]?.length > 0 && (
+                  <div className="board-selector-container absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                    <div className="p-2 text-xs text-gray-500 bg-gray-50 border-b">
+                      이전에 사용한 게시판 ({accountBoards[btoa(naverCredentials.username)].length}개)
+                    </div>
+                    {accountBoards[btoa(naverCredentials.username)].map((board, index) => {
+                      const accountId = btoa(naverCredentials.username);
+                      const isFirst = index === 0;
+                      const isLast = index === accountBoards[accountId].length - 1;
+                      
+                      return (
+                        <div key={index} className="flex items-center p-2 hover:bg-gray-50 border-b last:border-b-0 group">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('📋 게시판 버튼 클릭됨:', board);
+                              selectBoard(board);
+                            }}
+                            className="flex-1 text-left text-sm text-gray-700 hover:text-gray-900 py-1 pr-2"
+                          >
+                            {board}
+                          </button>
+                          
+                          {/* 순서 변경 및 삭제 버튼들 */}
+                          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* 위로 버튼 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                moveBoardUp(accountId, index);
+                              }}
+                              disabled={isFirst}
+                              className={`px-1 py-0.5 text-xs ${isFirst ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'} transition-colors`}
+                              title="위로"
+                            >
+                              ↑
+                            </button>
+                            
+                            {/* 아래로 버튼 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                moveBoardDown(accountId, index);
+                              }}
+                              disabled={isLast}
+                              className={`px-1 py-0.5 text-xs ${isLast ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'} transition-colors`}
+                              title="아래로"
+                            >
+                              ↓
+                            </button>
+                            
+                            {/* 삭제 버튼 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (confirm(`게시판 "${board}"을(를) 삭제하시겠습니까?`)) {
+                                  deleteBoardFromAccount(accountId, board);
+                                }
+                              }}
+                              className="px-1 py-0.5 text-xs text-red-400 hover:text-red-600 transition-colors"
+                              title="삭제"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
                 <p className="text-xs text-gray-500 mt-1">
                   💡 입력하신 게시판명과 일치하는 카테고리를 찾아서 자동으로 선택합니다.
+                  {naverCredentials.username && accountBoards[btoa(naverCredentials.username)]?.length > 0 && (
+                    <><br/>📋 이전에 사용한 게시판은 📋 버튼으로 선택할 수 있습니다.</>
+                  )}
                 </p>
               </div>
               
@@ -3497,6 +3774,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
       <div className="mt-3 text-xs text-gray-500">
         ⚠️ 로그인 정보는 발행 목적으로만 사용되며 저장되지 않습니다.
       </div>
+      
       
     </div>
   );

@@ -53,7 +53,9 @@
       "Bash(npm uninstall:*)",
       "Bash(dir:*)",
       "Bash(npx playwright:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git stash show:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": []
   }
