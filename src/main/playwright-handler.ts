@@ -10,13 +10,72 @@ class PlaywrightService {
   private context: BrowserContext | null = null;
   private page: Page | null = null;
 
+  // 시스템 브라우저 경로 감지
+  private getSystemBrowserPath(): string | null {
+    const os = require('os');
+    const fs = require('fs');
+    const path = require('path');
+
+    if (os.platform() === 'win32') {
+      // Windows에서 Chrome, Edge 경로 순서대로 시도
+      const browserPaths = [
+        // Chrome 경로들
+        path.join('C:', 'Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join('C:', 'Program Files (x86)', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        
+        // Edge 경로들
+        path.join('C:', 'Program Files (x86)', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+        path.join('C:', 'Program Files', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      ];
+
+      for (const browserPath of browserPaths) {
+        if (fs.existsSync(browserPath)) {
+          return browserPath;
+        }
+      }
+    } else if (os.platform() === 'darwin') {
+      // macOS
+      const browserPaths = [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+      ];
+
+      for (const browserPath of browserPaths) {
+        if (fs.existsSync(browserPath)) {
+          return browserPath;
+        }
+      }
+    } else {
+      // Linux
+      const browserPaths = [
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/microsoft-edge',
+      ];
+
+      for (const browserPath of browserPaths) {
+        if (fs.existsSync(browserPath)) {
+          return browserPath;
+        }
+      }
+    }
+
+    return null;
+  }
+
   async initialize(): Promise<boolean> {
     try {
       console.log('Playwright 브라우저 초기화 시작...');
       
+      // 시스템 브라우저 경로 감지
+      const systemBrowserPath = this.getSystemBrowserPath();
+      console.log('시스템 브라우저 경로:', systemBrowserPath || '감지되지 않음, 기본 브라우저 사용');
+      
       // 브라우저 실행 (헤드리스 모드 비활성화)
       this.browser = await chromium.launch({
         headless: false,
+        ...(systemBrowserPath && { executablePath: systemBrowserPath }),
         args: [
           '--disable-blink-features=AutomationControlled',
           '--disable-dev-shm-usage',

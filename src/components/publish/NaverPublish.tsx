@@ -113,7 +113,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
   };
   
   // 카테고리 자동 선택 함수
-  const selectCategoryIfSpecified = async (): Promise<{ success: boolean; selectedCategory?: string }> => {
+  const selectCategoryIfSpecified = async (): Promise<{ success: boolean; selectedCategory?: string; userInput?: string; notFound?: boolean }> => {
     try {
       console.log('📂 카테고리 확인 및 선택 시작...');
       
@@ -2376,20 +2376,10 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         console.log('✅ 발행 설정 팝업 열기 완료');
         await window.electronAPI.playwrightWaitTimeout(1000); // 팝업 로딩 대기
         
-        // 1.5단계: 공감허용 라벨 클릭 먼저 (카테고리 드롭박스에 가려지지 않도록)
-        console.log('💝 공감허용 라벨 클릭...');
-        const sympathyLabelResult = await window.electronAPI.playwrightClickInFrames('label[for="publish-option-sympathy"]', 'PostWriteForm.naver');
+        // 공감허용 체크박스 클릭 기능 제거됨 (사용자 요청)
         
-        if (sympathyLabelResult.success) {
-          console.log('✅ 공감허용 라벨 클릭 완료');
-        } else {
-          console.warn('⚠️ 공감허용 라벨 클릭 실패');
-        }
-        
-        await window.electronAPI.playwrightWaitTimeout(300); // 체크박스 처리 후 잠시 대기
-        
-        // 2단계: 카테고리 자동 선택 (공감허용 후에 처리)
-        if (publishOption !== 'temp') {
+        // 2단계: 카테고리 자동 선택
+        if (publishOption === 'immediate' || publishOption === 'scheduled') {
           console.log('📂 카테고리 선택 시작...');
           const categoryResult = await selectCategoryIfSpecified();
           if (categoryResult.success) {
@@ -2593,7 +2583,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
         throw new Error(`브라우저 초기화 실패: ${initResult.error}`);
       }
       
-      // 2단계: 네이버 로그인
+      // 3단계: 네이버 로그인
       setPublishStatus(prev => ({
         ...prev,
         error: '네이버 로그인 중...'
@@ -3172,7 +3162,7 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                 <span className="text-purple-700 font-medium mx-1">•</span>
                 <span className="text-purple-700 font-medium flex-shrink-0">서브 키워드:</span>
                 <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">
-                  {data.subKeyword || '없음'}
+                  {data.subKeywords?.join(', ') || '없음'}
                 </span>
               </div>
               
@@ -3338,11 +3328,11 @@ const NaverPublish: React.FC<PublishComponentProps> = ({
                   <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs">
                     {data.keyword}
                   </span>
-                  {data.subKeyword && (
+                  {data.subKeywords?.length > 0 && (
                     <>
                       <span className="mx-1">•</span>
                       <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs">
-                        {data.subKeyword}
+                        {data.subKeywords.join(', ')}
                       </span>
                     </>
                   )}

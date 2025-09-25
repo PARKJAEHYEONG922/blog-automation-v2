@@ -253,7 +253,11 @@ const App: React.FC = () => {
               updateWorkflowData(data);
               // 완료 처리
             }}
-            onBack={() => setCurrentStep(2)}
+            onBack={() => {
+              console.log('🔙 Step3에서 뒤로가기 - 이미지 데이터 유지 플래그 설정');
+              setIsReturningFromLaterStep(true);
+              setCurrentStep(2);
+            }}
           />
         );
       default:
