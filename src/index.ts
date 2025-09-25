@@ -376,9 +376,18 @@ const setupIpcHandlers = () => {
     data: number[];
   }) => {
     try {
+      console.log('💾 파일 저장 요청:', { defaultPath, pathType: typeof defaultPath });
+      
+      // defaultPath가 유효한 문자열인지 확인
+      const validDefaultPath = typeof defaultPath === 'string' && defaultPath.trim() !== '' 
+        ? defaultPath 
+        : 'image.png'; // 기본 파일명
+      
+      console.log('💾 사용할 기본 경로:', validDefaultPath);
+      
       const { dialog } = require('electron');
       const result = await dialog.showSaveDialog({
-        defaultPath,
+        defaultPath: validDefaultPath,
         filters
       });
       

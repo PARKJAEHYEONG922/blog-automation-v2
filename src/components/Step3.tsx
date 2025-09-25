@@ -149,14 +149,15 @@ const Step3: React.FC<Step3Props> = ({ data, onComplete, onBack }) => {
         const uint8Array = new Uint8Array(arrayBuffer);
         
         // Electron의 save dialog를 통해 저장
-        const result = await (window as any).electronAPI.saveFile({
-          defaultPath: filename,
-          filters: [
+        console.log('💾 saveFile 호출 준비:', { filename, filenameType: typeof filename });
+        const result = await (window as any).electronAPI.saveFile(
+          filename, // defaultPath
+          [
             { name: 'PNG 이미지', extensions: ['png'] },
             { name: '모든 파일', extensions: ['*'] }
-          ],
-          data: Array.from(uint8Array)
-        });
+          ], // filters
+          Array.from(uint8Array) // data
+        );
         
         if (result.success) {
           console.log('✅ 이미지 저장 성공:', result.filePath);
