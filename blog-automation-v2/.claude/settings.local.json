@@ -55,7 +55,10 @@
       "Bash(npx playwright:*)",
       "Bash(powershell:*)",
       "Bash(git stash show:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" release create v1.0.12 \"release\\블로그 자동화 Setup 1.0.12.exe\" \"release\\latest.yml\" --title \"v1.0.12 - 다중 계정 및 게시판 관리 기능 추가\" --notes \"## 새로운 기능\n- 🔐 다중 네이버 계정 저장 및 선택 기능 추가\n- 📋 계정별 게시판 관리 기능 구현 (저장, 선택, 삭제, 순서 변경)\n- 💾 localStorage를 활용한 데이터 지속성 보장\n- 🎯 성공한 발행 후 자동 게시판 저장\n\n## 개선사항  \n- 📱 드롭다운 UI 개선 및 외부 클릭 처리\n- 🔄 SimpleDialog 원래 modal 방식으로 복구\n- 🎨 계정/게시판 선택 인터페이스 개선\n- ⚡ 이전 사용 게시판 빠른 선택 기능\n\n## 기능 상세\n- 네이버 계정을 여러개 저장하고 선택 가능\n- 각 계정마다 사용한 게시판 자동 저장 (최대 10개)\n- 게시판 목록에서 순서 변경 및 삭제 가능  \n- 발행 성공 시 해당 게시판 자동 저장\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\")",
+      "Bash(npm init:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

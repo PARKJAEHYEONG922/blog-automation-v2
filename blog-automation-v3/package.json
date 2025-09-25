@@ -1,0 +1,53 @@
+{
+  "name": "blog-automation-v3",
+  "version": "1.0.0",
+  "description": "AI 블로그 자동화 툴 v3 - 클로드 웹 연동",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production && electron-builder",
+    "build:dev": "webpack --mode development",
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["blog", "automation", "ai", "claude"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "css-loader": "^6.8.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4",
+    "html-webpack-plugin": "^5.5.3",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.0.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "playwright": "^1.40.0",
+    "marked": "^9.0.0"
+  },
+  "build": {
+    "appId": "com.blog.automation.v3",
+    "productName": "블로그 자동화 v3",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false
+    }
+  }
+}
