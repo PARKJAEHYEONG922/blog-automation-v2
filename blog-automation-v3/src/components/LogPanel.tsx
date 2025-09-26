@@ -88,97 +88,43 @@ const LogPanel: React.FC<LogPanelProps> = ({ isVisible }) => {
   }
 
   return (
-    <div style={{
-      width: '320px',
-      backgroundColor: 'white',
-      borderLeft: '1px solid #e5e7eb',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%'
-    }}>
-      {/* 헤더 */}
-      <div style={{
-        padding: '16px',
-        borderBottom: '1px solid #e5e7eb',
-        backgroundColor: '#f9fafb'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '8px'
-        }}>
-          <h3 style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#374151',
-            margin: 0,
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-          }}>
-            실시간 로그
+    <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full shadow-lg">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 bg-gray-50/50">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+            <span className="text-base">📝</span>
+            <span>실시간 로그</span>
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={clearLogs}
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                backgroundColor: '#e5e7eb',
-                color: '#374151',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s'
-              }}
-              title="로그 지우기"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#d1d5db';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#e5e7eb';
-              }}
-            >
-              🗑️
-            </button>
-          </div>
+          <button
+            onClick={clearLogs}
+            className="px-2 py-1 text-xs bg-gray-200 text-gray-600 border-none rounded hover:bg-gray-300 transition-colors duration-200"
+            title="로그 지우기"
+          >
+            🗑️ 지우기
+          </button>
         </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '12px',
-          color: '#6b7280'
-        }}>
-          <span>총 {logs.length}개</span>
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            cursor: 'pointer'
-          }}>
+        <div className="flex items-center space-x-4 text-xs text-gray-500">
+          <span className="flex items-center space-x-1">
+            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+            <span>총 {logs.length}개</span>
+          </span>
+          <label className="flex items-center space-x-1.5 cursor-pointer">
             <input
               type="checkbox"
               checked={isAutoScroll}
               onChange={(e) => setIsAutoScroll(e.target.checked)}
-              style={{
-                width: '12px',
-                height: '12px'
-              }}
+              className="w-3 h-3 text-blue-600 rounded focus:ring-blue-500 focus:ring-2"
             />
             <span>자동 스크롤</span>
           </label>
         </div>
       </div>
 
-      {/* 로그 목록 */}
+      {/* Log List */}
       <div 
         ref={logContainerRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '8px',
-          gap: '4px'
-        }}
+        className="flex-1 overflow-y-auto p-2 space-y-2"
         onScroll={(e) => {
           const target = e.target as HTMLDivElement;
           const isScrolledToBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 10;
@@ -186,57 +132,34 @@ const LogPanel: React.FC<LogPanelProps> = ({ isVisible }) => {
         }}
       >
         {logs.length === 0 ? (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            color: '#6b7280',
-            fontSize: '14px'
-          }}>
-            로그가 없습니다
+          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+            <div className="text-center">
+              <div className="text-2xl mb-2">📄</div>
+              <div>로그가 없습니다</div>
+            </div>
           </div>
         ) : (
           logs.map((log, index) => (
             <div
               key={index}
-              style={{
-                padding: '8px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                border: '1px solid #e5e7eb',
-                marginBottom: '4px',
-                color: log.level === 'error' ? '#dc2626' : log.level === 'warning' ? '#d97706' : '#2563eb',
-                backgroundColor: log.level === 'error' ? '#fef2f2' : log.level === 'warning' ? '#fffbeb' : '#eff6ff'
-              }}
+              className={`p-3 rounded-lg text-xs border transition-all duration-200 hover:shadow-sm ${
+                log.level === 'error' 
+                  ? 'text-red-700 bg-red-50 border-red-200' 
+                  : log.level === 'warning' 
+                  ? 'text-amber-700 bg-amber-50 border-amber-200' 
+                  : 'text-blue-700 bg-blue-50 border-blue-200'
+              }`}
             >
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '4px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  <span>{getLogLevelIcon(log.level)}</span>
-                  <span style={{
-                    fontWeight: '500',
-                    textTransform: 'capitalize'
-                  }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-sm">{getLogLevelIcon(log.level)}</span>
+                  <span className="font-medium capitalize">
                     {log.level}
                   </span>
                 </div>
-                <span style={{ color: '#6b7280' }}>{formatTime(log.timestamp)}</span>
+                <span className="text-gray-500 text-xs">{formatTime(log.timestamp)}</span>
               </div>
-              <div style={{
-                color: '#1f2937',
-                wordBreak: 'break-all',
-                whiteSpace: 'pre-wrap',
-                lineHeight: '1.25'
-              }}>
+              <div className="text-gray-800 break-all whitespace-pre-wrap leading-relaxed">
                 {log.message}
               </div>
             </div>

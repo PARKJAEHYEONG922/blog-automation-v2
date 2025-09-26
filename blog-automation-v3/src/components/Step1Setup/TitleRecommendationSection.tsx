@@ -46,92 +46,70 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
     }
   };
   return (
-    <div style={{
-      backgroundColor: '#f8f9fa',
-      border: '1px solid #dee2e6',
-      borderRadius: '10px',
-      padding: '20px',
-      marginBottom: '20px'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        marginBottom: '15px'
-      }}>
-        <h4 style={{ color: '#495057', margin: 0, fontSize: '16px' }}>
-          🎯 AI 추천 제목 
-          {generatedTitles.length > 0 && <span style={{ color: '#28a745', fontWeight: 'normal' }}>({generatedTitles.length}개 생성됨)</span>}
-        </h4>
+    <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 mb-5 shadow-sm hover:shadow-md transition-shadow duration-300">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
+            🎯
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-800">AI 추천 제목</h3>
+            {generatedTitles.length > 0 && (
+              <span className="text-sm text-green-600 font-medium">
+                ({generatedTitles.length}개 생성됨)
+              </span>
+            )}
+          </div>
+        </div>
         
         {/* 제목 생성 버튼들 - 오른쪽 배치 */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="flex space-x-3">
           {/* 더미 데이터 버튼 */}
           <button
             onClick={handleLoadDummy}
             disabled={isGeneratingTitles}
-            style={{
-              backgroundColor: '#6c757d',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 16px',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              cursor: isGeneratingTitles ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.3s ease',
-              minWidth: '110px',
-              justifyContent: 'center'
-            }}
+            className={`
+              inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+              ${isGeneratingTitles 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-gray-500 hover:bg-gray-600 hover:-translate-y-0.5 shadow-lg shadow-gray-500/25'
+              } text-white
+            `}
             title="테스트용 더미 제목 10개를 불러옵니다"
           >
-            🧪 더미 데이터
+            <span>🧪</span>
+            <span>더미 데이터</span>
           </button>
           
           {/* 제목 생성 버튼 */}
           <button
             onClick={onGenerateTitles}
             disabled={isGeneratingTitles || !mainKeyword.trim()}
-            style={{
-              backgroundColor: isGeneratingTitles ? '#6c757d' : (generatedTitles.length > 0 ? '#28a745' : '#007bff'),
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 18px',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              cursor: isGeneratingTitles ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              opacity: !mainKeyword.trim() ? 0.5 : 1,
-              transition: 'all 0.3s ease',
-              minWidth: '140px',
-              justifyContent: 'center'
-            }}
+            className={`
+              inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+              ${isGeneratingTitles 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : generatedTitles.length > 0 
+                  ? 'bg-green-500 hover:bg-green-600 hover:-translate-y-0.5 shadow-lg shadow-green-500/25' 
+                  : 'bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 shadow-lg shadow-blue-500/25'
+              } text-white
+              ${!mainKeyword.trim() ? 'opacity-50' : ''}
+            `}
           >
             {isGeneratingTitles ? (
               <>
-                <div style={{
-                  width: '14px',
-                  height: '14px',
-                  border: '2px solid #fff',
-                  borderTop: '2px solid transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                생성 중...
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>생성 중...</span>
               </>
             ) : generatedTitles.length > 0 ? (
               <>
-                🔄 재생성
+                <span>🔄</span>
+                <span>재생성</span>
               </>
             ) : (
               <>
-                ✨ 제목 생성
+                <span>✨</span>
+                <span>제목 생성</span>
               </>
             )}
           </button>
@@ -141,62 +119,33 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
       {/* 제목이 생성되기 전 안내 메시지 및 직접 입력 */}
       {generatedTitles.length === 0 && !isGeneratingTitles && (
         <div>
-          <div style={{
-            textAlign: 'center',
-            padding: '20px',
-            color: '#6c757d',
-            fontSize: '14px',
-            backgroundColor: '#fff',
-            border: '2px dashed #dee2e6',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
+          <div className="text-center p-5 text-gray-600 text-sm bg-amber-50 border-2 border-dashed border-amber-300 rounded-xl mb-4">
             📝 메인키워드를 입력하고 "제목 생성" 버튼을 클릭해주세요
           </div>
           
-          <div style={{ 
-            textAlign: 'center', 
-            fontSize: '12px', 
-            color: '#6c757d',
-            marginBottom: '16px'
-          }}>
+          <div className="text-center text-xs text-gray-500 mb-4">
             또는
           </div>
           
           {/* 직접 제목 입력 (항상 표시) */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
-              ✍️ 직접 제목 입력
+          <div className="mb-5">
+            <label className="flex items-center space-x-2 mb-3 text-sm font-semibold text-gray-700">
+              <span>✍️</span>
+              <span>직접 제목 입력</span>
             </label>
             <input
               type="text"
               value={customTitle}
               onChange={(e) => setCustomTitle(e.target.value)}
               placeholder="사용하고 싶은 제목을 입력해주세요..."
-              style={{
-                width: '100%',
-                border: '2px solid #dee2e6',
-                borderRadius: '8px',
-                padding: '12px',
-                fontSize: '14px',
-                backgroundColor: '#fff',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => e.currentTarget.style.borderColor = '#007bff'}
-              onBlur={(e) => e.currentTarget.style.borderColor = '#dee2e6'}
+              className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm bg-gray-50 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all duration-200 placeholder-gray-400"
             />
             {customTitle.trim() && (
-              <div style={{
-                marginTop: '12px',
-                padding: '12px',
-                backgroundColor: '#e8f5e8',
-                border: '1px solid #c3e6cb',
-                borderRadius: '6px'
-              }}>
-                <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="text-xs text-green-700 font-semibold mb-1">
                   ✅ 입력된 제목
                 </div>
-                <div style={{ fontSize: '14px', color: '#155724', fontWeight: 'bold' }}>
+                <div className="text-sm text-green-800 font-semibold">
                   {customTitle}
                 </div>
               </div>
@@ -205,39 +154,20 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
           
           {/* 직접 입력 제목으로 글 생성 버튼 */}
           {customTitle.trim() && (
-            <div style={{ textAlign: 'center' }}>
+            <div className="text-center">
               <button
                 onClick={onStartGeneration}
                 disabled={isGenerating}
-                style={{
-                  backgroundColor: isGenerating ? '#6c757d' : '#28a745',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '14px 28px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: isGenerating ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  margin: '0 auto',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isGenerating) {
-                    e.currentTarget.style.backgroundColor = '#218838';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isGenerating) {
-                    e.currentTarget.style.backgroundColor = '#28a745';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }
-                }}
+                className={`
+                  inline-flex items-center space-x-2 px-6 py-3 rounded-xl text-base font-bold transition-all duration-200
+                  ${isGenerating 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-green-500 hover:bg-green-600 hover:-translate-y-1 shadow-lg shadow-green-500/25'
+                  } text-white
+                `}
               >
-                🚀 입력한 제목으로 글 생성하기
+                <span>🚀</span>
+                <span>입력한 제목으로 글 생성하기</span>
               </button>
             </div>
           )}
@@ -246,24 +176,8 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
       
       {/* 제목 생성 중 표시 */}
       {isGeneratingTitles && (
-        <div style={{
-          textAlign: 'center',
-          padding: '30px',
-          color: '#007bff',
-          fontSize: '14px',
-          backgroundColor: '#fff',
-          border: '2px solid #007bff',
-          borderRadius: '8px'
-        }}>
-          <div style={{
-            width: '24px',
-            height: '24px',
-            border: '3px solid #007bff',
-            borderTop: '3px solid transparent',
-            borderRadius: '50%',
-            margin: '0 auto 12px auto',
-            animation: 'spin 1s linear infinite'
-          }}></div>
+        <div className="text-center p-8 text-blue-600 text-sm bg-blue-50 border-2 border-blue-200 rounded-xl">
+          <div className="w-6 h-6 border-3 border-blue-500 border-t-transparent rounded-full mx-auto mb-3 animate-spin"></div>
           AI가 매력적인 제목 10개를 생성하고 있습니다...
         </div>
       )}
@@ -271,22 +185,16 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
       {/* 제목 선택 드롭다운 */}
       {generatedTitles.length > 0 && !isGeneratingTitles && (
         <>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
-              사용할 제목 선택 *
+          <div className="mb-5">
+            <label className="flex items-center space-x-2 mb-3 text-sm font-semibold text-gray-700">
+              <span className="text-red-500">*</span>
+              <span>사용할 제목 선택</span>
+              <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">필수</span>
             </label>
             <select
               value={selectedTitle}
               onChange={(e) => onSelectTitle(e.target.value)}
-              style={{
-                width: '100%',
-                border: '2px solid #dee2e6',
-                borderRadius: '8px',
-                padding: '12px',
-                fontSize: '14px',
-                backgroundColor: '#fff',
-                cursor: 'pointer'
-              }}
+              className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm bg-gray-50 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all duration-200 cursor-pointer"
             >
               <option value="">제목을 선택해주세요...</option>
               {generatedTitles.map((title, index) => (
@@ -300,39 +208,24 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
           
           {/* 커스텀 제목 입력 */}
           {selectedTitle === '__CUSTOM__' && (
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
-                ✍️ 직접 제목 입력
+            <div className="mb-5">
+              <label className="flex items-center space-x-2 mb-3 text-sm font-semibold text-gray-700">
+                <span>✍️</span>
+                <span>직접 제목 입력</span>
               </label>
               <input
                 type="text"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
                 placeholder="사용하고 싶은 제목을 입력해주세요..."
-                style={{
-                  width: '100%',
-                  border: '2px solid #dee2e6',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  fontSize: '14px',
-                  backgroundColor: '#fff',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#007bff'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#dee2e6'}
+                className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 text-sm bg-gray-50 focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all duration-200 placeholder-gray-400"
               />
               {customTitle.trim() && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '12px',
-                  backgroundColor: '#e8f5e8',
-                  border: '1px solid #c3e6cb',
-                  borderRadius: '6px'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="text-xs text-green-700 font-semibold mb-1">
                     ✅ 입력된 제목
                   </div>
-                  <div style={{ fontSize: '14px', color: '#155724', fontWeight: 'bold' }}>
+                  <div className="text-sm text-green-800 font-semibold">
                     {customTitle}
                   </div>
                 </div>
@@ -342,17 +235,11 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
           
           {/* 선택된 제목 표시 (AI 추천 제목인 경우) */}
           {selectedTitle && selectedTitle !== '__CUSTOM__' && (
-            <div style={{
-              marginBottom: '20px',
-              padding: '12px',
-              backgroundColor: '#e8f5e8',
-              border: '1px solid #c3e6cb',
-              borderRadius: '6px'
-            }}>
-              <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
+            <div className="mb-5 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="text-xs text-green-700 font-semibold mb-1">
                 ✅ 선택된 제목
               </div>
-              <div style={{ fontSize: '14px', color: '#155724', fontWeight: 'bold' }}>
+              <div className="text-sm text-green-800 font-semibold">
                 {selectedTitle}
               </div>
             </div>
@@ -360,55 +247,29 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
           
           {/* 글 생성 버튼 */}
           {((selectedTitle && selectedTitle !== '__CUSTOM__') || (selectedTitle === '__CUSTOM__' && customTitle.trim())) && (
-            <div style={{ textAlign: 'center' }}>
+            <div className="text-center">
               <button
                 onClick={() => {
                   onStartGeneration();
                 }}
                 disabled={isGenerating}
-                style={{
-                  backgroundColor: isGenerating ? '#6c757d' : '#28a745',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '14px 28px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: isGenerating ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  margin: '0 auto',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isGenerating) {
-                    e.currentTarget.style.backgroundColor = '#218838';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isGenerating) {
-                    e.currentTarget.style.backgroundColor = '#28a745';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }
-                }}
+                className={`
+                  inline-flex items-center space-x-2 px-6 py-3 rounded-xl text-base font-bold transition-all duration-200
+                  ${isGenerating 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-green-500 hover:bg-green-600 hover:-translate-y-1 shadow-lg shadow-green-500/25'
+                  } text-white
+                `}
               >
                 {isGenerating ? (
                   <>
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      border: '2px solid #fff',
-                      borderTop: '2px solid transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }}></div>
-                    글 생성 중...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>글 생성 중...</span>
                   </>
                 ) : (
                   <>
-                    🚀 {selectedTitle === '__CUSTOM__' ? '입력한' : '선택한'} 제목으로 글 생성하기
+                    <span>🚀</span>
+                    <span>{selectedTitle === '__CUSTOM__' ? '입력한' : '선택한'} 제목으로 글 생성하기</span>
                   </>
                 )}
               </button>

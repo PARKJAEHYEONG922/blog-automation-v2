@@ -3,7 +3,6 @@ import Step1Setup from './components/Step1Setup';
 import Step2Generation from './components/Step2Generation';
 import LLMSettings from './components/LLMSettings';
 import LogPanel from './components/LogPanel';
-import './App.css';
 
 type Step = 1 | 2;
 
@@ -92,143 +91,57 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{
-        backgroundColor: 'white',
-        borderBottom: '1px solid #e2e8f0',
-        flexShrink: 0
-      }}>
-        <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '0 24px'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            height: '56px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                backgroundColor: '#3b82f6',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px'
-              }}>
-                <span>🤖</span>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo and Title */}
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-lg">🤖</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h1 style={{
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  color: '#0f172a',
-                  margin: 0,
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
-                }}>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-bold text-gray-900 leading-tight">
                   AI 블로그 자동화 V3
                 </h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: '#64748b', marginTop: '4px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: aiModelStatus.writing !== '미설정' ? '#10b981' : '#ef4444' }}></span>
+                <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+                  <div className="flex items-center space-x-1.5">
+                    <div className={`w-2 h-2 rounded-full ${
+                      aiModelStatus.writing !== '미설정' ? 'bg-green-500' : 'bg-red-500'
+                    }`}></div>
                     <span>글쓰기: {aiModelStatus.writing}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: aiModelStatus.image !== '미설정' ? '#8b5cf6' : '#ef4444' }}></span>
+                  <div className="flex items-center space-x-1.5">
+                    <div className={`w-2 h-2 rounded-full ${
+                      aiModelStatus.image !== '미설정' ? 'bg-purple-500' : 'bg-red-500'
+                    }`}></div>
                     <span>이미지: {aiModelStatus.image}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => setShowLogs(!showLogs)}
-                style={{
-                  background: showLogs ? '#059669' : 'white',
-                  color: showLogs ? 'white' : '#475569',
-                  border: showLogs ? 'none' : '2px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '12px 16px',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                  fontWeight: '600',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)',
-                  boxShadow: showLogs 
-                    ? '0 0 0 1px rgba(5, 150, 105, 0.1), 0 2px 4px rgba(5, 150, 105, 0.2)'
-                    : '0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.06)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  minWidth: '80px',
-                  justifyContent: 'center'
-                }}
-                onMouseEnter={(e) => {
-                  if (!showLogs) {
-                    const target = e.target as HTMLElement;
-                    target.style.background = '#f0fdf4';
-                    target.style.borderColor = '#bbf7d0';
-                    target.style.color = '#059669';
-                    target.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showLogs) {
-                    const target = e.target as HTMLElement;
-                    target.style.background = 'white';
-                    target.style.borderColor = '#e2e8f0';
-                    target.style.color = '#475569';
-                    target.style.transform = 'translateY(0)';
-                  }
-                }}
+                className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  showLogs
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600'
+                    : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600 hover:-translate-y-0.5 shadow-sm'
+                }`}
               >
                 <span>📝</span>
                 <span>로그</span>
               </button>
               <button
                 onClick={() => setShowLLMSettings(true)}
-                style={{
-                  background: showLLMSettings ? '#059669' : 'white',
-                  color: showLLMSettings ? 'white' : '#475569',
-                  border: showLLMSettings ? 'none' : '2px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '12px 16px',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                  fontWeight: '600',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)',
-                  boxShadow: showLLMSettings 
-                    ? '0 0 0 1px rgba(5, 150, 105, 0.1), 0 2px 4px rgba(5, 150, 105, 0.2)'
-                    : '0 0 0 1px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.06)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  minWidth: '80px',
-                  justifyContent: 'center'
-                }}
-                onMouseEnter={(e) => {
-                  if (!showLLMSettings) {
-                    const target = e.target as HTMLElement;
-                    target.style.background = '#f0fdf4';
-                    target.style.borderColor = '#bbf7d0';
-                    target.style.color = '#059669';
-                    target.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showLLMSettings) {
-                    const target = e.target as HTMLElement;
-                    target.style.background = 'white';
-                    target.style.borderColor = '#e2e8f0';
-                    target.style.color = '#475569';
-                    target.style.transform = 'translateY(0)';
-                  }
-                }}
+                className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  showLLMSettings
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600'
+                    : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600 hover:-translate-y-0.5 shadow-sm'
+                }`}
               >
                 <span>🤖</span>
                 <span>API 설정</span>
@@ -238,9 +151,10 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-        <div style={{ flex: showLogs ? 1 : '1', overflowY: 'auto' }}>
-          <div className="app-main">
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden flex">
+        <div className={`${showLogs ? 'flex-1' : 'w-full'} overflow-y-auto`}>
+          <div className="h-full">
             {currentStep === 1 && (
               <Step1Setup 
                 onComplete={handleSetupComplete} 
@@ -260,12 +174,11 @@ const App: React.FC = () => {
         <LogPanel isVisible={showLogs} />
       </main>
 
-      {/* LLM 설정 모달 */}
+      {/* LLM Settings Modal */}
       {showLLMSettings && (
         <LLMSettings
           onClose={() => setShowLLMSettings(false)}
           onSettingsChange={() => {
-            // 설정 변경 후 모델 상태 새로고침
             refreshModelStatus();
           }}
         />

@@ -25,7 +25,9 @@
       "Bash(mkdir:*)",
       "Bash(git commit:*)",
       "Bash(npm run typecheck:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": []
   }

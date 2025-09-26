@@ -579,13 +579,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
 
 
   return (
-    <div style={{
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '20px',
-      backgroundColor: '#ffffff',
-      minHeight: '100vh'
-    }}>
+    <div className="max-w-6xl mx-auto p-5 bg-white min-h-screen">
       {/* 문서 업로드 섹션 */}
       <DocumentUploadSection
         savedWritingStyles={savedWritingStyles}

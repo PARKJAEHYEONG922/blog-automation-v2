@@ -103,69 +103,44 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   };
 
   return (
-    <div className="content-section" style={{ marginBottom: '24px' }}>
+    <div className="content-section mb-6">
       {/* 탭 헤더와 글씨 크기 컨트롤 */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '16px',
-        borderBottom: '2px solid #e5e7eb',
-        paddingBottom: '12px'
-      }}>
+      <div className="flex justify-between items-center mb-4 border-b-2 border-gray-200 pb-3">
         {/* 탭 버튼들 */}
-        <div style={{ display: 'flex', gap: '2px' }}>
+        <div className="flex space-x-1">
           <button
             onClick={() => onTabChange('edited')}
-            style={{
-              backgroundColor: activeTab === 'edited' ? '#3b82f6' : 'transparent',
-              color: activeTab === 'edited' ? 'white' : '#6b7280',
-              borderTop: activeTab === 'edited' ? 'none' : '1px solid #d1d5db',
-              borderLeft: activeTab === 'edited' ? 'none' : '1px solid #d1d5db',
-              borderRight: activeTab === 'edited' ? 'none' : '1px solid #d1d5db',
-              borderBottom: 'none',
-              borderRadius: '8px 8px 0 0',
-              padding: '12px 20px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
+            className={`
+              px-5 py-3 text-sm font-semibold rounded-t-lg border-t border-l border-r transition-all duration-200
+              ${activeTab === 'edited' 
+                ? 'bg-blue-500 text-white border-blue-500' 
+                : 'bg-transparent text-gray-600 border-gray-300 hover:bg-gray-50'
+              }
+            `}
           >
             📝 자동편집 콘텐츠
           </button>
           <button
             onClick={() => onTabChange('original')}
-            style={{
-              backgroundColor: activeTab === 'original' ? '#3b82f6' : 'transparent',
-              color: activeTab === 'original' ? 'white' : '#6b7280',
-              borderTop: activeTab === 'original' ? 'none' : '1px solid #d1d5db',
-              borderLeft: activeTab === 'original' ? 'none' : '1px solid #d1d5db',
-              borderRight: activeTab === 'original' ? 'none' : '1px solid #d1d5db',
-              borderBottom: 'none',
-              borderRadius: '8px 8px 0 0',
-              padding: '12px 20px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
+            className={`
+              px-5 py-3 text-sm font-semibold rounded-t-lg border-t border-l border-r transition-all duration-200
+              ${activeTab === 'original' 
+                ? 'bg-blue-500 text-white border-blue-500' 
+                : 'bg-transparent text-gray-600 border-gray-300 hover:bg-gray-50'
+              }
+            `}
           >
             📄 원본 콘텐츠
           </button>
         </div>
 
         {/* 글씨 크기 및 편집 버튼 */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="flex space-x-2 items-center">
           {/* 글씨 크기 선택 */}
           <select
             value={fontSize}
             onChange={(e) => onFontSizeChange(Number(e.target.value))}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm cursor-pointer focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
           >
             <option value={15}>15px</option>
             <option value={16}>16px</option>
@@ -178,32 +153,18 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
             <>
               <button
                 onClick={onResetContent}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#f59e0b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}
+                className="inline-flex items-center space-x-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-sm"
               >
-                🔄 원본 복원
+                <span>🔄</span>
+                <span>원본 복원</span>
               </button>
               
               <button
                 onClick={copyToClipboard}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}
+                className="inline-flex items-center space-x-1 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-sm"
               >
-                📋 복사
+                <span>📋</span>
+                <span>복사</span>
               </button>
             </>
           )}
@@ -212,47 +173,27 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       </div>
 
       {activeTab === 'edited' && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '8px'
-        }}>
+        <div className="flex justify-between items-center mb-2">
           {/* 글자 수 표시 */}
-          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+          <div className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-lg">
             글자 수: {charCount.toLocaleString()}자 / 공백포함: {charCountWithSpaces.toLocaleString()}자
           </div>
         </div>
       )}
 
       {/* 탭 콘텐츠 */}
-      <div style={{
-        border: '1px solid #e5e7eb',
-        borderRadius: '0 8px 8px 8px',
-        backgroundColor: '#ffffff',
-        minHeight: '400px'
-      }}>
+      <div className="border border-gray-200 rounded-r-xl rounded-b-xl bg-white min-h-96 shadow-sm">
         {activeTab === 'edited' ? (
           // v2 Step3과 동일한 contentEditable div 편집기
           <div
             ref={editorRef}
             id="step3-editor"
             contentEditable
+            className="w-full min-h-96 max-h-150 p-4 border-none rounded-r-xl rounded-b-xl bg-white relative z-10 overflow-y-auto outline-none focus:ring-2 focus:ring-blue-400 focus:ring-inset transition-all duration-200"
             style={{
-              width: '100%',
-              minHeight: '400px',
-              maxHeight: '600px',
-              padding: '16px',
-              border: 'none',
-              borderRadius: '0 8px 8px 8px',
               fontSize: `${fontSize}px`,
               lineHeight: '1.8',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              backgroundColor: 'white',
-              position: 'relative',
-              zIndex: 1,
-              overflowY: 'auto',
-              outline: 'none'
+              fontFamily: 'system-ui, -apple-system, sans-serif'
             }}
             onInput={handleContentChange}
             onKeyDown={handleKeyDown}
@@ -262,20 +203,10 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         ) : (
           // 원본 콘텐츠 (읽기 전용)
           <div 
-            className="original-content"
+            className="original-content p-5 h-125 max-h-125 overflow-y-auto text-gray-700 bg-gray-50 font-mono whitespace-pre-wrap break-words border border-gray-200 rounded-r-xl rounded-b-xl"
             style={{
-              padding: '20px',
               fontSize: `${fontSize}px`,
-              lineHeight: '1.7',
-              height: '500px',
-              maxHeight: '500px',
-              overflowY: 'auto',
-              color: '#374151',
-              backgroundColor: '#f9fafb',
-              fontFamily: 'monospace',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              border: '1px solid #e5e7eb'
+              lineHeight: '1.7'
             }}
           >
             {originalContent || '원본 콘텐츠가 없습니다.'}
@@ -343,8 +274,11 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       `}</style>
 
       {activeTab === 'edited' && (
-        <div style={{ marginTop: '12px', fontSize: '12px', color: '#6b7280' }}>
-          💡 <strong>편집 팁:</strong> 텍스트 선택 후 폰트 크기 변경 | 네이버 블로그 완전 호환 방식 | Ctrl+1~4로 폰트 크기 단축키
+        <div className="mt-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center space-x-2">
+            <span>💡</span>
+            <span><strong>편집 팁:</strong> 텍스트 선택 후 폰트 크기 변경 | 네이버 블로그 완전 호환 방식 | Ctrl+1~4로 폰트 크기 단축키</span>
+          </div>
         </div>
       )}
     </div>

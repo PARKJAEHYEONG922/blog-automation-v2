@@ -767,7 +767,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   `;
 
   return (
-    <div className="step2-container">
+    <div className="min-h-screen bg-gray-50 p-6">
       <style>{sectionStyles}</style>
       {/* 작업 요약 */}
       <WorkSummary 
@@ -781,21 +781,16 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       />
 
       {/* 콘텐츠 편집기 - v2 Step3 스타일 */}
-      <div className="section-card" style={{padding: '20px', marginBottom: '16px'}}>
-        <div className="section-header" style={{marginBottom: '16px', justifyContent: 'space-between'}}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div className="section-icon blue" style={{
-              width: '32px', 
-              height: '32px', 
-              fontSize: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>📝</div>
-            <h2 className="section-title" style={{fontSize: '16px', margin: '0', lineHeight: '1'}}>콘텐츠 편집</h2>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-base">
+              📝
+            </div>
+            <h2 className="text-base font-semibold text-gray-900">콘텐츠 편집</h2>
           </div>
           {/* 헤더 오른쪽에 글자 수 표시 */}
-          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+          <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg">
             📊 글자 수: {charCount.toLocaleString()}자 / 공백포함: {charCountWithSpaces.toLocaleString()}자
           </div>
         </div>
@@ -1165,37 +1160,22 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       )}
 
       {/* 발행 플랫폼 선택 섹션 */}
-      <div className="section-card" style={{padding: '20px', marginBottom: '16px'}}>
-        <div className="section-header" style={{marginBottom: '16px'}}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div className="section-icon purple" style={{
-              width: '32px', 
-              height: '32px', 
-              fontSize: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>🚀</div>
-            <h2 className="section-title" style={{fontSize: '16px', margin: '0', lineHeight: '1'}}>발행 플랫폼 선택</h2>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-4">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-base">
+            🚀
           </div>
+          <h2 className="text-base font-semibold text-gray-900">발행 플랫폼 선택</h2>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', minWidth: '100px' }}>
+        <div className="flex items-center space-x-4 mb-3">
+          <label className="text-sm font-medium text-gray-700 min-w-[100px]">
             발행할 블로그:
           </label>
           <select
             value={selectedPlatform}
             onChange={(e) => setSelectedPlatform(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              fontSize: '14px',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-              minWidth: '200px'
-            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white cursor-pointer min-w-[200px] focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
           >
             <option value="" disabled>플랫폼을 선택해주세요</option>
             <option value="naver">🟢 네이버 블로그</option>
@@ -1205,8 +1185,9 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
           </select>
         </div>
         
-        <div style={{ fontSize: '12px', color: '#6b7280' }}>
-          💡 네이버 블로그 발행 기능이 구현되어 있습니다. 다른 플랫폼은 순차적으로 구현 예정입니다.
+        <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center space-x-2">
+          <span>💡</span>
+          <span>네이버 블로그 발행 기능이 구현되어 있습니다. 다른 플랫폼은 순차적으로 구현 예정입니다.</span>
         </div>
       </div>
 
@@ -1237,64 +1218,36 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       )}
 
       {/* 액션 버튼 */}
-      <div className="action-buttons" style={{ 
-        marginTop: '32px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '12px'
-      }}>
+      <div className="mt-8 flex justify-between items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
         {/* 왼쪽: 이전으로 가기 */}
-        <button onClick={onGoBack} style={{ 
-          backgroundColor: '#6b7280', 
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          padding: '12px 20px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: '600',
-          transition: 'background-color 0.2s'
-        }}>
-          ← 이전으로 가기
+        <button 
+          onClick={onGoBack} 
+          className="inline-flex items-center space-x-2 px-5 py-3 bg-gray-500 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 transition-colors duration-200"
+        >
+          <span>←</span>
+          <span>이전으로 가기</span>
         </button>
         
         {/* 가운데: 발행 버튼 (다른 플랫폼용) */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="flex space-x-3">
           {selectedPlatform && selectedPlatform !== 'naver' && (Object.keys(images).length === imagePositions.length || imagePositions.length === 0) && (
             <button 
-              className="publish-button"
               onClick={handlePublish}
-              style={{
-                backgroundColor: '#059669',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px 24px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                transition: 'background-color 0.2s'
-              }}
+              className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-500 text-white rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-colors duration-200 shadow-lg shadow-emerald-500/25"
             >
-              📤 {getPlatformName(selectedPlatform)}에 발행하기
+              <span>📤</span>
+              <span>{getPlatformName(selectedPlatform)}에 발행하기</span>
             </button>
           )}
         </div>
         
         {/* 오른쪽: 처음부터 다시 */}
-        <button onClick={onReset} style={{
-          backgroundColor: '#ef4444',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          padding: '12px 20px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: '600',
-          transition: 'background-color 0.2s'
-        }}>
-          🔄 처음부터 다시
+        <button 
+          onClick={onReset}
+          className="inline-flex items-center space-x-2 px-5 py-3 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors duration-200"
+        >
+          <span>🔄</span>
+          <span>처음부터 다시</span>
         </button>
       </div>
 

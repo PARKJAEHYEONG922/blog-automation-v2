@@ -458,14 +458,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
   if (imageCount === 0) {
     return (
-      <div style={{
-        textAlign: 'center',
-        padding: '40px',
-        color: '#6b7280',
-        backgroundColor: '#f9fafb',
-        borderRadius: '8px',
-        border: '1px solid #e5e7eb'
-      }}>
+      <div className="text-center p-10 text-gray-500 bg-gray-50 rounded-xl border border-gray-200">
         이미지가 필요하지 않은 글입니다.
       </div>
     );
@@ -473,137 +466,59 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
   return (
     <>
-      <div style={{
-        background: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '8px',
-        padding: '20px',
-        marginBottom: '16px',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '16px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              backgroundColor: '#ede9fe',
-              color: '#7c3aed',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px'
-            }}>🖼️</div>
-            <h2 style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              color: '#1f2937',
-              margin: 0
-            }}>이미지 관리 ({imageCount}개)</h2>
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-4 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
+              🖼️
+            </div>
+            <h2 className="text-xl font-bold text-gray-800">이미지 관리 ({imageCount}개)</h2>
           </div>
           
-          <div style={{
-            fontSize: '14px',
-            color: '#6b7280',
-            fontWeight: '500'
-          }}>
+          <div className="text-sm text-gray-600 font-medium bg-purple-50 px-3 py-1 rounded-full">
             이미지 준비 현황: {completedCount} / {imageCount} 완료
           </div>
         </div>
         
         {/* 이미지 생성 AI 상태 카드 */}
-        <div style={{
-          backgroundColor: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '20px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '8px'
-          }}>
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#374151'
-            }}>
-              🤖 이미지 생성 AI 상태
+        <div className="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+              <span>🤖</span>
+              <span>이미지 생성 AI 상태</span>
             </span>
-            <span style={{
-              fontSize: '14px',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              backgroundColor: hasImageClient ? '#dcfce7' : '#fef2f2',
-              color: hasImageClient ? '#166534' : '#dc2626',
-              fontWeight: '500'
-            }}>
+            <span className={`
+              text-sm px-3 py-1 rounded-full font-medium
+              ${hasImageClient 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-red-100 text-red-700'
+              }
+            `}>
               {hasImageClient ? '✅ 연결됨' : '❌ 미설정'}
             </span>
           </div>
-          <div style={{
-            fontSize: '12px',
-            color: '#6b7280'
-          }}>
+          <div className="text-xs text-gray-600">
             현재 설정: {imageClientInfo}
           </div>
           
           {/* 이미지 생성 옵션 */}
           {hasImageClient && (
-            <div style={{
-              borderTop: '1px solid #e2e8f0',
-              paddingTop: '12px',
-              marginTop: '12px'
-            }}>
-              <div style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '8px'
-              }}>
-                🎛️ 이미지 생성 옵션
+            <div className="border-t border-slate-200 pt-4 mt-4">
+              <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                <span>🎛️</span>
+                <span>이미지 생성 옵션</span>
               </div>
               
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
-                gap: '12px'
-              }}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* 품질 설정 */}
                 <div>
-                  <label style={{
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    color: '#6b7280',
-                    display: 'block',
-                    marginBottom: '4px'
-                  }}>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
                     품질
                   </label>
                   <select
                     value={imageQuality}
                     onChange={(e) => setImageQuality(e.target.value as 'high')}
-                    style={{
-                      width: '100%',
-                      fontSize: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      backgroundColor: 'white',
-                      color: '#374151',
-                      cursor: 'pointer'
-                    }}
+                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
                   >
                     <option value="high">고품질 (권장)</option>
                   </select>
@@ -611,28 +526,13 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                 
                 {/* 해상도 설정 */}
                 <div>
-                  <label style={{
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    color: '#6b7280',
-                    display: 'block',
-                    marginBottom: '4px'
-                  }}>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
                     해상도
                   </label>
                   <select
                     value={imageSize}
                     onChange={(e) => setImageSize(e.target.value as '1024x1024')}
-                    style={{
-                      width: '100%',
-                      fontSize: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      backgroundColor: 'white',
-                      color: '#374151',
-                      cursor: 'pointer'
-                    }}
+                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
                   >
                     <option value="1024x1024">정사각형 (1024×1024)</option>
                   </select>
@@ -640,28 +540,13 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                 
                 {/* 스타일 설정 */}
                 <div>
-                  <label style={{
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    color: '#6b7280',
-                    display: 'block',
-                    marginBottom: '4px'
-                  }}>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
                     스타일
                   </label>
                   <select
                     value={imageStyle}
                     onChange={(e) => handleStyleChange(e.target.value as 'realistic' | 'photographic' | 'anime' | 'illustration' | 'dreamy')}
-                    style={{
-                      width: '100%',
-                      fontSize: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      backgroundColor: 'white',
-                      color: '#374151',
-                      cursor: 'pointer'
-                    }}
+                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
                   >
                     <option value="realistic">사실적</option>
                     <option value="photographic">사진 같은</option>
@@ -677,57 +562,22 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
         
         {/* 배치 생성 버튼 및 정지 버튼 */}
         {hasImageClient && imageCount > 0 && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '12px',
-            marginBottom: '20px',
-            padding: '16px',
-            backgroundColor: '#f8fafc',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0'
-          }}>
+          <div className="flex justify-center space-x-3 mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
             <button
               onClick={handleGenerateAllEmpty}
               disabled={isGeneratingAll}
-              style={{
-                backgroundColor: isGeneratingAll ? '#9ca3af' : '#7c3aed',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px 24px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: isGeneratingAll ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 4px rgba(124, 58, 237, 0.2)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (!isGeneratingAll) {
-                  e.currentTarget.style.backgroundColor = '#6d28d9';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isGeneratingAll) {
-                  e.currentTarget.style.backgroundColor = '#7c3aed';
-                  e.currentTarget.style.transform = 'translateY(0px)';
-                }
-              }}
+              className={`
+                inline-flex items-center space-x-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200
+                ${isGeneratingAll 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-purple-500 hover:bg-purple-600 hover:-translate-y-0.5 shadow-lg shadow-purple-500/25'
+                } text-white
+              `}
             >
-              🎨 빈 이미지 모두 AI로 생성 ({emptyWithPromptCount > 0 ? emptyWithPromptCount : imageCount}개)
+              <span>🎨</span>
+              <span>빈 이미지 모두 AI로 생성 ({emptyWithPromptCount > 0 ? emptyWithPromptCount : imageCount}개)</span>
               {isGeneratingAll && (
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid transparent',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
             </button>
             
@@ -735,38 +585,17 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
             {isGeneratingAll && (
               <button
                 onClick={handleStopGeneration}
-                style={{
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#dc2626';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#ef4444';
-                  e.currentTarget.style.transform = 'translateY(0px)';
-                }}
+                className="inline-flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-red-500/25"
               >
-                ⏹️ 정지
+                <span>⏹️</span>
+                <span>정지</span>
               </button>
             )}
           </div>
         )}
         
         {/* 이미지 목록 - v2 스타일 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="space-y-4">
           {Array.from({ length: imageCount }, (_, idx) => {
             const imageIndex = idx + 1;
             const imagePrompt = imagePrompts.find(p => p.index === imageIndex);
@@ -779,107 +608,44 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
             const imageUrl = imageUrls[imageIndex];
             
             return (
-              <div key={idx} style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '16px',
-                backgroundColor: 'white'
-              }}>
-                <div style={{ display: 'flex', gap: '16px' }}>
+              <div key={idx} className="border border-gray-200 rounded-xl p-5 bg-white hover:shadow-md transition-shadow duration-300">
+                <div className="flex space-x-4">
                   {/* 이미지 미리보기 영역 */}
-                  <div style={{
-                    flexShrink: 0,
-                    width: '160px',
-                    height: '128px',
-                    border: '2px dashed #d1d5db',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#f9fafb',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}>
+                  <div className="flex-shrink-0 w-40 h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50 relative overflow-hidden hover:border-purple-300 transition-colors duration-200">
                     {isGenerating && (
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{
-                          width: '24px',
-                          height: '24px',
-                          border: '3px solid #3b82f6',
-                          borderTop: '3px solid transparent',
-                          borderRadius: '50%',
-                          margin: '0 auto 8px auto',
-                          animation: 'spin 1s linear infinite'
-                        }}></div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>AI 생성 중...</div>
+                      <div className="text-center">
+                        <div className="w-6 h-6 border-3 border-blue-500 border-t-transparent rounded-full mx-auto mb-2 animate-spin"></div>
+                        <div className="text-xs text-gray-600">AI 생성 중...</div>
                       </div>
                     )}
                     {isCompleted && imageUrl && (
                       <div 
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          position: 'relative',
-                          cursor: 'pointer'
-                        }}
+                        className="w-full h-full relative cursor-pointer group"
                         onClick={() => openPreviewModal(imageUrl, imageIndex)}
                       >
                         <img 
                           src={imageUrl} 
                           alt={`이미지 ${imageIndex}`}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            borderRadius: '4px'
-                          }}
+                          className="w-full h-full object-contain rounded-lg"
                         />
                         {/* 호버 효과 */}
-                        <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: 0,
-                          transition: 'opacity 0.2s',
-                          color: 'white',
-                          fontSize: '24px',
-                          borderRadius: '4px'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-                        >
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white text-2xl rounded-lg">
                           🔍
                         </div>
                       </div>
                     )}
                     {isCompleted && !imageUrl && (
-                      <div style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#f0f9ff',
-                        border: '2px solid #3b82f6',
-                        borderRadius: '4px',
-                        color: '#1e40af'
-                      }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '24px', marginBottom: '4px' }}>🖼️</div>
-                          <div style={{ fontSize: '10px' }}>이미지 로드 중...</div>
+                      <div className="w-full h-full flex items-center justify-center bg-blue-50 border-2 border-blue-400 rounded-lg text-blue-700">
+                        <div className="text-center">
+                          <div className="text-2xl mb-1">🖼️</div>
+                          <div className="text-xs">이미지 로드 중...</div>
                         </div>
                       </div>
                     )}
                     {isEmpty && (
-                      <div style={{ textAlign: 'center', color: '#9ca3af' }}>
-                        <div style={{ fontSize: '24px', marginBottom: '4px' }}>📷</div>
-                        <div style={{ fontSize: '12px' }}>이미지 {imageIndex}</div>
+                      <div className="text-center text-gray-400">
+                        <div className="text-2xl mb-1">📷</div>
+                        <div className="text-xs">이미지 {imageIndex}</div>
                       </div>
                     )}
                   </div>

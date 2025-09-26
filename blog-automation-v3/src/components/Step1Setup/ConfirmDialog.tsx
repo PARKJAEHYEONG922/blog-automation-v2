@@ -18,56 +18,29 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: '#fff',
-        borderRadius: '12px',
-        padding: '24px',
-        maxWidth: '400px',
-        width: '90%',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
-      }}>
-        <h3 style={{ margin: '0 0 16px 0', color: '#495057', fontSize: '18px' }}>{title}</h3>
-        <p style={{ margin: '0 0 24px 0', color: '#6c757d', fontSize: '14px', lineHeight: '1.5' }}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-11/12 shadow-2xl transform transition-all duration-200">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
+            ⚠️
+          </div>
+          <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+        </div>
+        
+        <p className="text-gray-600 text-sm leading-relaxed mb-6 bg-red-50 border border-red-200 rounded-lg p-3">
           {message}
         </p>
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+        
+        <div className="flex space-x-3 justify-end">
           <button
             onClick={onCancel}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #dee2e6',
-              borderRadius: '6px',
-              backgroundColor: '#f8f9fa',
-              color: '#495057',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 text-sm font-medium"
           >
             취소
           </button>
           <button
             onClick={onConfirm}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '6px',
-              backgroundColor: '#dc3545',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
+            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200 text-sm font-semibold hover:-translate-y-0.5 shadow-lg shadow-red-500/25"
           >
             삭제
           </button>
