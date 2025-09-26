@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
-import ContentEditor from './ContentEditor';
 import ImageGenerator from './ImageGenerator';
 import { ContentProcessor } from './ContentProcessor';
 
@@ -30,6 +29,14 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   const [charCount, setCharCount] = useState(0);
   const [charCountWithSpaces, setCharCountWithSpaces] = useState(0);
   const [currentFontSize, setCurrentFontSize] = useState('15px');
+  
+  // v2와 동일한 폰트 크기 옵션
+  const fontSizes = [
+    { name: '대제목 (24px)', size: '24px', weight: 'bold' },
+    { name: '소제목 (19px)', size: '19px', weight: 'bold' },
+    { name: '강조 (16px)', size: '16px', weight: 'bold' },
+    { name: '일반 (15px)', size: '15px', weight: 'normal' }
+  ];
   const [imagePositions, setImagePositions] = useState<string[]>([]);
   const [images, setImages] = useState<{[key: string]: string}>({});
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
@@ -442,11 +449,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     if (originalContent) {
       const processedContent = processMarkdown(originalContent);
       setEditedContent(processedContent);
-      
-      if (editorRef.current) {
-        editorRef.current.innerHTML = processedContent;
-        updateCharCount();
-      }
+      setIsInitialLoad(true); // 복원 시에는 다시 초기화 허용
     }
   };
 
@@ -477,27 +480,64 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     return false;
   };
 
+  // v2와 동일한 폰트 크기 변경 처리
+  const handleFontSizeChange = (newSize: string) => {
+    applyFontSizeToSelection(newSize);
+    setCurrentFontSize(newSize);
+  };
+
+  // v2와 동일한 선택된 텍스트에 폰트 크기 적용
+  const applyFontSizeToSelection = (fontSize: string) => {
+    if (!editorRef.current) return;
+    
+    const fontInfo = fontSizes.find(f => f.size === fontSize);
+    if (!fontInfo) return;
+
+    editorRef.current.focus();
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    // 선택된 텍스트가 있는 경우만 처리
+    if (selection.toString().length > 0) {
+      // execCommand 사용하되 즉시 정리
+      document.execCommand('fontSize', false, '7'); // 임시 크기
+      
+      // 생성된 font 태그들을 span으로 교체
+      const fontTags = editorRef.current.querySelectorAll('font[size="7"]');
+      
+      fontTags.forEach(fontTag => {
+        const selectedText = fontTag.textContent || '';
+        
+        // 새로운 span 생성
+        const newSpan = document.createElement('span');
+        newSpan.className = `se-ff-nanumgothic se-fs${fontSize.replace('px', '')}`;
+        newSpan.style.color = 'rgb(0, 0, 0)';
+        
+        // font-weight 설정
+        if (fontInfo.weight === 'bold') {
+          newSpan.style.fontWeight = 'bold';
+        } else {
+          newSpan.style.fontWeight = 'normal';
+        }
+        
+        newSpan.textContent = selectedText;
+        
+        // font 태그를 새 span으로 교체
+        fontTag.parentNode?.replaceChild(newSpan, fontTag);
+      });
+      
+      handleContentChange();
+    }
+  };
+
   // v2와 동일한 키보드 이벤트 처리
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // 폰트 크기 단축키
     if (e.ctrlKey && e.key >= '1' && e.key <= '4') {
       e.preventDefault();
-      const sizes = [15, 16, 19, 24];
+      const sizes = ['24px', '19px', '16px', '15px'];
       const newSize = sizes[parseInt(e.key) - 1];
-      setCurrentFontSize(`${newSize}px`);
-      
-      // 선택된 텍스트에 폰트 크기 적용
-      const selection = window.getSelection();
-      if (selection && !selection.isCollapsed) {
-        document.execCommand('fontSize', false, '1');
-        const fontElements = editorRef.current?.querySelectorAll('font[size="1"]');
-        fontElements?.forEach(el => {
-          const span = document.createElement('span');
-          span.style.fontSize = `${newSize}px`;
-          span.innerHTML = el.innerHTML;
-          el.parentNode?.replaceChild(span, el);
-        });
-      }
+      handleFontSizeChange(newSize);
     }
   };
 
@@ -524,14 +564,16 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     }
   }, [content]);
 
-  // 편집된 콘텐츠가 변경될 때 에디터에 반영
+  // 편집된 콘텐츠가 변경될 때 에디터에 반영 (초기 로딩 시에만)
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   useEffect(() => {
-    if (editedContent && editorRef.current) {
-      console.log('🔍 에디터에 콘텐츠 설정:', editedContent.substring(0, 100) + '...');
+    if (editedContent && editorRef.current && isInitialLoad) {
+      console.log('🔍 에디터에 초기 콘텐츠 설정:', editedContent.substring(0, 100) + '...');
       editorRef.current.innerHTML = editedContent;
       updateCharCount();
+      setIsInitialLoad(false);
     }
-  }, [editedContent]);
+  }, [editedContent, isInitialLoad]);
 
   // activeTab이 'edited'로 변경될 때도 에디터에 콘텐츠 반영
   useEffect(() => {
@@ -651,27 +693,44 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
             </button>
           </div>
 
-          {/* 글씨 크기 및 기능 버튼 */}
+          {/* 기능 버튼 */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <select
-              value={parseInt(currentFontSize)}
-              onChange={(e) => setCurrentFontSize(`${e.target.value}px`)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                fontSize: '14px',
-                cursor: 'pointer'
-              }}
-            >
-              <option value={15}>15px</option>
-              <option value={16}>16px</option>
-              <option value={19}>19px</option>
-              <option value={24}>24px</option>
-            </select>
-
             {activeTab === 'edited' && (
               <>
+                <select
+                  value={currentFontSize}
+                  onChange={(e) => handleFontSizeChange(e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {fontSizes.map((font) => (
+                    <option key={font.size} value={font.size}>
+                      {font.name}
+                    </option>
+                  ))}
+                </select>
+                
+                {/* v2와 동일한 강제 적용 버튼 */}
+                <button
+                  onClick={() => handleFontSizeChange(currentFontSize)}
+                  style={{
+                    padding: '6px 8px',
+                    backgroundColor: '#f3f4f6',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                  title="현재 폰트 크기로 선택 영역 통일"
+                >
+                  🔄
+                </button>
+
                 <button
                   onClick={restoreOriginal}
                   style={{
@@ -732,7 +791,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
                 padding: '16px',
                 border: 'none',
                 borderRadius: '0 8px 8px 8px',
-                fontSize: currentFontSize,
+                fontSize: '15px',
                 lineHeight: '1.8',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 backgroundColor: 'white',
@@ -750,7 +809,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
             <div 
               style={{
                 padding: '20px',
-                fontSize: currentFontSize,
+                fontSize: '15px',
                 lineHeight: '1.7',
                 height: '500px',
                 maxHeight: '500px',
@@ -849,7 +908,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
               borderRadius: '8px',
               padding: '20px',
               backgroundColor: '#fafafa',
-              fontSize: `${fontSize}px`,
+              fontSize: `${currentFontSize}px`,
               lineHeight: '1.7'
             }}
             dangerouslySetInnerHTML={{ __html: marked(replaceImagesInContent()) }}
