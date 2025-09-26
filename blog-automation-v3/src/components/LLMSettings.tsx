@@ -359,105 +359,70 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '16px',
-        padding: '32px',
-        maxWidth: '800px',
-        width: '90%',
-        maxHeight: '80vh',
-        overflow: 'auto',
-        color: '#374151',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#374151' }}>🤖 AI 모델 설정</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl p-8 max-w-4xl w-11/12 max-h-[85vh] overflow-auto text-gray-700 shadow-2xl transform transition-all duration-300 scale-100">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg">
+              🤖
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">AI 모델 설정</h2>
+          </div>
           <button
             onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#6b7280',
-              fontSize: '24px',
-              cursor: 'pointer',
-              padding: '4px'
-            }}
+            className="w-8 h-8 bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-500 rounded-lg flex items-center justify-center text-lg cursor-pointer transition-all duration-200 hover:scale-110"
           >
             ✕
           </button>
         </div>
 
         {/* 탭 메뉴 */}
-        <div style={{ display: 'flex', marginBottom: '32px', borderBottom: '1px solid #e5e7eb' }}>
+        <div className="flex mb-8 bg-gray-50 rounded-xl p-1 shadow-inner">
           <button
             onClick={() => setActiveTab('writing')}
-            style={{
-              padding: '12px 24px',
-              background: 'transparent',
-              border: 'none',
-              color: activeTab === 'writing' ? '#374151' : '#6b7280',
-              borderBottom: activeTab === 'writing' ? '2px solid #374151' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: activeTab === 'writing' ? 'bold' : 'normal',
-              transition: 'all 0.2s'
-            }}
+            className={`flex-1 px-6 py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+              activeTab === 'writing'
+                ? 'bg-white text-blue-600 shadow-md border-2 border-blue-200'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            }`}
           >
-            ✍️ 글쓰기 AI
+            <span className="flex items-center justify-center space-x-2">
+              <span>✍️</span>
+              <span>글쓰기 AI</span>
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('image')}
-            style={{
-              padding: '12px 24px',
-              background: 'transparent',
-              border: 'none',
-              color: activeTab === 'image' ? '#374151' : '#6b7280',
-              borderBottom: activeTab === 'image' ? '2px solid #374151' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: activeTab === 'image' ? 'bold' : 'normal',
-              transition: 'all 0.2s'
-            }}
+            className={`flex-1 px-6 py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+              activeTab === 'image'
+                ? 'bg-white text-purple-600 shadow-md border-2 border-purple-200'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            }`}
           >
-            🎨 이미지 AI
+            <span className="flex items-center justify-center space-x-2">
+              <span>🎨</span>
+              <span>이미지 AI</span>
+            </span>
           </button>
         </div>
 
         {/* 글쓰기 AI 탭 */}
         {activeTab === 'writing' && (
           <div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+            <div className="mb-6">
+              <label className="block mb-3 text-sm font-semibold text-gray-700">
                 제공업체
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="flex gap-3 flex-wrap">
                 {getWritingProviders().map(provider => (
                   <button
                     key={provider.id}
                     onClick={() => handleProviderChange('writing', provider.id)}
-                    style={{
-                      padding: '12px 16px',
-                      border: settings.writing.provider === provider.id ? '2px solid #374151' : '2px solid #e5e7eb',
-                      backgroundColor: settings.writing.provider === provider.id ? '#f3f4f6' : 'white',
-                      borderRadius: '8px',
-                      color: settings.writing.provider === provider.id ? '#374151' : '#6b7280',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
+                    className={`px-4 py-3 rounded-xl border-2 cursor-pointer transition-all duration-200 flex items-center space-x-2 hover:-translate-y-0.5 shadow-sm hover:shadow-md ${
+                      settings.writing.provider === provider.id
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-blue-100'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
                   >
                     <span>{provider.icon}</span>
                     <span>{provider.name}</span>
@@ -468,21 +433,14 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
             {settings.writing.provider && (
               <>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+                <div className="mb-6">
+                  <label className="block mb-3 text-sm font-semibold text-gray-700">
                     모델
                   </label>
                   <select
                     value={settings.writing.model}
                     onChange={(e) => handleModelChange('writing', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      color: '#374151'
-                    }}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 cursor-pointer"
                   >
                     <option value="">모델을 선택하세요</option>
                     {getAvailableModels('writing', settings.writing.provider).map(model => (
@@ -493,8 +451,8 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                   </select>
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+                <div className="mb-6">
+                  <label className="block mb-3 text-sm font-semibold text-gray-700">
                     API 키
                   </label>
                   <input
@@ -502,35 +460,18 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                     value={providerApiKeys[settings.writing.provider as keyof ProviderApiKeys] || ''}
                     onChange={(e) => handleApiKeyChange(settings.writing.provider, e.target.value)}
                     placeholder={`${settings.writing.provider} API 키를 입력하세요`}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      color: '#374151'
-                    }}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 placeholder-gray-400"
                   />
                 </div>
 
                 {/* 테스트 및 적용, 삭제 버튼 */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', marginBottom: '16px' }}>
+                <div className="flex justify-end space-x-3 mt-4 mb-4">
                   <button
                     onClick={() => deleteApiKey('writing')}
                     disabled={testingStatus.writing?.testing || !settings.writing.apiKey}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#64748b',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      opacity: testingStatus.writing?.testing || !settings.writing.apiKey ? 0.5 : 1
-                    }}
+                    className={`inline-flex items-center space-x-2 px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-sm ${
+                      testingStatus.writing?.testing || !settings.writing.apiKey ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     <span>🗑️</span>
                     <span>삭제</span>
@@ -539,19 +480,13 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                   <button
                     onClick={() => testApiKey('writing')}
                     disabled={!settings.writing.apiKey || testingStatus.writing?.testing}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: testingStatus.writing?.success ? '#10b981' : '#10b981',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      opacity: !settings.writing.apiKey || testingStatus.writing?.testing ? 0.5 : 1
-                    }}
+                    className={`inline-flex items-center space-x-2 px-4 py-2 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-lg ${
+                      testingStatus.writing?.success 
+                        ? 'bg-green-500 hover:bg-green-600 shadow-green-500/25' 
+                        : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
+                    } ${
+                      !settings.writing.apiKey || testingStatus.writing?.testing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     <span>{testingStatus.writing?.testing ? '🔄' : testingStatus.writing?.success ? '✅' : '🧪'}</span>
                     <span>{testingStatus.writing?.testing ? '테스트 중...' : testingStatus.writing?.success ? '적용 완료' : '테스트 및 적용'}</span>
@@ -560,19 +495,20 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                 
                 {/* 테스트 결과 메시지 */}
                 {testingStatus.writing?.message && (
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginTop: '12px',
-                    backgroundColor: testingStatus.writing.success ? '#f0fdf4' : testingStatus.writing.testing ? '#eff6ff' : '#fef2f2',
-                    border: testingStatus.writing.success ? '1px solid #bbf7d0' : testingStatus.writing.testing ? '1px solid #bfdbfe' : '1px solid #fecaca'
-                  }}>
-                    <p style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      margin: 0,
-                      color: testingStatus.writing.success ? '#166534' : testingStatus.writing.testing ? '#1e40af' : '#dc2626'
-                    }}>
+                  <div className={`p-4 rounded-xl mt-3 border-2 ${
+                    testingStatus.writing.success 
+                      ? 'bg-green-50 border-green-200' 
+                      : testingStatus.writing.testing 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    <p className={`text-sm font-medium m-0 ${
+                      testingStatus.writing.success 
+                        ? 'text-green-700' 
+                        : testingStatus.writing.testing 
+                        ? 'text-blue-700' 
+                        : 'text-red-700'
+                    }`}>
                       {testingStatus.writing.message}
                     </p>
                   </div>
@@ -580,63 +516,60 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
                 {/* 현재 적용된 설정 */}
                 {appliedSettings.writing.provider && (
-                  <div style={{
-                    padding: '16px',
-                    backgroundColor: '#f8fafc',
-                    borderRadius: '12px',
-                    marginTop: '16px'
-                  }}>
-                    <h4 style={{
-                      fontWeight: '600',
-                      fontSize: '14px',
-                      color: '#1e293b',
-                      marginBottom: '12px',
-                      margin: 0
-                    }}>현재 적용된 설정</h4>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)',
-                      gap: '16px',
-                      fontSize: '12px'
-                    }}>
+                  <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl mt-6 shadow-sm">
+                    <h4 className="font-semibold text-sm text-blue-800 mb-3 m-0 flex items-center space-x-2">
+                      <span>⚙️</span>
+                      <span>현재 적용된 설정</span>
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>제공자</span>
-                        <span style={{ fontWeight: '600' }}>{appliedSettings.writing.provider.toUpperCase()}</span>
+                        <span className="text-slate-600 block mb-1">제공자</span>
+                        <span className="font-semibold text-blue-700">{appliedSettings.writing.provider.toUpperCase()}</span>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>모델</span>
-                        <span style={{ fontWeight: '600' }}>{appliedSettings.writing.model || '미선택'}</span>
+                        <span className="text-slate-600 block mb-1">모델</span>
+                        <span className="font-semibold text-blue-700">{appliedSettings.writing.model || '미선택'}</span>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>API 키</span>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: '600',
-                          color: appliedSettings.writing.apiKey ? '#059669' : '#ef4444'
-                        }}>
-                          {appliedSettings.writing.apiKey ? '🔑 설정됨' : '🔒 미설정'}
+                        <span className="text-slate-600 block mb-1">API 키</span>
+                        <div className={`flex items-center space-x-1 font-semibold ${
+                          appliedSettings.writing.apiKey ? 'text-emerald-600' : 'text-red-500'
+                        }`}>
+                          <span>{appliedSettings.writing.apiKey ? '🔑' : '🔒'}</span>
+                          <span>{appliedSettings.writing.apiKey ? '설정됨' : '미설정'}</span>
                         </div>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>연결 상태</span>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: '600',
-                          color: testingStatus.writing?.success || (appliedSettings.writing.provider && appliedSettings.writing.apiKey) ? '#059669' : testingStatus.writing?.message && !testingStatus.writing?.success ? '#ef4444' : '#64748b'
-                        }}>
-                          {testingStatus.writing?.testing 
-                            ? '🔄 테스트 중...'
-                            : testingStatus.writing?.success 
-                            ? '✅ 연결됨'
-                            : (appliedSettings.writing.provider && appliedSettings.writing.apiKey)
-                            ? '✅ 연결됨'
-                            : testingStatus.writing?.message && !testingStatus.writing?.success
-                            ? '❌ 연결 실패'
-                            : '⚪ 미확인'}
+                        <span className="text-slate-600 block mb-1">연결 상태</span>
+                        <div className={`flex items-center space-x-1 font-semibold ${
+                          testingStatus.writing?.success || (appliedSettings.writing.provider && appliedSettings.writing.apiKey) 
+                            ? 'text-emerald-600' 
+                            : testingStatus.writing?.message && !testingStatus.writing?.success 
+                            ? 'text-red-500' 
+                            : 'text-slate-500'
+                        }`}>
+                          <span>
+                            {testingStatus.writing?.testing 
+                              ? '🔄' 
+                              : testingStatus.writing?.success 
+                              ? '✅' 
+                              : (appliedSettings.writing.provider && appliedSettings.writing.apiKey)
+                              ? '✅' 
+                              : testingStatus.writing?.message && !testingStatus.writing?.success
+                              ? '❌' 
+                              : '⚪'}
+                          </span>
+                          <span>
+                            {testingStatus.writing?.testing 
+                              ? '테스트 중...'
+                              : testingStatus.writing?.success 
+                              ? '연결됨'
+                              : (appliedSettings.writing.provider && appliedSettings.writing.apiKey)
+                              ? '연결됨'
+                              : testingStatus.writing?.message && !testingStatus.writing?.success
+                              ? '연결 실패'
+                              : '미확인'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -645,28 +578,40 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
                 {/* API 키 발급 가이드 */}
                 {settings.writing.provider && (
-                  <div style={{
-                    padding: '16px',
-                    borderRadius: '8px',
-                    marginTop: '16px',
-                    backgroundColor: settings.writing.provider === 'claude' ? '#fff7ed' : settings.writing.provider === 'openai' ? '#eff6ff' : settings.writing.provider === 'gemini' ? '#f0fdf4' : '#f8fafc'
-                  }}>
-                    <h4 style={{
-                      fontWeight: '600',
-                      marginBottom: '8px',
-                      color: settings.writing.provider === 'claude' ? '#ea580c' : settings.writing.provider === 'openai' ? '#1d4ed8' : settings.writing.provider === 'gemini' ? '#166534' : '#374151'
-                    }}>📝 {
-                      settings.writing.provider === 'claude' ? 'Claude' :
-                      settings.writing.provider === 'openai' ? 'OpenAI' :
-                      settings.writing.provider === 'gemini' ? 'Gemini' : ''
-                    } API 키 발급 방법</h4>
-                    <ol style={{
-                      fontSize: '14px',
-                      lineHeight: '1.5',
-                      margin: 0,
-                      paddingLeft: '20px',
-                      color: settings.writing.provider === 'claude' ? '#c2410c' : settings.writing.provider === 'openai' ? '#1e40af' : settings.writing.provider === 'gemini' ? '#15803d' : '#374151'
-                    }}>
+                  <div className={`p-5 rounded-xl mt-6 border-2 ${
+                    settings.writing.provider === 'claude' 
+                      ? 'bg-orange-50 border-orange-200' 
+                      : settings.writing.provider === 'openai' 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : settings.writing.provider === 'gemini' 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <h4 className={`font-semibold mb-3 flex items-center space-x-2 ${
+                      settings.writing.provider === 'claude' 
+                        ? 'text-orange-700' 
+                        : settings.writing.provider === 'openai' 
+                        ? 'text-blue-700' 
+                        : settings.writing.provider === 'gemini' 
+                        ? 'text-green-700' 
+                        : 'text-gray-700'
+                    }`}>
+                      <span>📝</span>
+                      <span>{
+                        settings.writing.provider === 'claude' ? 'Claude' :
+                        settings.writing.provider === 'openai' ? 'OpenAI' :
+                        settings.writing.provider === 'gemini' ? 'Gemini' : ''
+                      } API 키 발급 방법</span>
+                    </h4>
+                    <ol className={`text-sm leading-relaxed m-0 pl-5 ${
+                      settings.writing.provider === 'claude' 
+                        ? 'text-orange-600' 
+                        : settings.writing.provider === 'openai' 
+                        ? 'text-blue-600' 
+                        : settings.writing.provider === 'gemini' 
+                        ? 'text-green-600' 
+                        : 'text-gray-600'
+                    }`}>
                       {settings.writing.provider === 'claude' && (
                         <>
                           <li><a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI?.openExternal?.('https://console.anthropic.com'); }} style={{ textDecoration: 'underline', cursor: 'pointer' }}>Claude Console</a> 접속</li>
@@ -708,26 +653,20 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
         {/* 이미지 AI 탭 */}
         {activeTab === 'image' && (
           <div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+            <div className="mb-6">
+              <label className="block mb-3 text-sm font-semibold text-gray-700">
                 제공업체 (Gemini만 지원)
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="flex gap-3 flex-wrap">
                 {getImageProviders().map(provider => (
                   <button
                     key={provider.id}
                     onClick={() => handleProviderChange('image', provider.id)}
-                    style={{
-                      padding: '12px 16px',
-                      border: settings.image.provider === provider.id ? '2px solid #374151' : '2px solid #e5e7eb',
-                      backgroundColor: settings.image.provider === provider.id ? '#f3f4f6' : 'white',
-                      borderRadius: '8px',
-                      color: settings.image.provider === provider.id ? '#374151' : '#6b7280',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
+                    className={`px-4 py-3 rounded-xl border-2 cursor-pointer transition-all duration-200 flex items-center space-x-2 hover:-translate-y-0.5 shadow-sm hover:shadow-md ${
+                      settings.image.provider === provider.id
+                        ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-purple-100'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
                   >
                     <span>{provider.icon}</span>
                     <span>{provider.name}</span>
@@ -738,21 +677,14 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
             {settings.image.provider && (
               <>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+                <div className="mb-6">
+                  <label className="block mb-3 text-sm font-semibold text-gray-700">
                     모델
                   </label>
                   <select
                     value={settings.image.model}
                     onChange={(e) => handleModelChange('image', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      color: '#374151'
-                    }}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
                   >
                     <option value="">모델을 선택하세요</option>
                     {getAvailableModels('image', settings.image.provider).map(model => (
@@ -765,21 +697,14 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
                 {/* 이미지 생성 옵션 */}
                 {settings.image.provider === 'gemini' && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+                  <div className="mb-6">
+                    <label className="block mb-3 text-sm font-semibold text-gray-700">
                       이미지 스타일
                     </label>
                     <select
                       value={settings.image.style || 'realistic'}
                       onChange={(e) => handleStyleChange('image', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: 'white',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        color: '#374151'
-                      }}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
                     >
                       <option value="realistic">사실적</option>
                       <option value="photographic">사진 같은</option>
@@ -790,8 +715,8 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                   </div>
                 )}
 
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+                <div className="mb-6">
+                  <label className="block mb-3 text-sm font-semibold text-gray-700">
                     API 키
                   </label>
                   <input
@@ -799,35 +724,18 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                     value={providerApiKeys[settings.image.provider as keyof ProviderApiKeys] || ''}
                     onChange={(e) => handleApiKeyChange(settings.image.provider, e.target.value)}
                     placeholder={`${settings.image.provider} API 키를 입력하세요`}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '8px',
-                      color: '#374151'
-                    }}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 placeholder-gray-400"
                   />
                 </div>
 
                 {/* 테스트 및 적용, 삭제 버튼 */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', marginBottom: '16px' }}>
+                <div className="flex justify-end space-x-3 mt-4 mb-4">
                   <button
                     onClick={() => deleteApiKey('image')}
                     disabled={testingStatus.image?.testing || !settings.image.apiKey}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#64748b',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      opacity: testingStatus.image?.testing || !settings.image.apiKey ? 0.5 : 1
-                    }}
+                    className={`inline-flex items-center space-x-2 px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-sm ${
+                      testingStatus.image?.testing || !settings.image.apiKey ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     <span>🗑️</span>
                     <span>삭제</span>
@@ -836,19 +744,13 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                   <button
                     onClick={() => testApiKey('image')}
                     disabled={!settings.image.apiKey || testingStatus.image?.testing}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: testingStatus.image?.success ? '#10b981' : '#10b981',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      opacity: !settings.image.apiKey || testingStatus.image?.testing ? 0.5 : 1
-                    }}
+                    className={`inline-flex items-center space-x-2 px-4 py-2 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-lg ${
+                      testingStatus.image?.success 
+                        ? 'bg-purple-500 hover:bg-purple-600 shadow-purple-500/25' 
+                        : 'bg-purple-500 hover:bg-purple-600 shadow-purple-500/25'
+                    } ${
+                      !settings.image.apiKey || testingStatus.image?.testing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
                   >
                     <span>{testingStatus.image?.testing ? '🔄' : testingStatus.image?.success ? '✅' : '🧪'}</span>
                     <span>{testingStatus.image?.testing ? '테스트 중...' : testingStatus.image?.success ? '적용 완료' : '테스트 및 적용'}</span>
@@ -857,19 +759,20 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                 
                 {/* 테스트 결과 메시지 */}
                 {testingStatus.image?.message && (
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginTop: '12px',
-                    backgroundColor: testingStatus.image.success ? '#f0fdf4' : testingStatus.image.testing ? '#eff6ff' : '#fef2f2',
-                    border: testingStatus.image.success ? '1px solid #bbf7d0' : testingStatus.image.testing ? '1px solid #bfdbfe' : '1px solid #fecaca'
-                  }}>
-                    <p style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      margin: 0,
-                      color: testingStatus.image.success ? '#166534' : testingStatus.image.testing ? '#1e40af' : '#dc2626'
-                    }}>
+                  <div className={`p-4 rounded-xl mt-3 border-2 ${
+                    testingStatus.image.success 
+                      ? 'bg-green-50 border-green-200' 
+                      : testingStatus.image.testing 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    <p className={`text-sm font-medium m-0 ${
+                      testingStatus.image.success 
+                        ? 'text-green-700' 
+                        : testingStatus.image.testing 
+                        ? 'text-blue-700' 
+                        : 'text-red-700'
+                    }`}>
                       {testingStatus.image.message}
                     </p>
                   </div>
@@ -877,63 +780,60 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
                 {/* 현재 적용된 설정 */}
                 {appliedSettings.image.provider && (
-                  <div style={{
-                    padding: '16px',
-                    backgroundColor: '#f8fafc',
-                    borderRadius: '12px',
-                    marginTop: '16px'
-                  }}>
-                    <h4 style={{
-                      fontWeight: '600',
-                      fontSize: '14px',
-                      color: '#1e293b',
-                      marginBottom: '12px',
-                      margin: 0
-                    }}>현재 적용된 설정</h4>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)',
-                      gap: '16px',
-                      fontSize: '12px'
-                    }}>
+                  <div className="p-5 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl mt-6 shadow-sm">
+                    <h4 className="font-semibold text-sm text-purple-800 mb-3 m-0 flex items-center space-x-2">
+                      <span>⚙️</span>
+                      <span>현재 적용된 설정</span>
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>제공자</span>
-                        <span style={{ fontWeight: '600' }}>{appliedSettings.image.provider.toUpperCase()}</span>
+                        <span className="text-slate-600 block mb-1">제공자</span>
+                        <span className="font-semibold text-purple-700">{appliedSettings.image.provider.toUpperCase()}</span>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>모델</span>
-                        <span style={{ fontWeight: '600' }}>{appliedSettings.image.model || '미선택'}</span>
+                        <span className="text-slate-600 block mb-1">모델</span>
+                        <span className="font-semibold text-purple-700">{appliedSettings.image.model || '미선택'}</span>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>API 키</span>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: '600',
-                          color: appliedSettings.image.apiKey ? '#059669' : '#ef4444'
-                        }}>
-                          {appliedSettings.image.apiKey ? '🔑 설정됨' : '🔒 미설정'}
+                        <span className="text-slate-600 block mb-1">API 키</span>
+                        <div className={`flex items-center space-x-1 font-semibold ${
+                          appliedSettings.image.apiKey ? 'text-emerald-600' : 'text-red-500'
+                        }`}>
+                          <span>{appliedSettings.image.apiKey ? '🔑' : '🔒'}</span>
+                          <span>{appliedSettings.image.apiKey ? '설정됨' : '미설정'}</span>
                         </div>
                       </div>
                       <div>
-                        <span style={{ color: '#64748b', display: 'block', marginBottom: '4px' }}>연결 상태</span>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: '600',
-                          color: testingStatus.image?.success || (appliedSettings.image.provider && appliedSettings.image.apiKey) ? '#059669' : testingStatus.image?.message && !testingStatus.image?.success ? '#ef4444' : '#64748b'
-                        }}>
-                          {testingStatus.image?.testing 
-                            ? '🔄 테스트 중...'
-                            : testingStatus.image?.success 
-                            ? '✅ 연결됨'
-                            : (appliedSettings.image.provider && appliedSettings.image.apiKey)
-                            ? '✅ 연결됨'
-                            : testingStatus.image?.message && !testingStatus.image?.success
-                            ? '❌ 연결 실패'
-                            : '⚪ 미확인'}
+                        <span className="text-slate-600 block mb-1">연결 상태</span>
+                        <div className={`flex items-center space-x-1 font-semibold ${
+                          testingStatus.image?.success || (appliedSettings.image.provider && appliedSettings.image.apiKey) 
+                            ? 'text-emerald-600' 
+                            : testingStatus.image?.message && !testingStatus.image?.success 
+                            ? 'text-red-500' 
+                            : 'text-slate-500'
+                        }`}>
+                          <span>
+                            {testingStatus.image?.testing 
+                              ? '🔄' 
+                              : testingStatus.image?.success 
+                              ? '✅' 
+                              : (appliedSettings.image.provider && appliedSettings.image.apiKey)
+                              ? '✅' 
+                              : testingStatus.image?.message && !testingStatus.image?.success
+                              ? '❌' 
+                              : '⚪'}
+                          </span>
+                          <span>
+                            {testingStatus.image?.testing 
+                              ? '테스트 중...'
+                              : testingStatus.image?.success 
+                              ? '연결됨'
+                              : (appliedSettings.image.provider && appliedSettings.image.apiKey)
+                              ? '연결됨'
+                              : testingStatus.image?.message && !testingStatus.image?.success
+                              ? '연결 실패'
+                              : '미확인'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -942,24 +842,24 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
                 {/* API 키 발급 가이드 */}
                 {settings.image.provider && (
-                  <div style={{
-                    padding: '16px',
-                    borderRadius: '8px',
-                    marginTop: '16px',
-                    backgroundColor: settings.image.provider === 'gemini' ? '#f0fdf4' : '#f8fafc'
-                  }}>
-                    <h4 style={{
-                      fontWeight: '600',
-                      marginBottom: '8px',
-                      color: settings.image.provider === 'gemini' ? '#166534' : '#374151'
-                    }}>📝 {settings.image.provider === 'gemini' ? 'Gemini' : ''} API 키 발급 방법</h4>
-                    <ol style={{
-                      fontSize: '14px',
-                      lineHeight: '1.5',
-                      margin: 0,
-                      paddingLeft: '20px',
-                      color: settings.image.provider === 'gemini' ? '#15803d' : '#374151'
-                    }}>
+                  <div className={`p-5 rounded-xl mt-6 border-2 ${
+                    settings.image.provider === 'gemini' 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <h4 className={`font-semibold mb-3 flex items-center space-x-2 ${
+                      settings.image.provider === 'gemini' 
+                        ? 'text-green-700' 
+                        : 'text-gray-700'
+                    }`}>
+                      <span>📝</span>
+                      <span>{settings.image.provider === 'gemini' ? 'Gemini' : ''} API 키 발급 방법</span>
+                    </h4>
+                    <ol className={`text-sm leading-relaxed m-0 pl-5 ${
+                      settings.image.provider === 'gemini' 
+                        ? 'text-green-600' 
+                        : 'text-gray-600'
+                    }`}>
                       {settings.image.provider === 'gemini' && (
                         <>
                           <li><a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI?.openExternal?.('https://aistudio.google.com/app/apikey'); }} style={{ textDecoration: 'underline', cursor: 'pointer' }}>Google AI Studio</a> 접속</li>
@@ -979,30 +879,16 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
         )}
 
         {/* 하단 버튼 */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+        <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
           <button
             onClick={onClose}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#6b7280',
-              border: 'none',
-              borderRadius: '8px',
-              color: 'white',
-              cursor: 'pointer'
-            }}
+            className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-gray-500/25"
           >
             취소
           </button>
           <button
             onClick={saveSettings}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#10b981',
-              border: 'none',
-              borderRadius: '8px',
-              color: 'white',
-              cursor: 'pointer'
-            }}
+            className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-emerald-500/25"
           >
             저장
           </button>
