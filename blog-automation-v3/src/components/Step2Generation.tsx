@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 
 interface Step2Props {
   setupData: {
-    writingStyle: string;
-    seoGuide: string;
+    writingStylePaths: string[];
+    seoGuidePath: string;
     topic: string;
   };
   onComplete: (content: string) => void;
@@ -24,24 +24,12 @@ const Step2Generation: React.FC<Step2Props> = ({ setupData, onComplete, onBack }
       await window.electronAPI.openClaudeWeb();
       setGenerationStep('문서 업로드 중...');
       
-      // 말투 문서 + SEO 가이드 + 주제를 클로드에 전송
-      const prompt = `
-다음 문서들을 참고해서 블로그 글을 작성해주세요.
-
-## 말투 참고 문서:
-${setupData.writingStyle}
-
-## SEO 가이드:
-${setupData.seoGuide}
-
-## 주제:
-${setupData.topic}
-
-위 말투와 SEO 가이드를 참고해서, 주제에 맞는 블로그 글을 작성해주세요. 
-이미지가 필요한 위치에는 (이미지)라고 표시해주세요.
-`;
-      
-      await window.electronAPI.sendToClaudeWeb(prompt);
+      // 말투 문서 파일들, SEO 가이드 파일, 주제를 클로드에 전송
+      await window.electronAPI.sendToClaudeWeb(
+        setupData.writingStylePaths,  // 말투 문서 파일 경로들
+        setupData.seoGuidePath,       // SEO 가이드 파일 경로
+        setupData.topic               // 주제
+      );
       setGenerationStep('AI 응답 생성 중...');
       
       // AI 응답 완료 대기
@@ -59,7 +47,20 @@ ${setupData.topic}
       
     } catch (error) {
       console.error('생성 실패:', error);
-      setGenerationStep('오류 발생: ' + error);
+      if (error.message.includes('Chrome을 디버깅 모드로')) {
+        setGenerationStep(`
+Chrome 디버깅 모드 실행 필요:
+
+1. PowerShell에서 다음 명령어 실행:
+"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=9222
+
+2. 열린 Chrome에서 claude.ai 로그인
+
+3. 다시 "자동으로 글 생성하기" 클릭
+        `);
+      } else {
+        setGenerationStep('오류 발생: ' + error.message);
+      }
       setIsGenerating(false);
     }
   };

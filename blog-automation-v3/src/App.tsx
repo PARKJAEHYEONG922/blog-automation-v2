@@ -9,8 +9,8 @@ type Step = 1 | 2 | 3;
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [setupData, setSetupData] = useState({
-    writingStyle: '',
-    seoGuide: '',
+    writingStylePaths: [] as string[],
+    seoGuidePath: '',
     topic: ''
   });
   const [generatedContent, setGeneratedContent] = useState<string>('');
@@ -27,7 +27,7 @@ const App: React.FC = () => {
 
   const handleReset = () => {
     setCurrentStep(1);
-    setSetupData({ writingStyle: '', seoGuide: '', topic: '' });
+    setSetupData({ writingStylePaths: [], seoGuidePath: '', topic: '' });
     setGeneratedContent('');
   };
 

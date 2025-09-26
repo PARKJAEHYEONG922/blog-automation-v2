@@ -2,37 +2,46 @@
   "name": "blog-automation-v3",
   "version": "1.0.0",
   "description": "AI 블로그 자동화 툴 v3 - 클로드 웹 연동",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "webpack serve --mode development",
+    "start": "npm run build:quick && concurrently \"webpack --mode development --watch\" \"nodemon --watch dist --ext js --exec electron dist/main.js\"",
     "build": "webpack --mode production && electron-builder",
-    "build:dev": "webpack --mode development",
-    "start": "electron .",
+    "build:quick": "webpack --mode development",
+    "start:prod": "cross-env NODE_ENV=production electron dist/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["blog", "automation", "ai", "claude"],
+  "keywords": [
+    "blog",
+    "automation",
+    "ai",
+    "claude"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "css-loader": "^6.8.1",
+    "@vitejs/plugin-react": "^5.0.3",
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.0.0",
+    "css-loader": "^6.11.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.6.4",
-    "html-webpack-plugin": "^5.5.3",
-    "style-loader": "^3.3.3",
-    "ts-loader": "^9.4.4",
+    "html-webpack-plugin": "^5.6.4",
+    "nodemon": "^3.1.10",
+    "style-loader": "^3.3.4",
+    "ts-loader": "^9.5.4",
     "typescript": "^5.0.0",
-    "webpack": "^5.88.0",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1"
+    "wait-on": "^8.0.5",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "marked": "^9.0.0",
     "playwright": "^1.40.0",
-    "marked": "^9.0.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "build": {
     "appId": "com.blog.automation.v3",
