@@ -772,7 +772,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   `;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="max-w-6xl mx-auto min-h-screen bg-gray-50 p-6">
       <style>{sectionStyles}</style>
       {/* 작업 요약 */}
       <WorkSummary 
