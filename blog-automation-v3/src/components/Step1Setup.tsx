@@ -5,6 +5,7 @@ interface Step1Props {
     writingStylePaths: string[]; // 말투 문서 파일 경로들
     seoGuidePath: string;        // SEO 가이드 파일 경로
     topic: string;
+    generatedContent?: string;   // 생성된 글 (옵셔널)
   }) => void;
 }
 
@@ -89,6 +90,10 @@ const ConfirmDialog: React.FC<{
 const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
   const [topic, setTopic] = useState('');
   
+  // 생성 관련 상태
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState<string>('');
+  
   // 저장된 문서들
   const [savedWritingStyles, setSavedWritingStyles] = useState<SavedDocument[]>([]);
   const [savedSeoGuides, setSavedSeoGuides] = useState<SavedDocument[]>([]);
@@ -112,41 +117,59 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
 
   // 로컬 스토리지에서 저장된 문서들 로드
   useEffect(() => {
-    const loadSavedDocuments = () => {
+    const loadSavedDocuments = async () => {
       const savedWritingStylesData = localStorage.getItem('savedWritingStyles');
-      const savedSeoGuidesData = localStorage.getItem('savedSeoGuides');
       
       if (savedWritingStylesData) {
         setSavedWritingStyles(JSON.parse(savedWritingStylesData));
       }
       
-      if (savedSeoGuidesData) {
-        setSavedSeoGuides(JSON.parse(savedSeoGuidesData));
+      // 항상 파일시스템에서 최신 SEO 가이드 로드 (기본 문서 포함)
+      try {
+        const seoGuides = await window.electronAPI.loadDocuments('seoGuide');
+        if (seoGuides && seoGuides.length > 0) {
+          setSavedSeoGuides(seoGuides);
+          localStorage.setItem('savedSeoGuides', JSON.stringify(seoGuides));
+          
+          // 기본 SEO 가이드가 있으면 자동 선택
+          const defaultSEO = seoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
+          if (defaultSEO && !selectedSeoGuide) {
+            setSelectedSeoGuide(defaultSEO);
+          }
+        } else {
+          // SEO 가이드가 하나도 없으면 기본 가이드 생성
+          await window.electronAPI.createDefaultSEO();
+          // 생성 후 다시 로드
+          const newSeoGuides = await window.electronAPI.loadDocuments('seoGuide');
+          if (newSeoGuides && newSeoGuides.length > 0) {
+            setSavedSeoGuides(newSeoGuides);
+            localStorage.setItem('savedSeoGuides', JSON.stringify(newSeoGuides));
+            
+            const defaultSEO = newSeoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
+            if (defaultSEO && !selectedSeoGuide) {
+              setSelectedSeoGuide(defaultSEO);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('SEO 가이드 문서 로드 실패:', error);
+        // 실패 시 로컬스토리지에서라도 로드 시도
+        const savedSeoGuidesData = localStorage.getItem('savedSeoGuides');
+        if (savedSeoGuidesData) {
+          const seoGuides = JSON.parse(savedSeoGuidesData);
+          setSavedSeoGuides(seoGuides);
+          
+          const defaultSEO = seoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
+          if (defaultSEO && !selectedSeoGuide) {
+            setSelectedSeoGuide(defaultSEO);
+          }
+        }
       }
     };
     
     loadSavedDocuments();
   }, []);
 
-  // 수동 저장 함수 (현재 사용하지 않음 - 자동저장으로 대체됨)
-  // const saveDocument = (type: 'writingStyle' | 'seoGuide', name: string) => {
-  //   // 현재 선택된 문서들에서 내용을 가져옴
-  //   const content = type === 'writingStyle' 
-  //     ? selectedWritingStyles[0]?.content || ''
-  //     : selectedSeoGuide?.content || '';
-  //   
-  //   if (!name.trim()) {
-  //     alert('문서 이름을 입력해주세요!');
-  //     return;
-  //   }
-  // 
-  //   if (!content.trim()) {
-  //     alert('저장할 내용이 없습니다!');
-  //     return;
-  //   }
-  // 
-  //   // ... 저장 로직
-  // };
 
   // 말투 문서 선택/해제 함수
   const toggleWritingStyle = (doc: SavedDocument) => {
@@ -166,8 +189,8 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
   };
 
   // SEO 가이드 선택 함수
-  const selectSeoGuide = (doc: SavedDocument) => {
-    setSelectedSeoGuide(doc);
+  const toggleSeoGuide = (doc: SavedDocument) => {
+    setSelectedSeoGuide(selectedSeoGuide?.id === doc.id ? null : doc);
   };
 
   // 삭제 다이얼로그 열기
@@ -189,7 +212,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
         // 물리 파일 삭제
         const docToDelete = savedWritingStyles.find(doc => doc.id === docId);
         if (docToDelete) {
-          await window.electronAPI.deleteDocumentFile(docToDelete.filePath);
+          await window.electronAPI.deleteDocument(docToDelete.filePath);
         }
         
         // 선택된 문서에서도 제거
@@ -201,7 +224,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
         // 물리 파일 삭제
         const docToDelete = savedSeoGuides.find(doc => doc.id === docId);
         if (docToDelete) {
-          await window.electronAPI.deleteDocumentFile(docToDelete.filePath);
+          await window.electronAPI.deleteDocument(docToDelete.filePath);
         }
         
         // 선택된 SEO 가이드도 제거
@@ -228,11 +251,11 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
   // 자동 저장 함수 (알림 없이)
   const saveDocumentAuto = async (type: 'writingStyle' | 'seoGuide', name: string, content: string): Promise<SavedDocument> => {
     // 파일을 실제 폴더에 저장
-    const filePath = await window.electronAPI.saveDocumentFile(type, name, content);
+    const filePath = await window.electronAPI.saveDocument(type, name, content);
     
     const newDocument: SavedDocument = {
       id: Date.now().toString(),
-      name: name.trim(),
+      name: name.trim(),  // 원래 파일명 유지
       content,
       filePath,
       createdAt: new Date().toISOString()
@@ -244,7 +267,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
       let updated;
       if (existingIndex >= 0) {
         // 기존 파일 삭제
-        await window.electronAPI.deleteDocumentFile(savedWritingStyles[existingIndex].filePath);
+        await window.electronAPI.deleteDocument(savedWritingStyles[existingIndex].filePath);
         updated = [...savedWritingStyles];
         updated[existingIndex] = newDocument;
       } else {
@@ -258,7 +281,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
       let updated;
       if (existingIndex >= 0) {
         // 기존 파일 삭제
-        await window.electronAPI.deleteDocumentFile(savedSeoGuides[existingIndex].filePath);
+        await window.electronAPI.deleteDocument(savedSeoGuides[existingIndex].filePath);
         updated = [...savedSeoGuides];
         updated[existingIndex] = newDocument;
       } else {
@@ -297,12 +320,47 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
     reader.readAsText(file);
   };
 
-  const handleSubmit = () => {
-    onComplete({ 
-      writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
-      seoGuidePath: selectedSeoGuide?.filePath || '',
-      topic 
-    });
+  // 자동 생성 함수
+  const handleStartGeneration = async () => {
+    if (!topic.trim()) {
+      alert('블로그 주제를 입력해주세요!');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationStep('클로드 웹 브라우저 열기...');
+    
+    try {
+      await window.electronAPI.openClaudeWeb();
+      setGenerationStep('문서 업로드 중...');
+      
+      await window.electronAPI.sendToClaudeWeb(
+        selectedWritingStyles.map(doc => doc.filePath),
+        selectedSeoGuide?.filePath || '',
+        topic
+      );
+      setGenerationStep('AI 응답 생성 중...');
+      
+      await window.electronAPI.waitForClaudeResponse();
+      setGenerationStep('마크다운 다운로드 중...');
+      
+      const content = await window.electronAPI.downloadFromClaude();
+      setGenerationStep('완료!');
+      
+      setTimeout(() => {
+        onComplete({ 
+          writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
+          seoGuidePath: selectedSeoGuide?.filePath || '',
+          topic,
+          generatedContent: content
+        });
+      }, 1000);
+      
+    } catch (error) {
+      console.error('생성 실패:', error);
+      setGenerationStep('오류 발생: ' + error.message);
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -316,230 +374,191 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
       <h2 style={{
         textAlign: 'center',
         color: '#495057',
-        marginBottom: '30px',
+        marginBottom: '40px',
         fontSize: '28px',
         fontWeight: 'bold'
-      }}>📝 1단계: 기본 설정</h2>
+      }}>📝 1단계: 설정 & 생성</h2>
       
-      {/* 문서 업로드 섹션 - 가로 배치 */}
-      <div style={{
-        display: 'flex',
-        gap: '30px',
-        marginBottom: '30px'
-      }}>
-        {/* 말투 문서 업로드 */}
-        <div style={{
-          backgroundColor: '#f8f9fa',
-          border: '2px solid #e9ecef',
-          borderRadius: '12px',
-          padding: '20px',
-          flex: '1'
-        }}>
-          <h3 style={{ color: '#495057', marginBottom: '8px' }}>✍️ 나만의 말투 문서</h3>
-          <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '16px' }}>
-            평소 블로그에 쓰는 글들을 복사해서 텍스트 파일로 만든 후 업로드하세요. (자동 저장됩니다)
-          </p>
-        
-        <div style={{ marginBottom: '16px' }}>
-          <input
-            type="file"
-            accept=".txt,.md"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileUpload('writingStyle', file);
-            }}
-            style={{
-              padding: '10px',
-              border: '2px dashed #dee2e6',
-              borderRadius: '8px',
-              backgroundColor: '#fff',
-              width: '100%',
-              cursor: 'pointer'
-            }}
-          />
-        </div>
-
-        {/* 저장된 말투 문서 목록 */}
-        {savedWritingStyles.length > 0 && (
-          <div style={{
-            backgroundColor: '#fff',
-            border: '1px solid #dee2e6',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px'
-          }}>
-            <h4 style={{ color: '#495057', marginBottom: '12px', fontSize: '16px' }}>📁 저장된 말투 문서 (최대 2개까지 선택 가능)</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {savedWritingStyles.map(doc => {
-                const isSelected = selectedWritingStyles.some(selected => selected.id === doc.id);
-                return (
-                  <div key={doc.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: isSelected ? '#e8f5e8' : '#f8f9fa',
-                    border: isSelected ? '2px solid #28a745' : '1px solid #dee2e6',
-                    borderRadius: '20px',
-                    padding: '6px 12px',
-                    fontSize: '14px'
-                  }}>
-                    <span
-                      onClick={() => toggleWritingStyle(doc)}
-                      style={{
-                        cursor: 'pointer',
-                        color: '#495057',
-                        marginRight: '8px'
-                      }}
-                    >
-                      {isSelected ? '✅ ' : ''}{doc.name}
-                    </span>
-                    <button
-                      onClick={() => openDeleteDialog('writingStyle', doc.id, doc.name)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#dc3545',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        padding: '0',
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="삭제"
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            {selectedWritingStyles.length > 0 && (
-              <div style={{ marginTop: '12px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                <small style={{ color: '#6c757d' }}>
-                  선택됨: {selectedWritingStyles.map(doc => doc.name).join(', ')} ({selectedWritingStyles.length}/2)
-                </small>
-              </div>
-            )}
-          </div>
-        )}
-        </div>
-
-        {/* SEO 가이드 업로드 */}
-        <div style={{
-          backgroundColor: '#f8f9fa',
-          border: '2px solid #e9ecef',
-          borderRadius: '12px',
-          padding: '20px',
-          flex: '1'
-        }}>
-          <h3 style={{ color: '#495057', marginBottom: '8px' }}>📊 네이버 SEO 가이드</h3>
-          <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '16px' }}>
-            네이버 블로그 SEO 최적화 가이드 문서를 업로드하세요. (자동 저장됩니다)
-          </p>
-        
-        <div style={{ marginBottom: '16px' }}>
-          <input
-            type="file"
-            accept=".txt,.md"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileUpload('seoGuide', file);
-            }}
-            style={{
-              padding: '10px',
-              border: '2px dashed #dee2e6',
-              borderRadius: '8px',
-              backgroundColor: '#fff',
-              width: '100%',
-              cursor: 'pointer'
-            }}
-          />
-        </div>
-
-        {/* 저장된 SEO 가이드 목록 */}
-        {savedSeoGuides.length > 0 && (
-          <div style={{
-            backgroundColor: '#fff',
-            border: '1px solid #dee2e6',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px'
-          }}>
-            <h4 style={{ color: '#495057', marginBottom: '12px', fontSize: '16px' }}>📁 저장된 SEO 가이드 (1개 선택)</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {savedSeoGuides.map(doc => {
-                const isSelected = selectedSeoGuide?.id === doc.id;
-                return (
-                  <div key={doc.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: isSelected ? '#e3f2fd' : '#f8f9fa',
-                    border: isSelected ? '2px solid #2196f3' : '1px solid #dee2e6',
-                    borderRadius: '20px',
-                    padding: '6px 12px',
-                    fontSize: '14px'
-                  }}>
-                    <span
-                      onClick={() => selectSeoGuide(doc)}
-                      style={{
-                        cursor: 'pointer',
-                        color: '#495057',
-                        marginRight: '8px'
-                      }}
-                    >
-                      {isSelected ? '📘 ' : '📄 '}{doc.name}
-                    </span>
-                    <button
-                      onClick={() => openDeleteDialog('seoGuide', doc.id, doc.name)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#dc3545',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        padding: '0',
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="삭제"
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-            {selectedSeoGuide && (
-              <div style={{ marginTop: '12px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                <small style={{ color: '#6c757d' }}>
-                  선택됨: {selectedSeoGuide.name}
-                </small>
-              </div>
-            )}
-          </div>
-        )}
-        </div>
-      </div>
-
-      {/* 주제 입력 */}
+      {/* 문서 업로드 통합 섹션 */}
       <div style={{
         backgroundColor: '#f8f9fa',
         border: '2px solid #e9ecef',
-        borderRadius: '12px',
-        padding: '20px',
-        marginBottom: '30px'
+        borderRadius: '16px',
+        padding: '25px',
+        marginBottom: '40px'
       }}>
-        <h3 style={{ color: '#495057', marginBottom: '8px' }}>🎯 블로그 주제</h3>
-        <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '16px' }}>
-          어떤 주제로 글을 작성하고 싶은지 입력하세요.
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <h3 style={{ color: '#495057', fontSize: '20px', marginBottom: '8px' }}>📚 문서 업로드</h3>
+          <p style={{ color: '#6c757d', fontSize: '14px', margin: 0 }}>
+            블로그 글 생성에 사용할 참고 문서들을 업로드하세요
+          </p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '25px' }}>
+          {/* 말투 문서 */}
+          <div style={{ flex: '1' }}>
+            <div style={{
+              backgroundColor: '#fff',
+              border: '1px solid #dee2e6',
+              borderRadius: '12px',
+              padding: '20px'
+            }}>
+              <h4 style={{ color: '#495057', marginBottom: '8px', fontSize: '16px' }}>✍️ 나만의 말투 문서</h4>
+              <p style={{ color: '#6c757d', fontSize: '13px', marginBottom: '16px' }}>
+                평소 블로그 글 스타일 참고용 (최대 2개)
+              </p>
+            
+              <input
+                type="file"
+                accept=".txt,.md"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload('writingStyle', file);
+                }}
+                style={{
+                  padding: '8px',
+                  border: '2px dashed #dee2e6',
+                  borderRadius: '8px',
+                  backgroundColor: '#fafafa',
+                  width: '100%',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              />
+
+              {savedWritingStyles.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {savedWritingStyles.map(doc => {
+                      const isSelected = selectedWritingStyles.some(selected => selected.id === doc.id);
+                      return (
+                        <div key={doc.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          backgroundColor: isSelected ? '#e8f5e8' : '#f8f9fa',
+                          border: isSelected ? '2px solid #28a745' : '1px solid #dee2e6',
+                          borderRadius: '15px',
+                          padding: '4px 10px',
+                          fontSize: '12px'
+                        }}>
+                          <span
+                            onClick={() => toggleWritingStyle(doc)}
+                            style={{ cursor: 'pointer', color: '#495057', marginRight: '6px' }}
+                          >
+                            {isSelected ? '✅ ' : ''}{doc.name}
+                          </span>
+                          <button
+                            onClick={() => openDeleteDialog('writingStyle', doc.id, doc.name)}
+                            style={{
+                              background: 'none', border: 'none', color: '#dc3545',
+                              cursor: 'pointer', fontSize: '12px', padding: '0'
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {selectedWritingStyles.length > 0 && (
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
+                      선택: {selectedWritingStyles.length}/2
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SEO 가이드 */}
+          <div style={{ flex: '1' }}>
+            <div style={{
+              backgroundColor: '#fff',
+              border: '1px solid #dee2e6',
+              borderRadius: '12px',
+              padding: '20px'
+            }}>
+              <h4 style={{ color: '#495057', marginBottom: '8px', fontSize: '16px' }}>📊 네이버 SEO 가이드</h4>
+              <p style={{ color: '#6c757d', fontSize: '13px', marginBottom: '16px' }}>
+                SEO 최적화 가이드 (1개 선택)
+              </p>
+            
+              <input
+                type="file"
+                accept=".txt,.md"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload('seoGuide', file);
+                }}
+                style={{
+                  padding: '8px',
+                  border: '2px dashed #dee2e6',
+                  borderRadius: '8px',
+                  backgroundColor: '#fafafa',
+                  width: '100%',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              />
+
+              {savedSeoGuides.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {savedSeoGuides.map(doc => {
+                      const isSelected = selectedSeoGuide?.id === doc.id;
+                      return (
+                        <div key={doc.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          backgroundColor: isSelected ? '#e3f2fd' : '#f8f9fa',
+                          border: isSelected ? '2px solid #2196f3' : '1px solid #dee2e6',
+                          borderRadius: '15px',
+                          padding: '4px 10px',
+                          fontSize: '12px'
+                        }}>
+                          <span
+                            onClick={() => toggleSeoGuide(doc)}
+                            style={{ cursor: 'pointer', color: '#495057', marginRight: '6px' }}
+                          >
+                            {isSelected ? '📘 ' : '📄 '}{doc.name}
+                          </span>
+                          <button
+                            onClick={() => openDeleteDialog('seoGuide', doc.id, doc.name)}
+                            style={{
+                              background: 'none', border: 'none', color: '#dc3545',
+                              cursor: 'pointer', fontSize: '12px', padding: '0'
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {selectedSeoGuide && (
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
+                      선택: {selectedSeoGuide.name}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 블로그 주제 입력 및 버튼들 */}
+      <div style={{
+        backgroundColor: '#fff',
+        border: '2px solid #e9ecef',
+        borderRadius: '16px',
+        padding: '25px'
+      }}>
+        <h3 style={{ color: '#495057', marginBottom: '8px', fontSize: '20px' }}>🎯 블로그 주제 입력</h3>
+        <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '20px' }}>
+          어떤 주제로 글을 작성하고 싶은지 입력하세요
         </p>
+        
         <textarea
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
@@ -548,45 +567,146 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
           style={{
             width: '100%',
             border: '2px solid #dee2e6',
-            borderRadius: '8px',
-            padding: '12px',
-            fontSize: '14px',
-            backgroundColor: '#fff',
+            borderRadius: '10px',
+            padding: '15px',
+            fontSize: '15px',
+            backgroundColor: '#fafafa',
             resize: 'vertical',
-            fontFamily: 'inherit'
+            fontFamily: 'inherit',
+            marginBottom: '20px'
           }}
         />
-      </div>
 
-      <div style={{ textAlign: 'center' }}>
-        <button 
-          onClick={handleSubmit}
-          style={{
-            backgroundColor: '#007bff',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '25px',
-            padding: '15px 40px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)'
-          }}
-          onMouseEnter={(e) => {
-            const target = e.target as HTMLButtonElement;
-            target.style.transform = 'translateY(-2px)';
-            target.style.boxShadow = '0 6px 20px rgba(0, 123, 255, 0.4)';
-          }}
-          onMouseLeave={(e) => {
-            const target = e.target as HTMLButtonElement;
-            target.style.transform = 'translateY(0)';
-            target.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.3)';
-          }}
-        >
-          다음 단계로 시작하기 →
-        </button>
+        {/* 버튼 섹션 */}
+        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+          {!isGenerating ? (
+            <>
+              <button 
+                onClick={handleStartGeneration}
+                style={{
+                  backgroundColor: '#28a745',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '15px 30px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  const target = e.target as HTMLButtonElement;
+                  target.style.backgroundColor = '#218838';
+                  target.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.target as HTMLButtonElement;
+                  target.style.backgroundColor = '#28a745';
+                  target.style.transform = 'translateY(0)';
+                }}
+              >
+                🚀 자동 생성하기
+              </button>
+
+              <label style={{
+                backgroundColor: '#6c757d',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '15px 30px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.target as HTMLLabelElement;
+                target.style.backgroundColor = '#5a6268';
+                target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.target as HTMLLabelElement;
+                target.style.backgroundColor = '#6c757d';
+                target.style.transform = 'translateY(0)';
+              }}>
+                📁 수동 업로드
+                <input
+                  type="file"
+                  accept=".md,.txt"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const content = event.target?.result as string;
+                        onComplete({ 
+                          writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
+                          seoGuidePath: selectedSeoGuide?.filePath || '',
+                          topic: topic || '수동 업로드된 글',
+                          generatedContent: content
+                        });
+                      };
+                      reader.readAsText(file);
+                    }
+                  }}
+                />
+              </label>
+            </>
+          ) : (
+            <div style={{
+              backgroundColor: '#fff',
+              border: '2px solid #007bff',
+              borderRadius: '12px',
+              padding: '20px 40px',
+              textAlign: 'center',
+              minWidth: '300px'
+            }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                border: '3px solid #007bff',
+                borderTop: '3px solid transparent',
+                borderRadius: '50%',
+                margin: '0 auto 12px auto',
+                animation: 'spin 1s linear infinite'
+              }}></div>
+              <p style={{ color: '#007bff', fontSize: '14px', margin: 0, fontWeight: 'bold' }}>
+                {generationStep}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* 안내 메시지 */}
+        <div style={{
+          marginTop: '20px',
+          padding: '12px',
+          backgroundColor: '#e8f4f8',
+          borderRadius: '8px',
+          border: '1px solid #bee5eb',
+          textAlign: 'center'
+        }}>
+          <small style={{ color: '#0c5460', fontSize: '13px' }}>
+            💡 자동 생성: 위 문서들을 참고해서 AI가 글을 생성합니다 | 수동 업로드: 직접 작성한 마크다운 파일을 업로드합니다
+          </small>
+        </div>
       </div>
+      
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
 
       {/* 삭제 확인 다이얼로그 */}
       <ConfirmDialog

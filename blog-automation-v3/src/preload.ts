@@ -11,9 +11,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadFromClaude: () => ipcRenderer.invoke('claude-web:download'),
   
   // File management
-  saveDocumentFile: (type: 'writingStyle' | 'seoGuide', name: string, content: string) =>
+  saveDocument: (type: 'writingStyle' | 'seoGuide', name: string, content: string) =>
     ipcRenderer.invoke('file:save-document', type, name, content),
-  deleteDocumentFile: (filePath: string) => ipcRenderer.invoke('file:delete-document', filePath),
+  deleteDocument: (filePath: string) => ipcRenderer.invoke('file:delete-document', filePath),
+  loadDocuments: (type: 'writingStyle' | 'seoGuide') => ipcRenderer.invoke('file:load-documents', type),
+  createDefaultSEO: () => ipcRenderer.invoke('file:create-default-seo'),
   
   // Image generation
   generateImagePrompts: (data: { content: string; imageCount: number }) => 
@@ -32,8 +34,10 @@ declare global {
       sendToClaudeWeb: (writingStylePaths: string[], seoGuidePath: string, topic: string) => Promise<void>;
       waitForClaudeResponse: () => Promise<void>;
       downloadFromClaude: () => Promise<string>;
-      saveDocumentFile: (type: 'writingStyle' | 'seoGuide', name: string, content: string) => Promise<string>;
-      deleteDocumentFile: (filePath: string) => Promise<boolean>;
+      saveDocument: (type: 'writingStyle' | 'seoGuide', name: string, content: string) => Promise<string>;
+      deleteDocument: (filePath: string) => Promise<boolean>;
+      loadDocuments: (type: 'writingStyle' | 'seoGuide') => Promise<any[]>;
+      createDefaultSEO: () => Promise<boolean>;
       generateImagePrompts: (data: { content: string; imageCount: number }) => Promise<{ prompts: string[] }>;
       generateImage: (prompt: string) => Promise<string>;
       publishToBlog: (content: string) => Promise<{ success: boolean }>;
