@@ -12,8 +12,26 @@ interface Step1Props {
     writingStylePaths: string[];
     seoGuidePath: string;
     topic: string;
+    selectedTitle: string;
+    mainKeyword: string;
+    subKeywords: string;
+    blogContent: string;
     generatedContent?: string;
+    isAIGenerated: boolean;
+    generatedTitles: string[];
   }) => void;
+  initialData?: {
+    writingStylePaths: string[];
+    seoGuidePath: string;
+    topic: string;
+    selectedTitle: string;
+    mainKeyword: string;
+    subKeywords: string;
+    blogContent: string;
+    generatedContent?: string;
+    isAIGenerated: boolean;
+    generatedTitles: string[];
+  };
 }
 
 interface SavedDocument {
@@ -24,17 +42,17 @@ interface SavedDocument {
   createdAt: string;
 }
 
-const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
+const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   
   // 키워드 입력 상태
-  const [mainKeyword, setMainKeyword] = useState('');
-  const [subKeywords, setSubKeywords] = useState('');
-  const [blogContent, setBlogContent] = useState('');
+  const [mainKeyword, setMainKeyword] = useState(initialData?.mainKeyword || '');
+  const [subKeywords, setSubKeywords] = useState(initialData?.subKeywords || '');
+  const [blogContent, setBlogContent] = useState(initialData?.blogContent || '');
   
   // 제목 추천 관련 상태
   const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
-  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
-  const [selectedTitle, setSelectedTitle] = useState('');
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>(initialData?.generatedTitles || []);
+  const [selectedTitle, setSelectedTitle] = useState(initialData?.selectedTitle || '');
   
   // 생성 관련 상태
   const [isGenerating, setIsGenerating] = useState(false);
@@ -61,13 +79,15 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
     type: 'writingStyle'
   });
 
-  // 로컬 스토리지에서 저장된 문서들 로드
+  // 로컬 스토리지에서 저장된 문서들 로드 및 초기 데이터 복원
   useEffect(() => {
     const loadSavedDocuments = async () => {
       const savedWritingStylesData = localStorage.getItem('savedWritingStyles');
+      let loadedWritingStyles: SavedDocument[] = [];
       
       if (savedWritingStylesData) {
-        setSavedWritingStyles(JSON.parse(savedWritingStylesData));
+        loadedWritingStyles = JSON.parse(savedWritingStylesData);
+        setSavedWritingStyles(loadedWritingStyles);
       }
       
       try {
@@ -76,9 +96,17 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
           setSavedSeoGuides(seoGuides);
           localStorage.setItem('savedSeoGuides', JSON.stringify(seoGuides));
           
-          const defaultSEO = seoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
-          if (defaultSEO && !selectedSeoGuide) {
-            setSelectedSeoGuide(defaultSEO);
+          // 초기 데이터가 있으면 해당 SEO 가이드 선택
+          if (initialData?.seoGuidePath) {
+            const selectedSEO = seoGuides.find((doc: SavedDocument) => doc.filePath === initialData.seoGuidePath);
+            if (selectedSEO) {
+              setSelectedSeoGuide(selectedSEO);
+            }
+          } else {
+            const defaultSEO = seoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
+            if (defaultSEO && !selectedSeoGuide) {
+              setSelectedSeoGuide(defaultSEO);
+            }
           }
         } else {
           await window.electronAPI.createDefaultSEO();
@@ -106,10 +134,18 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
           }
         }
       }
+
+      // 초기 데이터가 있으면 선택된 말투 문서들도 복원
+      if (initialData?.writingStylePaths && initialData.writingStylePaths.length > 0) {
+        const selectedStyles = loadedWritingStyles.filter(doc => 
+          initialData.writingStylePaths.includes(doc.filePath)
+        );
+        setSelectedWritingStyles(selectedStyles);
+      }
     };
     
     loadSavedDocuments();
-  }, []);
+  }, [initialData]);
 
   // 말투 문서 선택/해제
   const toggleWritingStyle = (doc: SavedDocument) => {
@@ -257,6 +293,13 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
     }
   };
 
+  // 더미 제목 로드 함수
+  const handleLoadDummyTitles = (dummyTitles: string[]) => {
+    setGeneratedTitles(dummyTitles);
+    setSelectedTitle(''); // 선택된 제목 초기화
+    console.log('더미 제목 데이터 로드됨:', dummyTitles.length + '개');
+  };
+
   // v2 스타일 제목 추천 함수
   const generateTitleRecommendations = async () => {
     if (!mainKeyword.trim()) {
@@ -356,6 +399,23 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
     }
   };
 
+  // 수동 업로드 콘텐츠 처리 함수
+  const handleFileUploaded = (content: string) => {
+    // 통합된 onComplete 호출 - 수동 업로드
+    onComplete({ 
+      writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
+      seoGuidePath: selectedSeoGuide?.filePath || '',
+      topic: `제목: ${selectedTitle}`,
+      selectedTitle: selectedTitle,
+      mainKeyword: mainKeyword,
+      subKeywords: subKeywords,
+      blogContent: blogContent,
+      generatedContent: content, // 수동 업로드된 콘텐츠
+      isAIGenerated: false, // 수동 업로드
+      generatedTitles: generatedTitles // 생성된 제목들도 유지
+    });
+  };
+
   // 자동 생성 함수 (제목 선택 후 호출됨)
   const handleStartGeneration = async () => {
     // 필수 요구사항 검증
@@ -409,7 +469,13 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
           writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
           seoGuidePath: selectedSeoGuide?.filePath || '',
           topic: `제목: ${selectedTitle}`,
-          generatedContent: content
+          selectedTitle: selectedTitle, // 순수 제목만 따로 전달
+          mainKeyword: mainKeyword,
+          subKeywords: subKeywords,
+          blogContent: blogContent,
+          generatedContent: content,
+          isAIGenerated: true, // AI로 생성됨
+          generatedTitles: generatedTitles // 생성된 제목들도 유지
         });
       }, 1000);
       
@@ -460,6 +526,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
         onGenerateTitles={generateTitleRecommendations}
         onSelectTitle={setSelectedTitle}
         onStartGeneration={handleStartGeneration}
+        onLoadDummyTitles={handleLoadDummyTitles}
       />
 
       {/* 수동 업로드 섹션 */}
@@ -470,7 +537,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
         blogContent={blogContent}
         mainKeyword={mainKeyword}
         subKeywords={subKeywords}
-        onComplete={onComplete}
+        onFileUploaded={handleFileUploaded}
       />
 
       {/* 생성 진행 상태 섹션 */}

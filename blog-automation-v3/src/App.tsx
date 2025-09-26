@@ -13,7 +13,13 @@ const App: React.FC = () => {
     writingStylePaths: [] as string[],
     seoGuidePath: '',
     topic: '',
-    generatedContent: undefined as string | undefined
+    selectedTitle: '',
+    mainKeyword: '',
+    subKeywords: '',
+    blogContent: '',
+    generatedContent: undefined as string | undefined,
+    isAIGenerated: false,
+    generatedTitles: [] as string[]
   });
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [showLLMSettings, setShowLLMSettings] = useState<boolean>(false);
@@ -61,8 +67,24 @@ const App: React.FC = () => {
 
   const handleReset = () => {
     setCurrentStep(1);
-    setSetupData({ writingStylePaths: [], seoGuidePath: '', topic: '', generatedContent: undefined });
+    setSetupData({ 
+      writingStylePaths: [], 
+      seoGuidePath: '', 
+      topic: '', 
+      selectedTitle: '',
+      mainKeyword: '',
+      subKeywords: '',
+      blogContent: '',
+      generatedContent: undefined,
+      isAIGenerated: false,
+      generatedTitles: []
+    });
     setGeneratedContent('');
+  };
+
+  const handleGoBack = () => {
+    setCurrentStep(1);
+    // 기존 데이터는 유지
   };
 
   return (
@@ -216,12 +238,17 @@ const App: React.FC = () => {
         <div style={{ flex: showLogs ? 1 : '1', overflowY: 'auto' }}>
           <div className="app-main">
             {currentStep === 1 && (
-              <Step1Setup onComplete={handleSetupComplete} />
+              <Step1Setup 
+                onComplete={handleSetupComplete} 
+                initialData={setupData}
+              />
             )}
             {currentStep === 2 && (
               <Step2Generation 
                 content={generatedContent}
+                setupData={setupData}
                 onReset={handleReset}
+                onGoBack={handleGoBack}
               />
             )}
           </div>

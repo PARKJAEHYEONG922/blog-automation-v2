@@ -88,11 +88,11 @@ const ConfirmDialog: React.FC<{
 };
 
 const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
-  const [topic, setTopic] = useState('');
   
   // 키워드 입력 상태
   const [mainKeyword, setMainKeyword] = useState('');
   const [subKeywords, setSubKeywords] = useState('');
+  const [blogContent, setBlogContent] = useState(''); // "어떤 블로그를 쓰고 싶은지" 입력
   
   // 제목 추천 관련 상태
   const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
@@ -329,10 +329,34 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
     reader.readAsText(file);
   };
 
-  // 제목 추천 함수
+  // 현재 적용된 글쓰기 API 설정 가져오기
+  const getWritingAPISettings = async () => {
+    try {
+      const llmSettings = await window.electronAPI?.getLLMSettings?.();
+      if (llmSettings?.appliedSettings?.writing) {
+        const { provider, model, apiKey } = llmSettings.appliedSettings.writing;
+        if (provider && model && apiKey) {
+          return { provider, model, apiKey };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('글쓰기 API 설정 로드 실패:', error);
+      return null;
+    }
+  };
+
+  // v2 스타일 제목 추천 함수 (실제 글쓰기 API 연동)
   const generateTitleRecommendations = async () => {
     if (!mainKeyword.trim()) {
       alert('메인키워드를 입력해주세요!');
+      return;
+    }
+
+    // API 설정 확인
+    const apiSettings = await getWritingAPISettings();
+    if (!apiSettings) {
+      alert('글쓰기 API가 설정되지 않았습니다. API 설정에서 글쓰기 AI를 연결해주세요.');
       return;
     }
 
@@ -341,41 +365,125 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
     setSelectedTitle('');
     
     try {
-      // Claude Web 브라우저 열기
-      await window.electronAPI.openClaudeWeb();
-      
-      // 제목 생성 프롬프트 구성
+      // JSON 형식으로 제목만 요청하는 시스템 프롬프트
+      const systemPrompt = `네이버 블로그 상위 노출에 유리한 '정보형' 스타일의 제목 10개를 추천해주세요.
+
+**정보형 특징**:
+- 유용한 정보와 지식을 제공하는 내용
+- 독자의 문제 해결에 도움이 되는 실용적 정보
+- 팁, 방법, 노하우 등의 실질적 가치 제공
+
+**제목 생성 규칙**:
+1. 메인키워드를 자연스럽게 포함 (필수)
+2. 보조키워드가 있다면 1-2개를 제목에 활용 (선택사항)
+3. 클릭 유도와 궁금증 자극하는 표현 사용
+4. 30-60자 내외 권장 (너무 길면 검색 결과에서 잘림)
+5. 네이버 블로그 SEO 최적화
+6. 주제에 맞는 자연스러운 표현 사용
+7. 이모티콘 사용 금지 (텍스트만 사용)
+8. 구체적 년도 표기 금지 ("최신", "현재" 등으로 대체)
+
+**출력 형식**:
+반드시 JSON 형태로 제목 10개만 반환해주세요:
+
+{
+  "titles": [
+    "제목1",
+    "제목2", 
+    "제목3",
+    "제목4",
+    "제목5",
+    "제목6",
+    "제목7",
+    "제목8",
+    "제목9",
+    "제목10"
+  ]
+}
+
+각 제목은 정보형의 특성을 살리되, 서로 다른 접근 방식으로 다양하게 생성해주세요.`;
+
+      // v2 스타일 유저 프롬프트
       const subKeywordList = subKeywords.split(',').map(k => k.trim()).filter(k => k);
-      const titlePrompt = `메인키워드: ${mainKeyword}
-${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : ''}
-
-위 키워드를 활용해서 네이버 블로그 최적화에 맞는 매력적인 제목 10개를 추천해주세요.
-
-요구사항:
-- 메인키워드는 제목에 자연스럽게 포함
-- 보조키워드 중 1-2개는 제목에 활용
-- 클릭하고 싶은 매력적인 제목
-- 검색 최적화 고려
-- 다양한 스타일 (방법, 후기, 추천, 비교, 정보 등)
-
-제목만 번호와 함께 목록으로 작성해주세요.`;
-
-      // 프롬프트 전송 (파일 업로드 없이)
-      await window.electronAPI.sendToClaudeWeb([], '', titlePrompt);
+      let userPrompt = "";
       
-      // 응답 대기
-      await window.electronAPI.waitForClaudeResponse();
+      // 1. 블로그 내용 (AI 역할 설정)
+      if (blogContent.trim()) {
+        userPrompt += `# AI 역할 설정\n${blogContent.trim()}\n\n`;
+      }
       
-      // 응답 다운로드
-      const response = await window.electronAPI.downloadFromClaude();
+      // 2. 메인키워드 (필수)
+      userPrompt += `**메인키워드**: ${mainKeyword}`;
       
-      // 제목 파싱 (번호가 있는 목록에서 제목만 추출)
-      const titleMatches = response.match(/^\d+\.\s*(.+)$/gm);
-      if (titleMatches && titleMatches.length > 0) {
-        const titles = titleMatches
-          .map(match => match.replace(/^\d+\.\s*/, '').trim())
-          .slice(0, 10); // 최대 10개
-        
+      // 3. 보조키워드 (있는 경우)
+      if (subKeywordList.length > 0) {
+        userPrompt += `\n**보조키워드**: ${subKeywordList.join(', ')}`;
+      }
+      
+      // 4. 제목 생성 가이드 (보조키워드와 글 주제 유무에 따라 조건부)
+      userPrompt += `\n\n**제목 생성 가이드**:`;
+      
+      if (subKeywordList.length > 0) {
+        userPrompt += `\n- 보조키워드 중 1-2개씩 활용하여 다양한 제목 생성 (선택사항)`;
+      }
+      
+      userPrompt += `\n- 메인키워드를 중심으로 다양한 관점에서 제목 생성
+- 다양한 스타일로 생성: 방법 안내형, 후기형, 추천형, 비교형, 문제해결형 등`;
+      
+      if (blogContent.trim()) {
+        userPrompt += `\n- 위 블로그 내용을 바탕으로 독자가 궁금해할 만한 관점에서 제목 생성`;
+      } else {
+        userPrompt += `\n- 독자가 궁금해할 만한 실용적인 관점에서 제목 생성`;
+      }
+
+      // 전체 프롬프트 조합
+      const fullPrompt = systemPrompt + '\n\n' + userPrompt;
+
+      // 연결된 글쓰기 API를 통해 제목 생성
+      const response = await window.electronAPI.generateTitles({
+        systemPrompt: systemPrompt,
+        userPrompt: userPrompt
+      });
+      
+      // API 응답에서 제목 추출
+      let titles: string[] = [];
+      
+      if (response.success) {
+        // titles 배열이 직접 있는 경우 사용
+        if (response.titles && Array.isArray(response.titles)) {
+          titles = response.titles.slice(0, 10);
+        }
+        // content 속성에서 파싱이 필요한 경우 (main process에서 content로 반환)
+        else if ((response as any).content) {
+          const content = (response as any).content;
+          try {
+            // JSON 형식으로 응답이 올 경우 파싱
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const jsonData = JSON.parse(jsonMatch[0]);
+              if (jsonData.titles && Array.isArray(jsonData.titles)) {
+                titles = jsonData.titles.slice(0, 10);
+              }
+            }
+          } catch (error) {
+            console.warn('JSON 파싱 실패, 번호 목록으로 처리:', error);
+          }
+
+          // fallback: 번호 목록 형태 처리
+          if (titles.length === 0) {
+            const titleMatches = content.match(/^\d+\.\s*(.+)$/gm);
+            if (titleMatches && titleMatches.length > 0) {
+              titles = titleMatches
+                .map((match: string): string => match.replace(/^\d+\.\s*/, '').trim())
+                .slice(0, 10);
+            }
+          }
+        }
+      } else {
+        throw new Error(response.error || '제목 생성 API 호출 실패');
+      }
+      
+      if (titles.length > 0) {
         setGeneratedTitles(titles);
       } else {
         alert('제목 생성에 실패했습니다. 다시 시도해주세요.');
@@ -389,10 +497,16 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
     }
   };
 
-  // 자동 생성 함수
+  // 자동 생성 함수 (제목 선택 후 호출됨)
   const handleStartGeneration = async () => {
-    if (!topic.trim()) {
-      alert('블로그 주제를 입력해주세요!');
+    // 필수 요구사항 검증
+    if (!selectedTitle) {
+      alert('제목을 선택해주세요!');
+      return;
+    }
+
+    if (!mainKeyword.trim()) {
+      alert('메인키워드를 입력해주세요!');
       return;
     }
 
@@ -408,10 +522,59 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
       await window.electronAPI.openClaudeWeb();
       setGenerationStep('문서 업로드 중...');
       
+      // 보조키워드 리스트 생성
+      const subKeywordList = subKeywords.split(',').map(k => k.trim()).filter(k => k);
+      
+      // 상세한 글쓰기 지시사항 생성
+      let detailedInstructions = `# 블로그 글 작성 요청
+
+## 🎯 작성할 제목 (변경 금지)
+"${selectedTitle}"
+
+## 📝 작성 지침
+
+### 핵심 정보
+- **메인키워드**: ${mainKeyword}
+- **보조키워드**: ${subKeywordList.length > 0 ? subKeywordList.join(', ') : '없음'}`;
+
+      if (blogContent.trim()) {
+        detailedInstructions += `
+- **글 내용 방향성**: ${blogContent.trim()}
+
+### 내용 요구사항
+- 위에 제시된 "${selectedTitle}" 제목에 정확히 맞는 내용으로 작성
+- "${blogContent.trim()}" 이 내용을 바탕으로 독자에게 유용한 정보 제공`;
+      }
+
+      detailedInstructions += `
+
+### SEO 최적화 요구사항
+- **메인키워드 "${mainKeyword}"**: 본문에 5-6회 자연스럽게 반복 (제목 포함하여 총 6-7회)`;
+
+      if (subKeywordList.length > 0) {
+        detailedInstructions += `
+- **보조키워드들**: ${subKeywordList.map(keyword => `"${keyword}"`).join(', ')} 각각 3-4회씩 자연스럽게 사용`;
+      }
+
+      detailedInstructions += `
+- 키워드는 억지로 넣지 말고 자연스러운 문맥에서 사용
+- 독자가 읽기에 어색하지 않도록 자연스럽게 배치
+
+### 글 작성 스타일
+- 선택된 제목 "${selectedTitle}"의 의도와 완전히 일치하는 내용
+- 독자의 궁금증을 해결하는 실용적인 정보 제공
+- 자연스럽고 읽기 쉬운 문체
+- 구체적이고 실행 가능한 내용 포함
+
+### 중요 사항
+⚠️ **제목 "${selectedTitle}"을 절대 변경하지 마세요**
+⚠️ **메인키워드와 보조키워드를 지정된 횟수만큼 자연스럽게 포함하세요**
+⚠️ **글의 모든 내용이 선택된 제목과 일치하도록 작성하세요**`;
+
       await window.electronAPI.sendToClaudeWeb(
         selectedWritingStyles.map(doc => doc.filePath),
         selectedSeoGuide?.filePath || '',
-        topic
+        detailedInstructions
       );
       setGenerationStep('AI 응답 생성 중...');
       
@@ -422,22 +585,17 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
       setGenerationStep('완료!');
       
       setTimeout(() => {
-        // 선택된 제목이 있으면 주제에 포함
-        const finalTopic = selectedTitle ? 
-          `제목: ${selectedTitle}\n주제: ${topic}\n메인키워드: ${mainKeyword}\n보조키워드: ${subKeywords}` : 
-          topic;
-          
         onComplete({ 
           writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
           seoGuidePath: selectedSeoGuide?.filePath || '',
-          topic: finalTopic,
+          topic: `제목: ${selectedTitle}`,
           generatedContent: content
         });
       }, 1000);
       
     } catch (error) {
       console.error('생성 실패:', error);
-      setGenerationStep('오류 발생: ' + error.message);
+      setGenerationStep('오류 발생: ' + (error as Error).message);
       setIsGenerating(false);
     }
   };
@@ -620,7 +778,7 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
         </div>
       </div>
 
-      {/* 키워드 입력 및 제목 추천 */}
+      {/* 키워드 입력 및 제목 추천 통합 */}
       <div style={{
         backgroundColor: '#fff',
         border: '2px solid #e9ecef',
@@ -630,12 +788,13 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
       }}>
         <h3 style={{ color: '#495057', marginBottom: '8px', fontSize: '20px' }}>🔍 키워드 입력 및 제목 추천</h3>
         <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '20px' }}>
-          메인키워드와 보조키워드를 입력하고 AI가 추천하는 제목을 선택하세요
+          메인키워드, SEO 보조키워드, 글 내용을 입력하면 AI가 독자 관심을 끌 매력적인 제목 10개를 추천합니다
         </p>
         
-        {/* 키워드 입력 섹션 */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-          <div style={{ flex: '1' }}>
+        {/* 통합 입력 섹션 - 3개 필드 */}
+        <div style={{ display: 'grid', gap: '20px', marginBottom: '25px' }}>
+          {/* 메인키워드 */}
+          <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
               메인키워드 *
             </label>
@@ -643,7 +802,7 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
               type="text"
               value={mainKeyword}
               onChange={(e) => setMainKeyword(e.target.value)}
-              placeholder="예: 강아지 산책"
+              placeholder="예: 홈트레이닝"
               style={{
                 width: '100%',
                 border: '2px solid #dee2e6',
@@ -654,11 +813,12 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
               }}
             />
             <small style={{ color: '#6c757d', fontSize: '12px' }}>
-              블로그 글의 핵심 키워드를 입력하세요
+              블로그 글의 핵심 주제 키워드를 입력하세요
             </small>
           </div>
           
-          <div style={{ flex: '1' }}>
+          {/* 보조키워드 */}
+          <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
               보조키워드
             </label>
@@ -666,7 +826,7 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
               type="text"
               value={subKeywords}
               onChange={(e) => setSubKeywords(e.target.value)}
-              placeholder="예: 훈련, 방법, 팁 (쉼표로 구분)"
+              placeholder="예: 홈트레이닝루틴, 홈트레이닝장비, 집에서운동 (쉼표로 구분)"
               style={{
                 width: '100%',
                 border: '2px solid #dee2e6',
@@ -680,248 +840,124 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
               관련 키워드를 쉼표(,)로 구분해서 입력하세요
             </small>
           </div>
-        </div>
 
-        {/* 제목 생성 버튼 */}
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <button
-            onClick={generateTitleRecommendations}
-            disabled={isGeneratingTitles || !mainKeyword.trim()}
-            style={{
-              backgroundColor: isGeneratingTitles ? '#6c757d' : '#007bff',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '12px 24px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: isGeneratingTitles ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              margin: '0 auto',
-              opacity: !mainKeyword.trim() ? 0.5 : 1
-            }}
-          >
-            {isGeneratingTitles ? (
-              <>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid #fff',
-                  borderTop: '2px solid transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                AI 제목 생성 중...
-              </>
-            ) : (
-              <>
-                🎯 AI 제목 10개 추천받기
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* 생성된 제목 목록 */}
-        {generatedTitles.length > 0 && (
-          <div style={{
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #dee2e6',
-            borderRadius: '10px',
-            padding: '20px'
-          }}>
-            <h4 style={{ color: '#495057', marginBottom: '15px', fontSize: '16px' }}>
-              🎯 AI 추천 제목 ({generatedTitles.length}개)
-            </h4>
-            <div style={{ display: 'grid', gap: '8px' }}>
-              {generatedTitles.map((title, index) => (
-                <label
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px',
-                    backgroundColor: selectedTitle === title ? '#e3f2fd' : '#fff',
-                    border: selectedTitle === title ? '2px solid #2196f3' : '1px solid #dee2e6',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedTitle !== title) {
-                      e.currentTarget.style.backgroundColor = '#f0f0f0';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedTitle !== title) {
-                      e.currentTarget.style.backgroundColor = '#fff';
-                    }
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="selectedTitle"
-                    value={title}
-                    checked={selectedTitle === title}
-                    onChange={(e) => setSelectedTitle(e.target.value)}
-                    style={{ margin: 0 }}
-                  />
-                  <span style={{ fontWeight: selectedTitle === title ? 'bold' : 'normal' }}>
-                    {index + 1}. {title}
-                  </span>
-                </label>
-              ))}
-            </div>
-            
-            {selectedTitle && (
-              <div style={{
-                marginTop: '15px',
+          {/* 어떤 블로그를 쓰고 싶은지 */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
+              쓰고 싶은 글 주제
+            </label>
+            <textarea
+              value={blogContent}
+              onChange={(e) => setBlogContent(e.target.value)}
+              placeholder="예: 초보자도 쉽게 따라할 수 있는 홈트레이닝 운동법과 효과적인 루틴 구성 방법, 필수 장비 추천"
+              rows={3}
+              style={{
+                width: '100%',
+                border: '2px solid #dee2e6',
+                borderRadius: '8px',
                 padding: '12px',
-                backgroundColor: '#e8f5e8',
-                border: '1px solid #c3e6cb',
-                borderRadius: '6px'
-              }}>
-                <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
-                  ✅ 선택된 제목:
-                </div>
-                <div style={{ fontSize: '14px', color: '#155724' }}>
-                  {selectedTitle}
-                </div>
-              </div>
-            )}
+                fontSize: '14px',
+                backgroundColor: '#fafafa',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+            />
+            <small style={{ color: '#6c757d', fontSize: '12px' }}>
+              어떤 내용으로 블로그 글을 쓸지 자세히 적어주세요
+            </small>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* 블로그 주제 입력 및 버튼들 */}
-      <div style={{
-        backgroundColor: '#fff',
-        border: '2px solid #e9ecef',
-        borderRadius: '16px',
-        padding: '25px'
-      }}>
-        <h3 style={{ color: '#495057', marginBottom: '8px', fontSize: '20px' }}>🎯 블로그 주제 입력</h3>
-        <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '20px' }}>
-          어떤 주제로 글을 작성하고 싶은지 입력하세요 (위에서 제목을 선택했다면 관련 내용을 입력하세요)
-        </p>
-        
-        <textarea
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="예: 강아지 산책 훈련 방법"
-          rows={4}
-          style={{
-            width: '100%',
-            border: '2px solid #dee2e6',
-            borderRadius: '10px',
-            padding: '15px',
-            fontSize: '15px',
-            backgroundColor: '#fafafa',
-            resize: 'vertical',
-            fontFamily: 'inherit',
-            marginBottom: '20px'
-          }}
-        />
-
-        {/* 버튼 섹션 */}
-        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-          {!isGenerating ? (
-            <>
-              <button 
-                onClick={handleStartGeneration}
-                style={{
-                  backgroundColor: '#28a745',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '15px 30px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = '#218838';
-                  target.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.backgroundColor = '#28a745';
-                  target.style.transform = 'translateY(0)';
-                }}
-              >
-                🚀 자동 생성하기
-              </button>
-
-              <label style={{
-                backgroundColor: '#6c757d',
+        {/* AI 추천 제목 섹션 (항상 표시) */}
+        <div style={{
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #dee2e6',
+          borderRadius: '10px',
+          padding: '20px',
+          marginBottom: '20px'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '15px'
+          }}>
+            <h4 style={{ color: '#495057', margin: 0, fontSize: '16px' }}>
+              🎯 AI 추천 제목 
+              {generatedTitles.length > 0 && <span style={{ color: '#28a745', fontWeight: 'normal' }}>({generatedTitles.length}개 생성됨)</span>}
+            </h4>
+            
+            {/* 제목 생성 버튼 - 오른쪽 배치 */}
+            <button
+              onClick={generateTitleRecommendations}
+              disabled={isGeneratingTitles || !mainKeyword.trim()}
+              style={{
+                backgroundColor: isGeneratingTitles ? '#6c757d' : (generatedTitles.length > 0 ? '#28a745' : '#007bff'),
                 color: '#fff',
                 border: 'none',
-                borderRadius: '12px',
-                padding: '15px 30px',
-                fontSize: '16px',
+                borderRadius: '8px',
+                padding: '10px 18px',
+                fontSize: '13px',
                 fontWeight: 'bold',
-                cursor: 'pointer',
+                cursor: isGeneratingTitles ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.3s ease'
+                gap: '6px',
+                opacity: !mainKeyword.trim() ? 0.5 : 1,
+                transition: 'all 0.3s ease',
+                minWidth: '140px',
+                justifyContent: 'center'
               }}
-              onMouseEnter={(e) => {
-                const target = e.target as HTMLLabelElement;
-                target.style.backgroundColor = '#5a6268';
-                target.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                const target = e.target as HTMLLabelElement;
-                target.style.backgroundColor = '#6c757d';
-                target.style.transform = 'translateY(0)';
-              }}>
-                📁 수동 업로드
-                <input
-                  type="file"
-                  accept=".md,.txt"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const content = event.target?.result as string;
-                        
-                        // 선택된 제목이 있으면 주제에 포함
-                        const finalTopic = selectedTitle ? 
-                          `제목: ${selectedTitle}\n주제: ${topic || '수동 업로드된 글'}\n메인키워드: ${mainKeyword}\n보조키워드: ${subKeywords}` : 
-                          (topic || '수동 업로드된 글');
-                          
-                        onComplete({ 
-                          writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
-                          seoGuidePath: selectedSeoGuide?.filePath || '',
-                          topic: finalTopic,
-                          generatedContent: content
-                        });
-                      };
-                      reader.readAsText(file);
-                    }
-                  }}
-                />
-              </label>
-            </>
-          ) : (
+            >
+              {isGeneratingTitles ? (
+                <>
+                  <div style={{
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid #fff',
+                    borderTop: '2px solid transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                  생성 중...
+                </>
+              ) : generatedTitles.length > 0 ? (
+                <>
+                  🔄 재생성
+                </>
+              ) : (
+                <>
+                  ✨ 제목 생성
+                </>
+              )}
+            </button>
+          </div>
+          
+          {/* 제목이 생성되기 전 안내 메시지 */}
+          {generatedTitles.length === 0 && !isGeneratingTitles && (
             <div style={{
+              textAlign: 'center',
+              padding: '30px',
+              color: '#6c757d',
+              fontSize: '14px',
+              backgroundColor: '#fff',
+              border: '2px dashed #dee2e6',
+              borderRadius: '8px'
+            }}>
+              📝 메인키워드를 입력하고 "제목 생성" 버튼을 클릭해주세요
+            </div>
+          )}
+          
+          {/* 제목 생성 중 표시 */}
+          {isGeneratingTitles && (
+            <div style={{
+              textAlign: 'center',
+              padding: '30px',
+              color: '#007bff',
+              fontSize: '14px',
               backgroundColor: '#fff',
               border: '2px solid #007bff',
-              borderRadius: '12px',
-              padding: '20px 40px',
-              textAlign: 'center',
-              minWidth: '300px'
+              borderRadius: '8px'
             }}>
               <div style={{
                 width: '24px',
@@ -932,27 +968,216 @@ ${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : 
                 margin: '0 auto 12px auto',
                 animation: 'spin 1s linear infinite'
               }}></div>
-              <p style={{ color: '#007bff', fontSize: '14px', margin: 0, fontWeight: 'bold' }}>
-                {generationStep}
-              </p>
+              AI가 매력적인 제목 10개를 생성하고 있습니다...
             </div>
+          )}
+          
+          {/* 제목 선택 드롭다운 */}
+          {generatedTitles.length > 0 && !isGeneratingTitles && (
+            <>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
+                  사용할 제목 선택 *
+                </label>
+                <select
+                  value={selectedTitle}
+                  onChange={(e) => setSelectedTitle(e.target.value)}
+                  style={{
+                    width: '100%',
+                    border: '2px solid #dee2e6',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    fontSize: '14px',
+                    backgroundColor: '#fff',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">제목을 선택해주세요...</option>
+                  {generatedTitles.map((title, index) => (
+                    <option key={index} value={title}>
+                      {index + 1}. {title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* 선택된 제목 표시 */}
+              {selectedTitle && (
+                <div style={{
+                  marginBottom: '20px',
+                  padding: '12px',
+                  backgroundColor: '#e8f5e8',
+                  border: '1px solid #c3e6cb',
+                  borderRadius: '6px'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
+                    ✅ 선택된 제목
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#155724', fontWeight: 'bold' }}>
+                    {selectedTitle}
+                  </div>
+                </div>
+              )}
+              
+              {/* 글 생성 버튼 */}
+              {selectedTitle && (
+                <div style={{ textAlign: 'center' }}>
+                  <button
+                    onClick={handleStartGeneration}
+                    disabled={isGenerating}
+                    style={{
+                      backgroundColor: isGenerating ? '#6c757d' : '#28a745',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '14px 28px',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      cursor: isGenerating ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      margin: '0 auto',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isGenerating) {
+                        e.currentTarget.style.backgroundColor = '#218838';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isGenerating) {
+                        e.currentTarget.style.backgroundColor = '#28a745';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }
+                    }}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <div style={{
+                          width: '16px',
+                          height: '16px',
+                          border: '2px solid #fff',
+                          borderTop: '2px solid transparent',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite'
+                        }}></div>
+                        글 생성 중...
+                      </>
+                    ) : (
+                      <>
+                        🚀 선택한 제목으로 글 생성하기
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* 안내 메시지 */}
+        {/* 수동 업로드 버튼 - 제목 선택 후에만 표시 */}
+        {selectedTitle && (
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <div style={{ 
+              marginBottom: '12px', 
+              fontSize: '12px', 
+              color: '#6c757d',
+              fontStyle: 'italic'
+            }}>
+              또는
+            </div>
+            <label style={{
+              backgroundColor: '#6c757d',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              const target = e.target as HTMLLabelElement;
+              target.style.backgroundColor = '#5a6268';
+              target.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              const target = e.target as HTMLLabelElement;
+              target.style.backgroundColor = '#6c757d';
+              target.style.transform = 'translateY(0)';
+            }}>
+              📄 직접 글 업로드
+              <input
+                type="file"
+                accept=".md,.txt"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const content = event.target?.result as string;
+                      
+                      // 선택된 제목과 키워드 정보 포함
+                      const finalTopic = selectedTitle ? 
+                        `제목: ${selectedTitle}\n블로그 설명: ${blogContent}\n메인키워드: ${mainKeyword}\n보조키워드: ${subKeywords}` : 
+                        (blogContent || '수동 업로드된 글');
+                        
+                      onComplete({ 
+                        writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
+                        seoGuidePath: selectedSeoGuide?.filePath || '',
+                        topic: finalTopic,
+                        generatedContent: content
+                      });
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+              />
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* 생성 진행 상태 표시 */}
+      {isGenerating && (
         <div style={{
-          marginTop: '20px',
-          padding: '12px',
-          backgroundColor: '#e8f4f8',
-          borderRadius: '8px',
-          border: '1px solid #bee5eb',
+          backgroundColor: '#fff',
+          border: '2px solid #007bff',
+          borderRadius: '16px',
+          padding: '25px',
           textAlign: 'center'
         }}>
-          <small style={{ color: '#0c5460', fontSize: '13px' }}>
-            💡 자동 생성: 위 문서들을 참고해서 AI가 글을 생성합니다 | 수동 업로드: 직접 작성한 마크다운 파일을 업로드합니다
-          </small>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            border: '4px solid #007bff',
+            borderTop: '4px solid transparent',
+            borderRadius: '50%',
+            margin: '0 auto 16px auto',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <p style={{ color: '#007bff', fontSize: '16px', margin: 0, fontWeight: 'bold' }}>
+            {generationStep}
+          </p>
+          <div style={{
+            marginTop: '12px',
+            padding: '8px',
+            backgroundColor: '#e3f2fd',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: '#1565c0'
+          }}>
+            💡 선택된 제목과 키워드로 AI가 최적화된 블로그 글을 생성하고 있습니다
+          </div>
         </div>
-      </div>
+      )}
       
       <style>
         {`

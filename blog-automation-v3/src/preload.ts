@@ -30,6 +30,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveLLMSettings: (settings: any) => ipcRenderer.invoke('llm:save-settings', settings),
   testLLMConfig: (config: any) => ipcRenderer.invoke('llm:test-config', config),
   
+  // Title generation via API
+  generateTitles: (data: { systemPrompt: string; userPrompt: string }) => 
+    ipcRenderer.invoke('llm:generate-titles', data),
+  
   // Log handling
   sendLog: (level: string, message: string) => ipcRenderer.send('log:add', level, message),
   onLogMessage: (callback: (data: any) => void) => {
@@ -60,6 +64,7 @@ declare global {
       getLLMSettings: () => Promise<any>;
       saveLLMSettings: (settings: any) => Promise<void>;
       testLLMConfig: (config: any) => Promise<{ success: boolean; error?: string }>;
+      generateTitles: (data: { systemPrompt: string; userPrompt: string }) => Promise<{ success: boolean; titles?: string[]; error?: string }>;
       sendLog: (level: string, message: string) => void;
       onLogMessage: (callback: (data: any) => void) => (() => void);
       openExternal: (url: string) => Promise<void>;

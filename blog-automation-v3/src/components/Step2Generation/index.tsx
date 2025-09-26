@@ -1,0 +1,930 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { marked } from 'marked';
+import WorkSummary from './WorkSummary';
+import ContentEditor from './ContentEditor';
+import ImageGenerator from './ImageGenerator';
+import { ContentProcessor } from './ContentProcessor';
+
+interface Step2Props {
+  content: string;
+  setupData: {
+    writingStylePaths: string[];
+    seoGuidePath: string;
+    topic: string;
+    selectedTitle: string;
+    mainKeyword: string;
+    subKeywords: string;
+    blogContent: string;
+    generatedContent?: string;
+    isAIGenerated: boolean;
+    generatedTitles: string[];
+  };
+  onReset: () => void;
+  onGoBack: () => void;
+}
+
+const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, onGoBack }) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [originalContent, setOriginalContent] = useState<string>('');
+  const [editedContent, setEditedContent] = useState<string>('');
+  const [charCount, setCharCount] = useState(0);
+  const [charCountWithSpaces, setCharCountWithSpaces] = useState(0);
+  const [currentFontSize, setCurrentFontSize] = useState('15px');
+  const [imagePositions, setImagePositions] = useState<string[]>([]);
+  const [images, setImages] = useState<{[key: string]: string}>({});
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [imageAIInfo, setImageAIInfo] = useState<string>('확인 중...');
+  const [activeTab, setActiveTab] = useState<'original' | 'edited'>('edited');
+  
+  // 컴포넌트 마운트 시 스크롤을 최상단으로 이동
+  useEffect(() => {
+    const scrollableContainer = document.querySelector('main > div');
+    const mainElement = document.querySelector('main');
+    
+    if (scrollableContainer) {
+      scrollableContainer.scrollTop = 0;
+    } else if (mainElement) {
+      mainElement.scrollTop = 0;
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
+
+  // v2 Step3와 완전히 동일한 마크다운 처리 함수들
+  
+  // AI 생성 콘텐츠 정리 함수
+  const cleanAIGeneratedContent = (content: string): string => {
+    let cleanedContent = content;
+    
+    // 코드 블록 제거
+    cleanedContent = cleanedContent.replace(/```[\s\S]*?```/g, '');
+    
+    // 연속된 이미지 플레이스홀더를 하나로 합치기
+    cleanedContent = cleanedContent.replace(/\(이미지\)\s*\(이미지\)/g, '(이미지)');
+    
+    // 불필요한 구조 설명 제거
+    cleanedContent = cleanedContent.replace(/^(다음은|아래는|위의 내용은|본문은).*?입니다[.:]?\s*$/gm, '');
+    
+    // 해시태그 정리
+    cleanedContent = cleanHashtags(cleanedContent);
+    
+    return cleanedContent;
+  };
+  
+  // v2 원본과 완전히 동일한 해시태그 정리 함수
+  const cleanHashtags = (content: string): string => {
+    try {
+      // 모든 해시태그 찾기 (v2와 동일: #\w+만 매치, 마크다운 헤더는 공백 때문에 매치 안됨)
+      const hashtags = content.match(/#\w+/g) || [];
+      
+      if (hashtags.length === 0) {
+        return content;
+      }
+      
+      // 중복 제거하되 순서 유지
+      const seen = new Set<string>();
+      const uniqueHashtags: string[] = [];
+      
+      for (const tag of hashtags) {
+        if (!seen.has(tag.toLowerCase())) {
+          seen.add(tag.toLowerCase());
+          uniqueHashtags.push(tag);
+        }
+      }
+      
+      // 원본에서 해시태그 부분 제거
+      const contentWithoutTags = content.replace(/#\w+/g, '').trim();
+      
+      // 정리된 태그들을 마지막에 한 줄로 추가
+      if (uniqueHashtags.length > 0) {
+        const tagsLine = uniqueHashtags.join(' ');
+        return `${contentWithoutTags}\n\n${tagsLine}`;
+      }
+      
+      return contentWithoutTags;
+    } catch (error) {
+      console.warn('해시태그 정리 중 오류:', error);
+      return content;
+    }
+  };
+  
+  // 이미지 번호 매기기 함수
+  const addImageNumbers = (content: string): string => {
+    let numberedContent = content;
+    let imageCount = 1;
+    
+    // (이미지)를 (이미지1), (이미지2) 등으로 변경
+    numberedContent = numberedContent.replace(/\(이미지\)/g, () => {
+      return `(이미지${imageCount++})`;
+    });
+    
+    return numberedContent;
+  };
+  
+  // 마크다운 테이블을 네이버 블로그 테이블로 변환
+  const convertMarkdownTable = (tableLines: string[]): string => {
+    const rows: string[][] = [];
+    
+    for (const line of tableLines) {
+      if (line.includes('---')) continue; // 구분선 무시
+      
+      const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
+      if (cells.length > 0) {
+        rows.push(cells);
+      }
+    }
+    
+    if (rows.length === 0) return '';
+    
+    let tableHtml = '<div class="se-component se-table"><table class="se-table-content">';
+    
+    rows.forEach((row, rowIndex) => {
+      const isHeader = rowIndex === 0;
+      const backgroundColor = isHeader ? 'background-color: rgb(248, 249, 250);' : '';
+      
+      tableHtml += '<tr class="se-tr">';
+      
+      row.forEach(cell => {
+        let processedCell = cell;
+        // **강조** 처리
+        processedCell = processedCell.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold;">$1</span>');
+        
+        tableHtml += `<td class="se-cell" style="border: 1px solid rgb(221, 221, 221); padding: 8px; ${backgroundColor}"><div class="se-module-text"><p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedCell}</span></p></div></td>`;
+      });
+      
+      tableHtml += '</tr>';
+    });
+    
+    tableHtml += '</table></div>';
+    
+    return tableHtml;
+  };
+  
+  // 긴 텍스트를 28자 기준으로 재귀적으로 자르는 함수
+  const breakLongText = (text: string): string[] => {
+    // 마크다운 제거하여 실제 텍스트 길이 계산
+    const plainText = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+    
+    if (plainText.length <= 28) {
+      return [text]; // 28자 이하면 그대로 반환
+    }
+    
+    // 15-28자 구간에서 자를 위치 찾기
+    let cutPosition = -1;
+    
+    // 1순위: 마침표
+    for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
+      if (plainText[i] === '.') {
+        cutPosition = i + 1;
+        break;
+      }
+    }
+    
+    // 2순위: 쉼표 (마침표를 못 찾은 경우만)
+    if (cutPosition === -1) {
+      for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
+        if (plainText[i] === ',') {
+          cutPosition = i + 1;
+          break;
+        }
+      }
+    }
+    
+    // 3순위: 접속사 (마침표, 쉼표를 못 찾은 경우만)
+    if (cutPosition === -1) {
+      for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
+        const remaining = plainText.substring(i);
+        if (remaining.startsWith('그리고') || remaining.startsWith('하지만') || 
+            remaining.startsWith('또한') || remaining.startsWith('따라서') ||
+            remaining.startsWith('그런데') || remaining.startsWith('그러나') ||
+            remaining.startsWith('그래서') || remaining.startsWith('또는') ||
+            remaining.startsWith('그러면') || remaining.startsWith('그럼') ||
+            remaining.startsWith('이제') || remaining.startsWith('이때') ||
+            remaining.startsWith('반면') || remaining.startsWith('한편') ||
+            remaining.startsWith('예를 들어') || remaining.startsWith('특히') ||
+            remaining.startsWith('특별히')) {
+          cutPosition = i;
+          break;
+        }
+      }
+    }
+    
+    // 4순위: 공백 (다른 구분자를 못 찾은 경우만)
+    if (cutPosition === -1) {
+      for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
+        if (plainText[i] === ' ') {
+          cutPosition = i;
+        }
+      }
+    }
+    
+    if (cutPosition > 0) {
+      // 원본 텍스트(마크다운 포함)에서 해당 위치로 자르기
+      let realCutPosition = 0;
+      let plainCount = 0;
+      let i = 0;
+      
+      while (i < text.length && plainCount < cutPosition) {
+        if (text.substring(i, i + 2) === '**') {
+          // 마크다운 태그는 건너뛰기
+          realCutPosition = i + 2;
+          i += 2;
+        } else {
+          // 일반 문자는 카운트
+          plainCount++;
+          realCutPosition = i + 1;
+          i++;
+        }
+      }
+      
+      // 마크다운 태그 중간에서 자르는 것 방지
+      let markdownCount = 0;
+      for (let j = 0; j < realCutPosition; j++) {
+        if (text.substring(j, j + 2) === '**') {
+          markdownCount++;
+          j++; // ** 두 글자이므로 하나 더 건너뛰기
+        }
+      }
+      
+      // 홀수 개의 ** 태그가 있으면 마크다운 내부이므로 조정
+      if (markdownCount % 2 === 1) {
+        // 다음 ** 태그 뒤로 이동
+        while (realCutPosition < text.length - 1) {
+          if (text.substring(realCutPosition, realCutPosition + 2) === '**') {
+            realCutPosition += 2;
+            break;
+          }
+          realCutPosition++;
+        }
+      }
+      
+      const firstPart = text.substring(0, realCutPosition).trim();
+      const secondPart = text.substring(realCutPosition).trim();
+      
+      // 재귀적으로 두 번째 부분도 처리
+      const restParts = breakLongText(secondPart);
+      
+      return [firstPart, ...restParts];
+    } else {
+      // 자를 위치를 못 찾으면 그대로 반환
+      return [text];
+    }
+  };
+  
+  // v2와 완전히 동일한 마크다운 처리 메인 함수
+  const processMarkdown = (content: string): string => {
+    console.log('🔍 processMarkdown 시작:', content);
+    
+    // 먼저 콘텐츠 정리
+    const cleanedContent = cleanAIGeneratedContent(content);
+    console.log('🔍 cleanedContent:', cleanedContent);
+    
+    // 이미지 플레이스홀더에 번호 매기기
+    const numberedContent = addImageNumbers(cleanedContent);
+    console.log('🔍 numberedContent:', numberedContent);
+    
+    const lines = numberedContent.split('\n');
+    console.log('🔍 lines:', lines);
+    const result: string[] = [];
+    let i = 0;
+    
+    while (i < lines.length) {
+      const line = lines[i];
+      
+      // 표 감지 (| 포함된 연속 라인들)
+      if (line.includes('|')) {
+        const tableLines: string[] = [];
+        let j = i;
+        
+        // 연속된 표 라인들 수집
+        while (j < lines.length && (lines[j].includes('|') || lines[j].includes('---'))) {
+          tableLines.push(lines[j]);
+          j++;
+        }
+        
+        if (tableLines.length > 0) {
+          result.push(convertMarkdownTable(tableLines));
+          i = j;
+          continue;
+        }
+      }
+      
+      // 일반 텍스트 처리
+      if (line.trim().startsWith('## ')) {
+        const text = line.substring(line.indexOf('## ') + 3);
+        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs24" style="color: rgb(0, 0, 0); font-weight: bold;">${text}</span></p>`);
+      } else if (line.trim().startsWith('### ')) {
+        const text = line.substring(line.indexOf('### ') + 4);
+        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs19" style="color: rgb(0, 0, 0); font-weight: bold;">${text}</span></p>`);
+      } else if (line.trim() === '') {
+        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">&nbsp;</span></p>`);
+      } else if (line.trim().match(/^(\d+\.|[-•*]\s+|✓\s+|[①-⑳]\s+|[가-힣]\.\s+)/)) {
+        // 모든 리스트 항목 처리 - 줄바꿈 금지
+        let text = line.trim();
+        // **강조** 처리만 적용하고 문장별 개행은 하지 않음
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
+        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${text}</span></p>`);
+      } else {        
+        // 일반 텍스트 처리 (28자 이상이면 재귀적으로 자르기)
+        const processedLines = breakLongText(line.trim());
+        for (const textLine of processedLines) {
+          let processedLine = textLine.replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
+          result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedLine}</span></p>`);
+        }
+      }
+      
+      i++;
+    }
+    
+    const finalResult = result.join('');
+    console.log('🔍 processMarkdown 결과:', finalResult);
+    console.log('🔍 result 배열:', result);
+    return finalResult;
+  };
+
+  // 이미지 AI 설정 정보 가져오기
+  useEffect(() => {
+    const loadImageAIInfo = async () => {
+      try {
+        const llmSettings = await window.electronAPI?.getLLMSettings?.();
+        if (llmSettings?.appliedSettings?.image) {
+          const { provider, model } = llmSettings.appliedSettings.image;
+          if (provider && model) {
+            setImageAIInfo(`✅ ${provider} ${model}`);
+          } else {
+            setImageAIInfo('❌ 미설정');
+          }
+        } else {
+          setImageAIInfo('❌ 미설정');
+        }
+      } catch (error) {
+        console.error('이미지 AI 설정 확인 실패:', error);
+        setImageAIInfo('❌ 확인 실패');
+      }
+    };
+    
+    loadImageAIInfo();
+  }, []);
+
+  const generateImagePrompts = async () => {
+    setIsGeneratingImages(true);
+    
+    try {
+      // API를 통해 이미지 프롬프트 생성 (편집된 콘텐츠 사용)
+      const response = await window.electronAPI.generateImagePrompts({
+        content: editedContent,
+        imageCount: imagePositions.length
+      });
+      
+      // 각 프롬프트로 이미지 생성
+      const generatedImages: {[key: string]: string} = {};
+      
+      for (let i = 0; i < response.prompts.length; i++) {
+        const prompt = response.prompts[i];
+        const imageKey = `이미지${i + 1}`;
+        
+        const imageUrl = await window.electronAPI.generateImage(prompt);
+        generatedImages[imageKey] = imageUrl;
+      }
+      
+      setImages(generatedImages);
+    } catch (error) {
+      console.error('이미지 생성 실패:', error);
+    } finally {
+      setIsGeneratingImages(false);
+    }
+  };
+
+  const replaceImagesInContent = () => {
+    let finalContent = editedContent;
+    
+    imagePositions.forEach((imageKey, index) => {
+      const imageUrl = images[imageKey];
+      if (imageUrl) {
+        // 첫 번째 (이미지)를 실제 이미지로 교체
+        finalContent = finalContent.replace('(이미지)', `![${imageKey}](${imageUrl})`);
+      }
+    });
+    
+    return finalContent;
+  };
+
+  const handlePublish = () => {
+    const finalContent = replaceImagesInContent();
+    // v2의 발행 로직 재사용
+    window.electronAPI.publishToBlog(finalContent);
+  };
+
+  // v2와 동일한 글자 수 계산
+  const updateCharCount = () => {
+    if (editorRef.current) {
+      const textContent = editorRef.current.innerText || '';
+      const textContentNoSpaces = textContent.replace(/\s+/g, '');
+      
+      setCharCount(textContentNoSpaces.length);
+      setCharCountWithSpaces(textContent.length);
+    }
+  };
+
+  // v2와 동일한 콘텐츠 변경 처리
+  const handleContentChange = () => {
+    if (editorRef.current) {
+      const newContent = editorRef.current.innerHTML;
+      setEditedContent(newContent);
+      updateCharCount();
+    }
+  };
+
+  // v2와 동일한 원본 복원 처리
+  const restoreOriginal = () => {
+    if (originalContent) {
+      const processedContent = processMarkdown(originalContent);
+      setEditedContent(processedContent);
+      
+      if (editorRef.current) {
+        editorRef.current.innerHTML = processedContent;
+        updateCharCount();
+      }
+    }
+  };
+
+  // v2와 동일한 클립보드 복사
+  const copyToClipboard = async (): Promise<boolean> => {
+    if (editorRef.current) {
+      try {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        
+        const success = document.execCommand('copy');
+        selection?.removeAllRanges();
+        
+        if (success) {
+          console.log('✅ HTML 형식으로 클립보드에 복사되었습니다!');
+          return true;
+        } else {
+          throw new Error('복사 명령 실패');
+        }
+      } catch (error) {
+        console.error('❌ 복사 실패:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
+  // v2와 동일한 키보드 이벤트 처리
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // 폰트 크기 단축키
+    if (e.ctrlKey && e.key >= '1' && e.key <= '4') {
+      e.preventDefault();
+      const sizes = [15, 16, 19, 24];
+      const newSize = sizes[parseInt(e.key) - 1];
+      setCurrentFontSize(`${newSize}px`);
+      
+      // 선택된 텍스트에 폰트 크기 적용
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        document.execCommand('fontSize', false, '1');
+        const fontElements = editorRef.current?.querySelectorAll('font[size="1"]');
+        fontElements?.forEach(el => {
+          const span = document.createElement('span');
+          span.style.fontSize = `${newSize}px`;
+          span.innerHTML = el.innerHTML;
+          el.parentNode?.replaceChild(span, el);
+        });
+      }
+    }
+  };
+
+  // v2와 동일한 클릭 이벤트 처리
+  const handleClick = () => {
+    updateCharCount();
+  };
+
+  // v2와 동일한 초기 콘텐츠 로딩
+  useEffect(() => {
+    if (content) {
+      // 원본 콘텐츠 저장
+      setOriginalContent(content);
+      
+      // 자동편집 콘텐츠 생성 (네이버 블로그용 HTML) - v2와 동일한 방식
+      const processedContent = processMarkdown(content);
+      console.log('🔍 원본 콘텐츠:', content);
+      console.log('🔍 처리된 콘텐츠:', processedContent);
+      setEditedContent(processedContent);
+      
+      // 이미지 위치 감지 (원본 마크다운에서)
+      const imageInfo = ContentProcessor.processImages(content);
+      setImagePositions(imageInfo.imagePositions);
+    }
+  }, [content]);
+
+  // 편집된 콘텐츠가 변경될 때 에디터에 반영
+  useEffect(() => {
+    if (editedContent && editorRef.current) {
+      console.log('🔍 에디터에 콘텐츠 설정:', editedContent.substring(0, 100) + '...');
+      editorRef.current.innerHTML = editedContent;
+      updateCharCount();
+    }
+  }, [editedContent]);
+
+  // activeTab이 'edited'로 변경될 때도 에디터에 콘텐츠 반영
+  useEffect(() => {
+    if (activeTab === 'edited' && editedContent && editorRef.current) {
+      console.log('🔍 탭 전환시 에디터에 콘텐츠 복원:', editedContent.substring(0, 50) + '...');
+      editorRef.current.innerHTML = editedContent;
+      updateCharCount();
+    }
+  }, [activeTab]);
+
+  // 콘텐츠 통계 계산
+  const contentStats = ContentProcessor.getContentStats(editedContent);
+
+  // v2와 동일한 CSS 스타일
+  const sectionStyles = `
+    .section-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .section-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    
+    .section-icon.blue {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+    }
+    
+    .section-icon.purple {
+      background-color: #ede9fe;
+      color: #7c3aed;
+    }
+    
+    .section-title {
+      margin: 0;
+      font-weight: 600;
+      color: #1f2937;
+    }
+  `;
+
+  return (
+    <div className="step2-container">
+      <style>{sectionStyles}</style>
+      {/* 작업 요약 */}
+      <WorkSummary 
+        setupData={setupData}
+        contentStats={contentStats}
+        imageCount={imagePositions.length}
+        imageAIInfo={imageAIInfo}
+      />
+
+      {/* 콘텐츠 편집기 - v2 Step3 스타일 */}
+      <div className="section-card" style={{padding: '20px', marginBottom: '16px'}}>
+        <div className="section-header" style={{marginBottom: '16px'}}>
+          <div className="section-icon blue" style={{width: '32px', height: '32px', fontSize: '16px'}}>📝</div>
+          <h2 className="section-title" style={{fontSize: '16px'}}>콘텐츠 편집</h2>
+        </div>
+        
+        {/* v2 Step3와 완전 동일한 편집기 UI */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '16px',
+          borderBottom: '2px solid #e5e7eb',
+          paddingBottom: '12px'
+        }}>
+          {/* 탭 버튼들 */}
+          <div style={{ display: 'flex', gap: '2px' }}>
+            <button
+              onClick={() => setActiveTab('edited')}
+              style={{
+                backgroundColor: activeTab === 'edited' ? '#3b82f6' : 'transparent',
+                color: activeTab === 'edited' ? 'white' : '#6b7280',
+                borderTop: activeTab === 'edited' ? 'none' : '1px solid #d1d5db',
+                borderLeft: activeTab === 'edited' ? 'none' : '1px solid #d1d5db',
+                borderRight: activeTab === 'edited' ? 'none' : '1px solid #d1d5db',
+                borderBottom: 'none',
+                borderRadius: '8px 8px 0 0',
+                padding: '12px 20px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              📝 자동편집 콘텐츠
+            </button>
+            <button
+              onClick={() => setActiveTab('original')}
+              style={{
+                backgroundColor: activeTab === 'original' ? '#3b82f6' : 'transparent',
+                color: activeTab === 'original' ? 'white' : '#6b7280',
+                borderTop: activeTab === 'original' ? 'none' : '1px solid #d1d5db',
+                borderLeft: activeTab === 'original' ? 'none' : '1px solid #d1d5db',
+                borderRight: activeTab === 'original' ? 'none' : '1px solid #d1d5db',
+                borderBottom: 'none',
+                borderRadius: '8px 8px 0 0',
+                padding: '12px 20px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              📄 원본 콘텐츠
+            </button>
+          </div>
+
+          {/* 글씨 크기 및 기능 버튼 */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <select
+              value={parseInt(currentFontSize)}
+              onChange={(e) => setCurrentFontSize(`${e.target.value}px`)}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #d1d5db',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              <option value={15}>15px</option>
+              <option value={16}>16px</option>
+              <option value={19}>19px</option>
+              <option value={24}>24px</option>
+            </select>
+
+            {activeTab === 'edited' && (
+              <>
+                <button
+                  onClick={restoreOriginal}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔄 원본 복원
+                </button>
+                
+                <button
+                  onClick={copyToClipboard}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#8b5cf6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📋 복사
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        
+        {/* 글자 수 표시 */}
+        {activeTab === 'edited' && (
+          <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+            글자 수: {charCount.toLocaleString()}자 / 공백포함: {charCountWithSpaces.toLocaleString()}자
+          </div>
+        )}
+
+        {/* v2와 완전 동일한 편집기 */}
+        <div style={{
+          border: '1px solid #e5e7eb',
+          borderRadius: '0 8px 8px 8px',
+          backgroundColor: '#ffffff',
+          minHeight: '400px'
+        }}>
+          {activeTab === 'edited' ? (
+            <div
+              ref={editorRef}
+              id="step3-editor"
+              contentEditable
+              style={{
+                width: '100%',
+                minHeight: '400px',
+                maxHeight: '600px',
+                padding: '16px',
+                border: 'none',
+                borderRadius: '0 8px 8px 8px',
+                fontSize: currentFontSize,
+                lineHeight: '1.8',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                backgroundColor: 'white',
+                position: 'relative',
+                zIndex: 1,
+                overflowY: 'auto',
+                outline: 'none'
+              }}
+              onInput={handleContentChange}
+              onKeyDown={handleKeyDown}
+              onClick={handleClick}
+              suppressContentEditableWarning={true}
+            />
+          ) : (
+            <div 
+              style={{
+                padding: '20px',
+                fontSize: currentFontSize,
+                lineHeight: '1.7',
+                height: '500px',
+                maxHeight: '500px',
+                overflowY: 'auto',
+                color: '#374151',
+                backgroundColor: '#f9fafb',
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                border: '1px solid #e5e7eb'
+              }}
+            >
+              {originalContent || '원본 콘텐츠가 없습니다.'}
+            </div>
+          )}
+        </div>
+
+        {/* v2와 동일한 CSS 스타일 */}
+        <style>{`
+          .se-text-paragraph {
+            margin: 0;
+            padding: 0;
+            line-height: 1.8;
+          }
+          .se-text-paragraph-align-left {
+            text-align: left;
+          }
+          .se-text-paragraph-align-center {
+            text-align: center;
+          }
+          .se-ff-nanumgothic {
+            font-family: "Nanum Gothic", "나눔고딕", "돋움", Dotum, Arial, sans-serif;
+          }
+          .se-fs15 {
+            font-size: 15px !important;
+          }
+          .se-fs16 {
+            font-size: 16px !important;
+          }
+          .se-fs19 {
+            font-size: 19px !important;
+          }
+          .se-fs24 {
+            font-size: 24px !important;
+          }
+          .se-component {
+            margin: 16px 0;
+          }
+          .se-table {
+            width: 100%;
+          }
+          .se-table-content {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+          }
+          .se-cell {
+            border: 1px solid #ddd;
+            padding: 8px;
+            vertical-align: top;
+          }
+          .se-tr {
+            border: none;
+          }
+          .se-module-text {
+            margin: 0;
+            padding: 0;
+          }
+          #step3-editor:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: -2px;
+          }
+        `}</style>
+
+        <div style={{ marginTop: '12px', fontSize: '12px', color: '#6b7280' }}>
+          💡 <strong>편집 팁:</strong> 텍스트 선택 후 폰트 크기 변경 | 네이버 블로그 완전 호환 방식 | Ctrl+1~4로 폰트 크기 단축키
+        </div>
+      </div>
+
+      {/* 이미지 생성 섹션 */}
+      <ImageGenerator
+        imagePositions={imagePositions}
+        images={images}
+        isGeneratingImages={isGeneratingImages}
+        onGenerateImages={generateImagePrompts}
+      />
+
+      {/* 최종 완성본 */}
+      {Object.keys(images).length === imagePositions.length && imagePositions.length > 0 && (
+        <div className="final-content" style={{ marginTop: '24px' }}>
+          <h3>✨ 최종 완성본</h3>
+          <div 
+            className="final-preview"
+            style={{
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '20px',
+              backgroundColor: '#fafafa',
+              fontSize: `${fontSize}px`,
+              lineHeight: '1.7'
+            }}
+            dangerouslySetInnerHTML={{ __html: marked(replaceImagesInContent()) }}
+          />
+        </div>
+      )}
+
+      {/* 액션 버튼 */}
+      <div className="action-buttons" style={{ 
+        marginTop: '32px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button onClick={onGoBack} style={{ 
+            backgroundColor: '#6b7280', 
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px 20px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '600',
+            transition: 'background-color 0.2s'
+          }}>
+            ← 이전으로 가기
+          </button>
+          
+          <button onClick={onReset} style={{
+            backgroundColor: '#ef4444',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px 20px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '600',
+            transition: 'background-color 0.2s'
+          }}>
+            🔄 처음부터 다시
+          </button>
+        </div>
+        
+        {(Object.keys(images).length === imagePositions.length || imagePositions.length === 0) && (
+          <button 
+            className="publish-button"
+            onClick={handlePublish}
+            style={{
+              backgroundColor: '#059669',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            📤 블로그에 발행하기
+          </button>
+        )}
+      </div>
+
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+    </div>
+  );
+};
+
+export default Step2Generation;

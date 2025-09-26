@@ -15,12 +15,7 @@ interface ManualUploadSectionProps {
   blogContent: string;
   mainKeyword: string;
   subKeywords: string;
-  onComplete: (data: {
-    writingStylePaths: string[];
-    seoGuidePath: string;
-    topic: string;
-    generatedContent: string;
-  }) => void;
+  onFileUploaded: (content: string) => void;
 }
 
 const ManualUploadSection: React.FC<ManualUploadSectionProps> = ({
@@ -30,7 +25,7 @@ const ManualUploadSection: React.FC<ManualUploadSectionProps> = ({
   blogContent,
   mainKeyword,
   subKeywords,
-  onComplete,
+  onFileUploaded,
 }) => {
   if (!selectedTitle) return null;
 
@@ -79,18 +74,7 @@ const ManualUploadSection: React.FC<ManualUploadSectionProps> = ({
               const reader = new FileReader();
               reader.onload = (event) => {
                 const content = event.target?.result as string;
-                
-                // 선택된 제목과 키워드 정보 포함
-                const finalTopic = selectedTitle ? 
-                  `제목: ${selectedTitle}\n블로그 설명: ${blogContent}\n메인키워드: ${mainKeyword}\n보조키워드: ${subKeywords}` : 
-                  (blogContent || '수동 업로드된 글');
-                  
-                onComplete({ 
-                  writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
-                  seoGuidePath: selectedSeoGuide?.filePath || '',
-                  topic: finalTopic,
-                  generatedContent: content
-                });
+                onFileUploaded(content);
               };
               reader.readAsText(file);
             }
