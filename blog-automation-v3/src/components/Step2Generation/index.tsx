@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
+import NaverPublish from '../publishers/NaverPublish';
 import { ContentProcessor } from './ContentProcessor';
 import { BlogWritingService } from '../../services/blog-writing-service';
 
@@ -54,6 +55,9 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   
   // 수정된 글 가져오기 관련 상태
   const [isRefreshingContent, setIsRefreshingContent] = useState(false);
+  
+  // 발행 플랫폼 선택 상태
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   
   // 컴포넌트 마운트 시 스크롤을 최상단으로 이동
   useEffect(() => {
@@ -435,9 +439,30 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   };
 
   const handlePublish = () => {
+    if (!selectedPlatform) {
+      alert('발행할 플랫폼을 선택해주세요.');
+      return;
+    }
+    
     const finalContent = replaceImagesInContent();
-    // v2의 발행 로직 재사용
-    window.electronAPI.publishToBlog(finalContent);
+    
+    if (selectedPlatform === 'naver') {
+      // v2의 네이버 블로그 발행 로직 재사용
+      window.electronAPI.publishToBlog(finalContent);
+    } else {
+      alert(`${getPlatformName(selectedPlatform)} 발행 기능은 곧 구현될 예정입니다.`);
+    }
+  };
+  
+  // 플랫폼 이름 반환 함수
+  const getPlatformName = (platform: string): string => {
+    switch (platform) {
+      case 'naver': return '네이버 블로그';
+      case 'tistory': return '티스토리';
+      case 'wordpress': return '워드프레스';
+      case 'google': return '구글 블로그';
+      default: return '선택된 플랫폼';
+    }
   };
 
   // v2와 동일한 글자 수 계산
@@ -1139,34 +1164,87 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
         </div>
       )}
 
+      {/* 발행 플랫폼 선택 섹션 */}
+      <div className="section-card" style={{padding: '20px', marginBottom: '16px'}}>
+        <div className="section-header" style={{marginBottom: '16px'}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="section-icon purple" style={{
+              width: '32px', 
+              height: '32px', 
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>🚀</div>
+            <h2 className="section-title" style={{fontSize: '16px', margin: '0', lineHeight: '1'}}>발행 플랫폼 선택</h2>
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+          <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', minWidth: '100px' }}>
+            발행할 블로그:
+          </label>
+          <select
+            value={selectedPlatform}
+            onChange={(e) => setSelectedPlatform(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #d1d5db',
+              fontSize: '14px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              minWidth: '200px'
+            }}
+          >
+            <option value="" disabled>플랫폼을 선택해주세요</option>
+            <option value="naver">🟢 네이버 블로그</option>
+            <option value="tistory">🟠 티스토리</option>
+            <option value="wordpress">🔵 워드프레스</option>
+            <option value="google">🔴 구글 블로그</option>
+          </select>
+        </div>
+        
+        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+          💡 네이버 블로그 발행 기능이 구현되어 있습니다. 다른 플랫폼은 순차적으로 구현 예정입니다.
+        </div>
+      </div>
+
+      {/* 선택된 플랫폼별 발행 컴포넌트 */}
+      {selectedPlatform === 'naver' && (
+        <NaverPublish
+          data={setupData}
+          editedContent={editedContent}
+          imageUrls={Object.values(images)}
+          onComplete={(result) => {
+            console.log('네이버 발행 완료:', result);
+          }}
+          copyToClipboard={() => {}}
+        />
+      )}
+
+      {selectedPlatform && selectedPlatform !== 'naver' && (
+        <div className="section-card" style={{padding: '20px', marginBottom: '16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca'}}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '16px', color: '#dc2626', fontWeight: '600', marginBottom: '8px' }}>
+              🚧 {getPlatformName(selectedPlatform)} 발행 기능 준비 중
+            </div>
+            <div style={{ fontSize: '14px', color: '#7f1d1d' }}>
+              해당 플랫폼의 발행 기능은 곧 구현될 예정입니다.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 액션 버튼 */}
       <div className="action-buttons" style={{ 
         marginTop: '32px',
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
         gap: '12px'
       }}>
-        {(Object.keys(images).length === imagePositions.length || imagePositions.length === 0) && (
-          <button 
-            className="publish-button"
-            onClick={handlePublish}
-            style={{
-              backgroundColor: '#059669',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              transition: 'background-color 0.2s'
-            }}
-          >
-            📤 블로그에 발행하기
-          </button>
-        )}
-        
+        {/* 왼쪽: 이전으로 가기 */}
         <button onClick={onGoBack} style={{ 
           backgroundColor: '#6b7280', 
           color: 'white',
@@ -1181,6 +1259,30 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
           ← 이전으로 가기
         </button>
         
+        {/* 가운데: 발행 버튼 (다른 플랫폼용) */}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {selectedPlatform && selectedPlatform !== 'naver' && (Object.keys(images).length === imagePositions.length || imagePositions.length === 0) && (
+            <button 
+              className="publish-button"
+              onClick={handlePublish}
+              style={{
+                backgroundColor: '#059669',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px 24px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                transition: 'background-color 0.2s'
+              }}
+            >
+              📤 {getPlatformName(selectedPlatform)}에 발행하기
+            </button>
+          )}
+        </div>
+        
+        {/* 오른쪽: 처음부터 다시 */}
         <button onClick={onReset} style={{
           backgroundColor: '#ef4444',
           color: 'white',

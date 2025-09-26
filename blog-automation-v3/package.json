@@ -38,10 +38,14 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
+    "autoprefixer": "^10.4.21",
     "marked": "^9.0.0",
     "playwright": "^1.40.0",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.2.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.4.1"
   },
   "build": {
     "appId": "com.blog.automation.v3",
