@@ -52,6 +52,9 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   const [isRegeneratingPrompts, setIsRegeneratingPrompts] = useState(false);
   const [imagePromptError, setImagePromptError] = useState<string | null>(null);
   
+  // 수정된 글 가져오기 관련 상태
+  const [isRefreshingContent, setIsRefreshingContent] = useState(false);
+  
   // 컴포넌트 마운트 시 스크롤을 최상단으로 이동
   useEffect(() => {
     const scrollableContainer = document.querySelector('main > div');
@@ -613,14 +616,16 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
 
   // 이미지 프롬프트 재생성 함수
   const regenerateImagePrompts = async () => {
-    if (!content || isRegeneratingPrompts) return;
+    // 현재 원본 콘텐츠를 사용 (수정된 글이 있다면 그것을, 아니면 초기 콘텐츠를)
+    const currentContent = originalContent || content;
+    if (!currentContent || isRegeneratingPrompts) return;
 
     setIsRegeneratingPrompts(true);
     setImagePromptError(null);
     
     try {
       console.log('🔄 이미지 프롬프트 재생성 시작');
-      const result = await BlogWritingService.generateImagePrompts(content);
+      const result = await BlogWritingService.generateImagePrompts(currentContent);
       
       if (result.success && result.imagePrompts && result.imagePrompts.length > 0) {
         console.log(`✅ 이미지 프롬프트 재생성 성공: ${result.imagePrompts.length}개`);
@@ -635,6 +640,63 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       setImagePromptError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
     } finally {
       setIsRegeneratingPrompts(false);
+    }
+  };
+
+  // 수정된 글 가져오기 함수
+  const handleRefreshContent = async () => {
+    if (isRefreshingContent) return;
+    
+    setIsRefreshingContent(true);
+    
+    try {
+      console.log('🔄 Claude Web에서 수정된 글 가져오기 시작');
+      
+      // Claude Web에서 다시 다운로드
+      const newContent = await window.electronAPI.downloadFromClaude();
+      
+      if (newContent && newContent.trim()) {
+        console.log('✅ 수정된 글 가져오기 성공');
+        
+        // 원본 및 편집 콘텐츠 업데이트
+        setOriginalContent(newContent);
+        
+        // 새로운 콘텐츠로 마크다운 처리
+        const processedContent = processMarkdown(newContent);
+        setEditedContent(processedContent);
+        
+        // 이미지 위치 재감지
+        const imageInfo = ContentProcessor.processImages(newContent);
+        setImagePositions(imageInfo.imagePositions);
+        
+        // 기존 이미지와 프롬프트 초기화 (새로운 글이므로)
+        setImages({});
+        setImagePrompts([]);
+        
+        // 이미지 프롬프트 오류 상태 설정 (재생성 필요)
+        const hasImageTags = newContent.match(/\(이미지\)|\[이미지\]/g);
+        const expectedImageCount = hasImageTags ? hasImageTags.length : 0;
+        
+        if (expectedImageCount > 0) {
+          setImagePromptError('새로운 글로 업데이트되었습니다. 이미지 프롬프트를 재생성해주세요.');
+        } else {
+          setImagePromptError(null);
+        }
+        
+        // 편집기 초기화 플래그 설정
+        setIsInitialLoad(true);
+        
+        console.log(`📊 새 글 통계: ${newContent.length}자, 예상 이미지: ${expectedImageCount}개`);
+        
+      } else {
+        throw new Error('Claude Web에서 빈 콘텐츠가 반환되었습니다.');
+      }
+      
+    } catch (error) {
+      console.error('❌ 수정된 글 가져오기 실패:', error);
+      alert(`수정된 글 가져오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\nClaude Web에서 마크다운을 다시 복사해보세요.`);
+    } finally {
+      setIsRefreshingContent(false);
     }
   };
 
@@ -689,6 +751,8 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
         charCountWithSpaces={charCountWithSpaces}
         imageCount={imagePositions.length}
         imageAIInfo={imageAIInfo}
+        onRefreshContent={handleRefreshContent}
+        isRefreshingContent={isRefreshingContent}
       />
 
       {/* 콘텐츠 편집기 - v2 Step3 스타일 */}

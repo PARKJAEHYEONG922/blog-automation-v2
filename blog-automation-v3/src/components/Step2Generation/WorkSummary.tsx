@@ -12,6 +12,8 @@ interface WorkSummaryProps {
   charCountWithSpaces: number;
   imageCount: number;
   imageAIInfo: string;
+  onRefreshContent?: () => void;
+  isRefreshingContent?: boolean;
 }
 
 const WorkSummary: React.FC<WorkSummaryProps> = ({ 
@@ -19,7 +21,9 @@ const WorkSummary: React.FC<WorkSummaryProps> = ({
   charCount,
   charCountWithSpaces,
   imageCount, 
-  imageAIInfo 
+  imageAIInfo,
+  onRefreshContent,
+  isRefreshingContent = false
 }) => {
   return (
     <div style={{
@@ -34,19 +38,82 @@ const WorkSummary: React.FC<WorkSummaryProps> = ({
         borderRadius: '15px',
         padding: '24px'
       }}>
-        <h3 style={{ 
-          fontSize: '20px', 
-          fontWeight: '700', 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          marginBottom: '20px',
+        <div style={{
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '10px'
+          marginBottom: '20px'
         }}>
-          📋 작업 요약
-        </h3>
+          <h3 style={{ 
+            fontSize: '20px', 
+            fontWeight: '700', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            📋 작업 요약
+          </h3>
+          
+          {/* AI 생성된 글인 경우에만 수정된 글 가져오기 버튼 표시 */}
+          {setupData.isAIGenerated && onRefreshContent && (
+            <button
+              onClick={onRefreshContent}
+              disabled={isRefreshingContent}
+              style={{
+                backgroundColor: isRefreshingContent ? '#9ca3af' : '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: isRefreshingContent ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
+              }}
+              onMouseEnter={(e) => {
+                if (!isRefreshingContent) {
+                  e.currentTarget.style.backgroundColor = '#2563eb';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.3)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isRefreshingContent) {
+                  e.currentTarget.style.backgroundColor = '#3b82f6';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
+                }
+              }}
+              title="Claude Web에서 수정한 글을 다시 가져옵니다"
+            >
+              {isRefreshingContent ? (
+                <>
+                  <div style={{
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid #fff',
+                    borderTop: '2px solid transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                  가져오는 중...
+                </>
+              ) : (
+                <>
+                  🔄 수정된 글 가져오기
+                </>
+              )}
+            </button>
+          )}
+        </div>
         
         {/* 제목 섹션 - 특별히 강조 */}
         <div style={{ 
