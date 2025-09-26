@@ -7,6 +7,40 @@ let mainWindow: BrowserWindow;
 const claudeWebService = new ClaudeWebService();
 const imageService = new ImageService();
 
+// 콘솔 로그를 UI로 전송하는 함수
+function sendLogToUI(level: string, message: string) {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('log-message', {
+      level,
+      message,
+      timestamp: new Date()
+    });
+  }
+}
+
+// console.log 오버라이드
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+console.log = (...args: any[]) => {
+  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  originalConsoleLog(...args);
+  sendLogToUI('info', message);
+};
+
+console.error = (...args: any[]) => {
+  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  originalConsoleError(...args);
+  sendLogToUI('error', message);
+};
+
+console.warn = (...args: any[]) => {
+  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+  originalConsoleWarn(...args);
+  sendLogToUI('warning', message);
+};
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     height: 900,

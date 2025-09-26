@@ -282,18 +282,14 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   
   // v2와 완전히 동일한 마크다운 처리 메인 함수
   const processMarkdown = (content: string): string => {
-    console.log('🔍 processMarkdown 시작:', content);
     
     // 먼저 콘텐츠 정리
     const cleanedContent = cleanAIGeneratedContent(content);
-    console.log('🔍 cleanedContent:', cleanedContent);
     
     // 이미지 플레이스홀더에 번호 매기기
     const numberedContent = addImageNumbers(cleanedContent);
-    console.log('🔍 numberedContent:', numberedContent);
     
     const lines = numberedContent.split('\n');
-    console.log('🔍 lines:', lines);
     const result: string[] = [];
     let i = 0;
     
@@ -319,7 +315,10 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       }
       
       // 일반 텍스트 처리
-      if (line.trim().startsWith('## ')) {
+      if (line.trim().match(/^#\s+/) && !line.trim().startsWith('## ')) {
+        // 단일 # 제목은 제거 (# 다음에 공백이 있는 마크다운 제목만)
+        // 해시태그들 (#태그1 #태그2)은 공백 없이 연결되므로 제거되지 않음
+      } else if (line.trim().startsWith('## ')) {
         const text = line.substring(line.indexOf('## ') + 3);
         result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs24" style="color: rgb(0, 0, 0); font-weight: bold;">${text}</span></p>`);
       } else if (line.trim().startsWith('### ')) {
@@ -346,8 +345,6 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     }
     
     const finalResult = result.join('');
-    console.log('🔍 processMarkdown 결과:', finalResult);
-    console.log('🔍 result 배열:', result);
     return finalResult;
   };
 
@@ -554,8 +551,6 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       
       // 자동편집 콘텐츠 생성 (네이버 블로그용 HTML) - v2와 동일한 방식
       const processedContent = processMarkdown(content);
-      console.log('🔍 원본 콘텐츠:', content);
-      console.log('🔍 처리된 콘텐츠:', processedContent);
       setEditedContent(processedContent);
       
       // 이미지 위치 감지 (원본 마크다운에서)
@@ -568,9 +563,11 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   useEffect(() => {
     if (editedContent && editorRef.current && isInitialLoad) {
-      console.log('🔍 에디터에 초기 콘텐츠 설정:', editedContent.substring(0, 100) + '...');
       editorRef.current.innerHTML = editedContent;
-      updateCharCount();
+      // DOM 업데이트 완료 후 글자 수 계산
+      setTimeout(() => {
+        updateCharCount();
+      }, 100);
       setIsInitialLoad(false);
     }
   }, [editedContent, isInitialLoad]);
@@ -578,14 +575,15 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   // activeTab이 'edited'로 변경될 때도 에디터에 콘텐츠 반영
   useEffect(() => {
     if (activeTab === 'edited' && editedContent && editorRef.current) {
-      console.log('🔍 탭 전환시 에디터에 콘텐츠 복원:', editedContent.substring(0, 50) + '...');
       editorRef.current.innerHTML = editedContent;
-      updateCharCount();
+      // 약간의 지연 후 글자 수 업데이트 (DOM 업데이트 완료 후)
+      setTimeout(() => {
+        updateCharCount();
+      }, 100);
     }
   }, [activeTab]);
 
-  // 콘텐츠 통계 계산
-  const contentStats = ContentProcessor.getContentStats(editedContent);
+  // 콘텐츠 통계는 편집기에서 실시간 계산하므로 제거
 
   // v2와 동일한 CSS 스타일
   const sectionStyles = `
@@ -632,16 +630,30 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       {/* 작업 요약 */}
       <WorkSummary 
         setupData={setupData}
-        contentStats={contentStats}
+        charCount={charCount}
+        charCountWithSpaces={charCountWithSpaces}
         imageCount={imagePositions.length}
         imageAIInfo={imageAIInfo}
       />
 
       {/* 콘텐츠 편집기 - v2 Step3 스타일 */}
       <div className="section-card" style={{padding: '20px', marginBottom: '16px'}}>
-        <div className="section-header" style={{marginBottom: '16px'}}>
-          <div className="section-icon blue" style={{width: '32px', height: '32px', fontSize: '16px'}}>📝</div>
-          <h2 className="section-title" style={{fontSize: '16px'}}>콘텐츠 편집</h2>
+        <div className="section-header" style={{marginBottom: '16px', justifyContent: 'space-between'}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="section-icon blue" style={{
+              width: '32px', 
+              height: '32px', 
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>📝</div>
+            <h2 className="section-title" style={{fontSize: '16px', margin: '0', lineHeight: '1'}}>콘텐츠 편집</h2>
+          </div>
+          {/* 헤더 오른쪽에 글자 수 표시 */}
+          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+            📊 글자 수: {charCount.toLocaleString()}자 / 공백포함: {charCountWithSpaces.toLocaleString()}자
+          </div>
         </div>
         
         {/* v2 Step3와 완전 동일한 편집기 UI */}

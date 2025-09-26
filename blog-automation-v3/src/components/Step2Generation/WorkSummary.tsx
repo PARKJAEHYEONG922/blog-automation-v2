@@ -8,17 +8,16 @@ interface WorkSummaryProps {
     blogContent: string;
     isAIGenerated: boolean;
   };
-  contentStats: {
-    totalChars: number;
-    charsWithoutSpaces: number;
-  };
+  charCount: number;
+  charCountWithSpaces: number;
   imageCount: number;
   imageAIInfo: string;
 }
 
 const WorkSummary: React.FC<WorkSummaryProps> = ({ 
   setupData, 
-  contentStats, 
+  charCount,
+  charCountWithSpaces,
   imageCount, 
   imageAIInfo 
 }) => {
@@ -120,7 +119,7 @@ const WorkSummary: React.FC<WorkSummaryProps> = ({
           }}>
             <div style={{ fontSize: '12px', color: '#0284c7', fontWeight: '600', marginBottom: '4px' }}>📊 글자 수</div>
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#0369a1' }}>
-              {contentStats.charsWithoutSpaces}자 / 공백 {contentStats.totalChars}자
+              {charCount.toLocaleString()}자 / 공백포함 {charCountWithSpaces.toLocaleString()}자
             </div>
           </div>
         </div>
@@ -171,18 +170,6 @@ const WorkSummary: React.FC<WorkSummaryProps> = ({
             </div>
           </div>
 
-          {/* 이미지 AI 카드 */}
-          <div style={{
-            backgroundColor: imageAIInfo.includes('✅') ? '#f0fdf4' : '#fef2f2',
-            border: `1px solid ${imageAIInfo.includes('✅') ? '#bbf7d0' : '#fecaca'}`,
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            <div style={{ fontSize: '12px', color: imageAIInfo.includes('✅') ? '#16a34a' : '#dc2626', fontWeight: '600', marginBottom: '4px' }}>🤖 이미지 AI</div>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: imageAIInfo.includes('✅') ? '#15803d' : '#b91c1c' }}>
-              {imageAIInfo}
-            </div>
-          </div>
         </div>
       </div>
     </div>

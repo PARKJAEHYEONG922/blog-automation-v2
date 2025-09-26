@@ -38,8 +38,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendLog: (level: string, message: string) => ipcRenderer.send('log:add', level, message),
   onLogMessage: (callback: (data: any) => void) => {
     const handler = (_event: any, data: any) => callback(data);
-    ipcRenderer.on('log:message', handler);
-    return () => ipcRenderer.removeListener('log:message', handler);
+    ipcRenderer.on('log-message', handler);
+    return () => ipcRenderer.removeListener('log-message', handler);
   },
   
   // External URL opening
