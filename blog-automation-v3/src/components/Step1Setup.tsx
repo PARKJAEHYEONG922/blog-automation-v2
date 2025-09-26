@@ -327,6 +327,11 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
       return;
     }
 
+    if (!selectedSeoGuide) {
+      alert('SEO 가이드를 선택해주세요!');
+      return;
+    }
+
     setIsGenerating(true);
     setGenerationStep('클로드 웹 브라우저 열기...');
     

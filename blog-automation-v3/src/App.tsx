@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Step1Setup from './components/Step1Setup';
-import Step3Process from './components/Step3Process';
+import Step2Generation from './components/Step2Generation';
 import './App.css';
 
-type Step = 1 | 3;
+type Step = 1 | 2;
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -18,11 +18,11 @@ const App: React.FC = () => {
   const handleSetupComplete = (data: typeof setupData) => {
     setSetupData(data);
     
-    // Set generated content and move to Step 3
+    // Set generated content and move to Step 2
     if (data.generatedContent) {
       setGeneratedContent(data.generatedContent);
     }
-    setCurrentStep(3);
+    setCurrentStep(2);
   };
 
   const handleReset = () => {
@@ -37,7 +37,7 @@ const App: React.FC = () => {
         <h1>🚀 블로그 자동화 v3</h1>
         <div className="step-indicator">
           <div className={`step ${currentStep >= 1 ? 'active' : ''}`}>1. 설정 & 생성</div>
-          <div className={`step ${currentStep >= 3 ? 'active' : ''}`}>2. 완성</div>
+          <div className={`step ${currentStep >= 2 ? 'active' : ''}`}>2. 완성</div>
         </div>
       </header>
 
@@ -45,8 +45,8 @@ const App: React.FC = () => {
         {currentStep === 1 && (
           <Step1Setup onComplete={handleSetupComplete} />
         )}
-        {currentStep === 3 && (
-          <Step3Process 
+        {currentStep === 2 && (
+          <Step2Generation 
             content={generatedContent}
             onReset={handleReset}
           />

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { marked } from 'marked';
 
-interface Step3Props {
+interface Step2Props {
   content: string;
   onReset: () => void;
 }
 
-const Step3Process: React.FC<Step3Props> = ({ content, onReset }) => {
+const Step2Generation: React.FC<Step2Props> = ({ content, onReset }) => {
   const [processedContent, setProcessedContent] = useState<string>('');
   const [imagePositions, setImagePositions] = useState<string[]>([]);
   const [images, setImages] = useState<{[key: string]: string}>({});
@@ -158,4 +158,4 @@ const Step3Process: React.FC<Step3Props> = ({ content, onReset }) => {
   );
 };
 
-export default Step3Process;
+export default Step2Generation;
