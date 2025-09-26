@@ -109,7 +109,7 @@ ipcMain.handle('claude-web:wait-response', async () => {
 });
 
 ipcMain.handle('claude-web:download', async () => {
-  return await claudeWebService.downloadContent();
+  return await claudeWebService.copyContent();
 });
 
 // IPC handlers for image generation

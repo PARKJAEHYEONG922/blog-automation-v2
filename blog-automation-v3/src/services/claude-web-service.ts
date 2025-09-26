@@ -35,8 +35,8 @@ export class ClaudeWebService {
       // 자동화 전용 프로필 디렉토리
       const automationProfileDir = path.join(os.homedir(), 'AppData', 'Local', 'BlogAutomation', 'Chrome_Profile');
       
-      // 자동화용 Chrome을 별도 프로필로 실행
-      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=9222 --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check`);
+      // 자동화용 Chrome을 별도 프로필로 실행 (클립보드 권한만 허용)
+      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=9222 --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check --disable-background-timer-throttling`);
       
       // Chrome 시작 대기
       await new Promise(resolve => setTimeout(resolve, 5000));
@@ -44,8 +44,12 @@ export class ClaudeWebService {
       // 실행중인 Chrome에 연결
       this.browser = await chromium.connectOverCDP('http://localhost:9222');
       
+      // 클립보드 권한 허용
+      const context = this.browser.contexts()[0];
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+      
       // 기존 페이지들 가져오기
-      const pages = this.browser.contexts()[0].pages();
+      const pages = context.pages();
       
       // 첫 번째 페이지 사용 (이미 열린 탭)
       if (pages.length > 0) {
@@ -236,14 +240,71 @@ export class ClaudeWebService {
     }
 
     try {
-      // AI 응답 완료 대기 (로딩 인디케이터가 사라질 때까지)
-      await this.page.waitForFunction(() => {
-        const loadingElements = document.querySelectorAll('[data-testid="loading"], .loading, [class*="loading"]');
-        return loadingElements.length === 0;
-      }, { timeout: 300000 }); // 5분 대기
+      console.log('0단계: 자료 조사 단계 모니터링 중...');
       
-      // 추가로 2초 대기 (안전장치)
+      // 0단계: 자료 조사 단계 감지 (5초마다 체크)
+      let researchPhase = true;
+      let researchCheckCount = 0;
+      
+      while (researchPhase) {
+        researchCheckCount++;
+        
+        // 웹 검색 결과가 있는지 확인
+        const hasWebResults = await this.page.$('.transition-all.duration-400.ease-out.rounded-lg.border-0\\.5.flex.flex-col');
+        
+        // 아티팩트가 생성되었는지 확인
+        const hasArtifact = await this.page.$('#markdown-artifact');
+        
+        if (hasArtifact) {
+          console.log(`✅ 자료 조사 완료! 아티팩트 생성 시작 (${researchCheckCount * 5}초 경과)`);
+          researchPhase = false;
+          break;
+        } else if (hasWebResults) {
+          console.log(`🔍 자료 조사 중... (${researchCheckCount * 5}초 경과)`);
+        } else {
+          console.log(`⏳ AI 사고 중... (${researchCheckCount * 5}초 경과)`);
+        }
+        
+        await this.page.waitForTimeout(5000); // 5초마다 체크
+        
+        // 5분 이상 걸리면 아티팩트 생성 대기로 전환
+        if (researchCheckCount >= 60) { // 5초 * 60 = 5분
+          console.log('자료 조사가 길어지고 있습니다. 아티팩트 생성 대기로 전환...');
+          researchPhase = false;
+        }
+      }
+      
+      console.log('1단계: 아티팩트 생성 대기 중...');
+      // 1단계: 아티팩트 생성 대기
+      await this.page.waitForSelector('#markdown-artifact', { timeout: 300000 });
+      console.log('✨ 아티팩트 생성 감지됨!');
+      
+      console.log('2단계: 내용 변화 모니터링 시작 (3초 간격)');
+      // 2단계: 내용 변화 모니터링 (3초 간격)
+      let previousContent = '';
+      let noChangeCount = 0;
+      const maxNoChangeCount = 4; // 10초 대기 (3초 * 3 + 1초 여유)
+      
+      while (noChangeCount < maxNoChangeCount) {
+        await this.page.waitForTimeout(3000);
+        
+        const currentContent = await this.page.$eval('#markdown-artifact', (el: Element) => el.textContent || '');
+        const contentLength = currentContent.length;
+        
+        if (currentContent === previousContent) {
+          noChangeCount++;
+          console.log(`🔄 변화 없음 ${noChangeCount}/${maxNoChangeCount} (글자 수: ${contentLength})`);
+        } else {
+          noChangeCount = 0; // 변화가 있으면 카운트 리셋
+          previousContent = currentContent;
+          console.log(`✏️ 내용 변화 감지, 카운트 리셋 (글자 수: ${contentLength})`);
+        }
+      }
+      
+      console.log('3단계: 추가 안전 대기 (2초)');
+      // 3단계: 추가 안전장치
       await this.page.waitForTimeout(2000);
+      console.log('✅ 아티팩트 완료 감지 완마!');
       
     } catch (error) {
       console.error('AI 응답 대기 실패:', error);
@@ -251,6 +312,35 @@ export class ClaudeWebService {
     }
   }
 
+  async copyContent() {
+    if (!this.page) {
+      throw new Error('브라우저가 열려있지 않습니다.');
+    }
+
+    try {
+      console.log('복사 버튼 클릭 중...');
+      
+      // 복사 버튼 클릭
+      const copyButton = await this.page.waitForSelector('button:has-text("복사")', { timeout: 10000 });
+      await copyButton.click();
+      
+      // 잠시 대기 후 클립보드에서 내용 가져오기
+      await this.page.waitForTimeout(1000);
+      
+      const content = await this.page.evaluate(() => {
+        return navigator.clipboard.readText();
+      });
+      
+      console.log('복사 완료, 내용 길이:', content.length);
+      return content;
+      
+    } catch (error) {
+      console.error('콘텐츠 복사 실패:', error);
+      throw error;
+    }
+  }
+
+  // 기존 다운로드 방식도 유지 (백업용)
   async downloadContent() {
     if (!this.page) {
       throw new Error('브라우저가 열려있지 않습니다.');
