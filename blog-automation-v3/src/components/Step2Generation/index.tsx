@@ -88,8 +88,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     // 코드 블록 제거
     cleanedContent = cleanedContent.replace(/```[\s\S]*?```/g, '');
     
-    // 연속된 이미지 플레이스홀더를 하나로 합치기
-    cleanedContent = cleanedContent.replace(/\(이미지\)\s*\(이미지\)/g, '(이미지)');
+    // 연속된 이미지 플레이스홀더는 개별적으로 유지 (통합하지 않음)
     
     // 불필요한 구조 설명 제거
     cleanedContent = cleanedContent.replace(/^(다음은|아래는|위의 내용은|본문은).*?입니다[.:]?\s*$/gm, '');

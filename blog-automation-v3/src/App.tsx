@@ -66,7 +66,25 @@ const App: React.FC = () => {
     setCurrentStep(2);
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    // 브라우저 정리 (Claude Web, Playwright 등)
+    try {
+      console.log('🧹 브라우저 정리 시작...');
+      
+      // Playwright 브라우저 정리
+      if (window.electronAPI?.playwrightCleanup) {
+        await window.electronAPI.playwrightCleanup();
+        console.log('✅ Playwright 브라우저 정리 완료');
+      }
+      
+      // Claude Web 서비스 정리 (추가 필요시)
+      // 기타 브라우저 관련 정리 작업
+      
+    } catch (error) {
+      console.warn('⚠️ 브라우저 정리 중 오류:', error);
+    }
+    
+    // 기존 상태 초기화
     setCurrentStep(1);
     setSetupData({ 
       writingStylePaths: [], 

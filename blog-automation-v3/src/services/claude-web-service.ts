@@ -193,7 +193,15 @@ export class ClaudeWebService {
       'text="파일 업로드"',
       ':text("파일 업로드")',
       '[role="menuitem"]:has-text("파일 업로드")',
-      'p:text("파일 업로드")'
+      'p:text("파일 업로드")',
+      'text="Upload file"',
+      ':text("Upload file")',
+      '[role="menuitem"]:has-text("Upload file")',
+      'button:has-text("파일")',
+      'div:has-text("파일 업로드")',
+      '[data-testid*="upload"]',
+      '[aria-label*="파일"]',
+      '[aria-label*="upload"]'
     ];
     
     let uploadButton = null;

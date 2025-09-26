@@ -94,60 +94,6 @@ export class BlogPromptService {
   }
 
   /**
-   * 블로그 글 작성용 상세 프롬프트 생성
-   */
-  static getBlogContentPrompt(data: BlogPromptData): string {
-    const subKeywordList = data.subKeywords.split(',').map(k => k.trim()).filter(k => k);
-    
-    let detailedInstructions = `# 블로그 글 작성 요청
-
-## 🎯 작성할 제목 (변경 금지)
-"${data.selectedTitle}"
-
-## 📝 작성 지침
-
-### 핵심 정보
-- **메인키워드**: ${data.mainKeyword}
-- **보조키워드**: ${subKeywordList.length > 0 ? subKeywordList.join(', ') : '없음'}`;
-
-    if (data.blogContent.trim()) {
-      detailedInstructions += `
-- **글 내용 방향성**: ${data.blogContent.trim()}
-
-### 내용 요구사항
-- 위에 제시된 "${data.selectedTitle}" 제목에 정확히 맞는 내용으로 작성
-- "${data.blogContent.trim()}" 이 내용을 바탕으로 독자에게 유용한 정보 제공`;
-    }
-
-    detailedInstructions += `
-
-### SEO 최적화 요구사항
-- **메인키워드 "${data.mainKeyword}"**: 본문에 5-6회 자연스럽게 반복 (제목 포함하여 총 6-7회)`;
-
-    if (subKeywordList.length > 0) {
-      detailedInstructions += `
-- **보조키워드들**: ${subKeywordList.map(keyword => `"${keyword}"`).join(', ')} 각각 3-4회씩 자연스럽게 사용`;
-    }
-
-    detailedInstructions += `
-- 키워드는 억지로 넣지 말고 자연스러운 문맥에서 사용
-- 독자가 읽기에 어색하지 않도록 자연스럽게 배치
-
-### 글 작성 스타일
-- 선택된 제목 "${data.selectedTitle}"의 의도와 완전히 일치하는 내용
-- 독자의 궁금증을 해결하는 실용적인 정보 제공
-- 자연스럽고 읽기 쉬운 문체
-- 구체적이고 실행 가능한 내용 포함
-
-### 중요 사항
-⚠️ **제목 "${data.selectedTitle}"을 절대 변경하지 마세요**
-⚠️ **메인키워드와 보조키워드를 지정된 횟수만큼 자연스럽게 포함하세요**
-⚠️ **글의 모든 내용이 선택된 제목과 일치하도록 작성하세요**`;
-
-    return detailedInstructions;
-  }
-
-  /**
    * Claude Web 서비스용 통합 프롬프트 (파일 첨부 설명 + 상세 글쓰기 지시사항)
    */
   static getClaudeWebPrompt(data: BlogPromptData): string {
@@ -165,9 +111,9 @@ export class BlogPromptService {
     
     if (data.hasSeoGuide) {
       if (data.writingStyleCount > 0) {
-        prompt += `자연스럽게 글을 작성하되, ${data.writingStyleCount + 1}번 문서의 네이버 블로그 SEO 최적화 가이드를 지켜서 글을 작성해주세요.\n\n`;
+        prompt += `자연스럽게 글을 작성하되, ${data.writingStyleCount + 1}번 문서의 네이버 블로그 SEO 최적화 가이드를 참고하여 글을 작성해주세요.\n\n`;
       } else {
-        prompt += `1번 문서의 네이버 블로그 SEO 최적화 가이드를 지켜서 글을 작성해주세요.\n\n`;
+        prompt += `1번 문서의 네이버 블로그 SEO 최적화 가이드를 참고하여 글을 작성해주세요.\n\n`;
       }
     }
     
@@ -175,45 +121,110 @@ export class BlogPromptService {
     const today = new Date();
     const currentDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
     
-    // 1순위: 제목 (최우선)
-    prompt += `## 🎯 작성할 제목\n"${data.selectedTitle}"\n\n`;
-    
-    // 2순위: 글 내용 방향성 (사용자 의도)
+    prompt += `
+# 🎯 글 작성 요청서
+
+## 📋 **기본 정보**
+**📌 작성할 제목**
+"${data.selectedTitle}"
+`;
+
     if (data.blogContent.trim()) {
-      prompt += `## 📝 글 내용 방향성 (중요)\n${data.blogContent.trim()}\n\n`;
+      prompt += `
+**📝 글 내용 방향성 (중요)**
+${data.blogContent.trim()}
+`;
     }
-    
-    prompt += `**중요 지시사항 (우선순위 순):**\n`;
-    prompt += `1. **제목에 맞는 글 작성이 최우선**: "${data.selectedTitle}" 제목의 의도에 완전히 부합하는 내용으로 작성\n`;
-    if (data.blogContent.trim()) {
-      prompt += `2. **글 방향성 준수**: "${data.blogContent.trim()}" 이 내용을 바탕으로 독자에게 유용한 정보 제공\n`;
-    }
-    prompt += `3. **현재 날짜**: ${currentDate}일 기준으로 작성, 최신성이 중요한 글이면 최신 정보 반영\n`;
-    
-    // 3순위: SEO 키워드 (자연스럽게만)
-    prompt += `\n## 🔑 SEO 키워드 (자연스럽게 반복)\n`;
-    prompt += `- **메인키워드**: "${data.mainKeyword}" → 본문에 5-9회 자연스럽게 포함\n`;
+
+    prompt += `
+**📅 현재 날짜**
+${currentDate}일 기준으로 작성, 최신성이 중요한 글이면 최신 정보 반영
+
+---
+
+## 🔑 **SEO 키워드**
+- **메인키워드**: "${data.mainKeyword}" → 본문에 5-9회 자연스럽게 포함`;
+
     if (subKeywordList.length > 0) {
-      prompt += `- **보조키워드**: ${subKeywordList.map(keyword => `"${keyword}"`).join(', ')} → 각각 5-9회씩 자연스럽게 사용\n`;
+      prompt += `
+- **보조키워드**: ${subKeywordList.map(keyword => `"${keyword}"`).join(', ')} → 각각 5-9회씩 자연스럽게 사용`;
     }
-    prompt += `※ 키워드는 억지로 넣지 말고 내용이 자연스러울 때만 사용 (최대 10회 미만)\n\n`;
-    prompt += `- 아티팩트(Artifacts) 기능을 사용하여 블로그 글을 작성해주세요\n`;
-    prompt += `- 다른 설명이나 부가 내용 없이 블로그 글 내용만 작성\n`;
-    prompt += `- SEO 요구사항: 글자 수 1,700-2,500자(공백 제외), 이미지 5개 이상 배치\n`;
-    prompt += `\n**이미지 배치 규칙 (중요):**\n`;
-    prompt += `- **소제목과 설명이 완전히 끝난 후**에만 (이미지) 배치\n`;
-    prompt += `- **단계별 설명 중간에는 절대 이미지 배치 금지** (1단계, 2단계, - 항목 등의 중간)\n`;
-    prompt += `- **최적 배치 위치**: 소제목 → 설명 → (이미지) 순서\n`;
-    prompt += `- **이미지 집중 배치**: 소제목이 적고 이미지가 많이 필요한 경우 한 곳에 (이미지)(이미지) 연속 배치 가능\n`;
-    prompt += `- **안정적인 패턴**: 큰 주제가 완료된 후 관련 이미지들을 모아서 배치\n`;
-    prompt += `\n**출력 형식:**\n`;
-    prompt += `다른 설명 없이 아래 형식으로만 출력하세요:\n\n`;
-    prompt += `[서론 - 3초의 법칙으로 핵심 답변 즉시 제시]\n\n`;
-    prompt += `[본문은 주제에 맞는 다양한 형식 중에서 적절히 선택하여 구성하세요]\n`;
-    prompt += `옵션: 소제목+본문+(이미지) / 체크리스트(✓)+(이미지) / 비교표+(이미지) / TOP5 순위+(이미지) / 단계별 가이드+(이미지) / Q&A+(이미지) 등\n\n`;
-    prompt += `[결론 - 요약 및 독자 행동 유도]\n\n`;
-    prompt += `[작성한 글 내용을 토대로 적합한 태그 5개 이상을 # 형태로 작성]\n\n`;
-    prompt += `- 바로 복사해서 붙여넣을 수 있는 완성된 블로그 글만 작성`;
+
+    prompt += `
+- ※ 키워드는 억지로 넣지 말고 내용이 자연스러울 때만 사용 (최대 10회 미만)
+
+---
+
+## ⚠️ **중요 지시사항** (우선순위 순)
+1. **제목에 맞는 글 작성이 최우선**: "${data.selectedTitle}" 제목의 의도에 완전히 부합하는 내용으로 작성`;
+
+    if (data.blogContent.trim()) {
+      prompt += `
+2. **글 방향성 준수**: "${data.blogContent.trim()}" 이 내용을 바탕으로 독자에게 유용한 정보 제공`;
+    }
+
+    prompt += `
+
+---
+
+## 🖼️ **이미지 배치 규칙** (중요)
+- **소제목과 설명이 완전히 끝난 후에만** (이미지) 배치
+- **단계별 설명 중간에는 절대 이미지 배치 금지** (1단계, 2단계, - 항목 등의 중간)
+- **최적 배치 위치**: 소제목 → 설명 → (이미지) 순서
+- **이미지 집중 배치**: 소제목이 적고 이미지가 많이 필요한 경우 한 곳에 (이미지)(이미지) 연속 배치 가능
+
+---
+
+## 📊 **SEO 요구사항**
+- **글자 수**: 1,700-2,500자 (공백 제외)
+- **이미지**: 5~10개 이상 배치
+- **태그**: 5~10개 이상 작성
+
+---
+
+## 📝 **작성 지침**`;
+
+    if (data.hasSeoGuide) {
+      if (data.writingStyleCount > 0) {
+        prompt += `
+- ${data.writingStyleCount + 1}번 문서의 **네이버 블로그 SEO 최적화 가이드**를 참고하여 글을 작성해주세요`;
+      } else {
+        prompt += `
+- 1번 문서의 **네이버 블로그 SEO 최적화 가이드**를 참고하여 글을 작성해주세요`;
+      }
+    }
+
+    prompt += `
+- **아티팩트(Artifacts) 기능**을 사용하여 블로그 글을 작성해주세요
+- **다른 설명이나 부가 내용 없이 블로그 글 내용만** 작성
+- **바로 복사해서 붙여넣을 수 있는 완성된 블로그 글만** 작성
+
+---
+
+## 📋 **글쓰기 품질 요구사항**
+- **자연스러운 글쓰기**: AI 생성티 없이 다른 블로그와 차별화된 개성 있고 인간적인 어투로 작성
+- **완전한 내용**: XX공원, OO병원 같은 placeholder 사용 금지. 구체적인 정보가 없다면 "근처 공원", "동네 병원" 등 일반적 표현 사용
+
+---
+
+## 📤 **출력 형식**
+다른 설명 없이 아래 형식으로만 출력하세요:
+
+[서론 - 3초의 법칙으로 핵심 답변 즉시 제시]
+
+[본문 구성 - 아래 옵션들 중에서 알아서 골라서 잘 섞어서 사용]
+📌 본문 구성 옵션:
+   • 소제목 + 본문 + (이미지)
+   • 체크리스트(✓) + (이미지) 
+   • 비교표 + (이미지)
+   • TOP5 순위 + (이미지)
+   • 단계별 가이드 + (이미지)
+   • Q&A + (이미지)
+
+[결론 - 요약 및 독자 행동 유도]
+
+[작성한 글 내용을 토대로 적합한 태그 5개 이상을 # 형태로 작성]
+`;
     
     return prompt;
   }
