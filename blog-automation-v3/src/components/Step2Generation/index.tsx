@@ -1146,24 +1146,6 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
         onImagesChange={handleImagesChange}
       />
 
-      {/* 최종 완성본 */}
-      {Object.keys(images).length === imagePositions.length && imagePositions.length > 0 && (
-        <div className="final-content" style={{ marginTop: '24px' }}>
-          <h3>✨ 최종 완성본</h3>
-          <div 
-            className="final-preview"
-            style={{
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              padding: '20px',
-              backgroundColor: '#fafafa',
-              fontSize: `${currentFontSize}px`,
-              lineHeight: '1.7'
-            }}
-            dangerouslySetInnerHTML={{ __html: marked(replaceImagesInContent()) }}
-          />
-        </div>
-      )}
 
       {/* 발행 플랫폼 선택 섹션 */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 mb-4">
