@@ -152,7 +152,54 @@ ipcMain.handle('image:generate-prompts', async (event, data: { content: string; 
 });
 
 ipcMain.handle('image:generate', async (event, prompt: string) => {
-  return await imageService.generateImage(prompt);
+  try {
+    console.log('이미지 생성 시작 - LLMClientFactory 사용');
+    
+    // LLM 설정 로드
+    const fs = require('fs');
+    const path = require('path');
+    const userDataPath = app.getPath('userData');
+    const settingsPath = path.join(userDataPath, 'llm-settings.json');
+    
+    let settings = null;
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, 'utf-8');
+      settings = JSON.parse(settingsData);
+    }
+    
+    if (!settings?.appliedSettings?.image) {
+      throw new Error('이미지 생성 API가 설정되지 않았습니다.');
+    }
+    
+    const imageConfig = settings.appliedSettings.image;
+    
+    // LLMClientFactory 사용
+    const { LLMClientFactory } = require('./services/llm-client-factory');
+    
+    // Image client 설정
+    LLMClientFactory.setImageClient({
+      provider: imageConfig.provider,
+      model: imageConfig.model,
+      apiKey: imageConfig.apiKey,
+      style: imageConfig.style
+    });
+    
+    // Image client로 이미지 생성
+    const imageClient = LLMClientFactory.getImageClient();
+    const imageUrl = await imageClient.generateImage(prompt, {
+      quality: imageConfig.quality || 'medium',
+      size: imageConfig.size || '1024x1024'
+    });
+    
+    return imageUrl;
+    
+  } catch (error) {
+    console.error('이미지 생성 실패:', error);
+    
+    // 실패한 경우 에러 메시지와 함께 placeholder 반환
+    const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
+    return `https://via.placeholder.com/400x300/ff6b6b/ffffff?text=${encodeURIComponent(errorMsg.substring(0, 30))}`;
+  }
 });
 
 // IPC handler for publishing to blog (reuse v2 logic)
@@ -389,171 +436,67 @@ ipcMain.on('log:add', (event, level: string, message: string) => {
 
 // IPC handler for title generation via API
 ipcMain.handle('llm:generate-titles', async (event, data: { systemPrompt: string; userPrompt: string }) => {
-  const maxRetries = 3;
-  const retryDelay = 2000; // 2초
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`제목 생성 시도 ${attempt}/${maxRetries}`);
-      
-      // LLM 설정 로드
-      const fs = require('fs');
-      const path = require('path');
-      const userDataPath = app.getPath('userData');
-      const settingsPath = path.join(userDataPath, 'llm-settings.json');
-      
-      let settings = null;
-      if (fs.existsSync(settingsPath)) {
-        const settingsData = fs.readFileSync(settingsPath, 'utf-8');
-        settings = JSON.parse(settingsData);
-      }
-      
-      if (!settings?.appliedSettings?.writing) {
-        return { success: false, error: '글쓰기 API가 설정되지 않았습니다.' };
-      }
-      
-      const writingConfig = settings.appliedSettings.writing;
-      const { provider, model, apiKey } = writingConfig;
-      
-      console.log(`제목 생성 시작: ${provider} ${model} (시도 ${attempt})`);
-      
-      // API별 호출 로직
-      let response;
-      if (provider === 'claude' || provider === 'anthropic') {
-        response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: model,
-            max_tokens: 1000,
-            messages: [
-              { role: 'user', content: `${data.systemPrompt}\n\n${data.userPrompt}` }
-            ]
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          const error = new Error(`Claude API 오류: ${response.status} ${errorText}`);
-          if (response.status >= 500 && attempt < maxRetries) {
-            console.warn(`Claude API 서버 오류 (${response.status}), ${retryDelay/1000}초 후 재시도...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-            continue;
-          }
-          throw error;
-        }
-        
-        const result = await response.json();
-        const content = result.content[0]?.text || '';
-        
-        return { success: true, content };
-        
-      } else if (provider === 'openai') {
-        response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              { role: 'system', content: data.systemPrompt },
-              { role: 'user', content: data.userPrompt }
-            ],
-            max_tokens: 1000,
-            temperature: 0.7
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          const error = new Error(`OpenAI API 오류: ${response.status} ${errorText}`);
-          if ((response.status >= 500 || response.status === 429) && attempt < maxRetries) {
-            console.warn(`OpenAI API 오류 (${response.status}), ${retryDelay/1000}초 후 재시도...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-            continue;
-          }
-          throw error;
-        }
-        
-        const result = await response.json();
-        const content = result.choices[0]?.message?.content || '';
-        
-        return { success: true, content };
-        
-      } else if (provider === 'gemini') {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `${data.systemPrompt}\n\n${data.userPrompt}`
-              }]
-            }]
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          const error = new Error(`Gemini API 오류: ${response.status} ${errorText}`);
-          
-          // 503 (서버 과부하), 429 (Rate limit), 500+ (서버 오류) 시 재시도
-          if ((response.status >= 500 || response.status === 429 || response.status === 503) && attempt < maxRetries) {
-            console.warn(`Gemini API 오류 (${response.status}), ${retryDelay/1000}초 후 재시도...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-            continue;
-          }
-          throw error;
-        }
-        
-        const result = await response.json();
-        const content = result.candidates[0]?.content?.parts[0]?.text || '';
-        
-        return { success: true, content };
-      } else {
-        return { success: false, error: '지원하지 않는 API 제공자입니다.' };
-      }
-      
-    } catch (error) {
-      console.error(`제목 생성 실패 (시도 ${attempt}/${maxRetries}):`, error);
-      
-      // 마지막 시도에서 실패한 경우에만 에러 반환
-      if (attempt === maxRetries) {
-        let errorMessage = error instanceof Error ? error.message : String(error);
-        
-        // 사용자 친화적인 에러 메시지 변환
-        if (errorMessage.includes('503')) {
-          errorMessage = 'AI 서버가 일시적으로 과부하 상태입니다. 잠시 후 다시 시도해주세요.';
-        } else if (errorMessage.includes('429')) {
-          errorMessage = 'API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요.';
-        } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
-          errorMessage = 'API 키가 올바르지 않습니다. 설정을 확인해주세요.';
-        } else if (errorMessage.includes('500')) {
-          errorMessage = 'AI 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
-        }
-        
-        return { 
-          success: false, 
-          error: errorMessage
-        };
-      }
-      
-      // 재시도 전 잠시 대기 (지수 백오프)
-      if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-      }
+  try {
+    console.log('제목 생성 시작 - LLMClientFactory 사용');
+    
+    // LLM 설정 로드
+    const fs = require('fs');
+    const path = require('path');
+    const userDataPath = app.getPath('userData');
+    const settingsPath = path.join(userDataPath, 'llm-settings.json');
+    
+    let settings = null;
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, 'utf-8');
+      settings = JSON.parse(settingsData);
     }
+    
+    if (!settings?.appliedSettings?.writing) {
+      return { success: false, error: '글쓰기 API가 설정되지 않았습니다.' };
+    }
+    
+    const writingConfig = settings.appliedSettings.writing;
+    
+    // LLMClientFactory 사용
+    const { LLMClientFactory } = require('./services/llm-client-factory');
+    
+    // Writing client 설정
+    LLMClientFactory.setWritingClient({
+      provider: writingConfig.provider,
+      model: writingConfig.model,
+      apiKey: writingConfig.apiKey
+    });
+    
+    // Writing client로 텍스트 생성
+    const writingClient = LLMClientFactory.getWritingClient();
+    const response = await writingClient.generateText([
+      { role: 'system', content: data.systemPrompt },
+      { role: 'user', content: data.userPrompt }
+    ]);
+    
+    return { success: true, content: response.content };
+    
+  } catch (error) {
+    console.error('제목 생성 실패:', error);
+    
+    let errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // 사용자 친화적인 에러 메시지 변환
+    if (errorMessage.includes('503')) {
+      errorMessage = 'AI 서버가 일시적으로 과부하 상태입니다. 잠시 후 다시 시도해주세요.';
+    } else if (errorMessage.includes('429')) {
+      errorMessage = 'API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요.';
+    } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
+      errorMessage = 'API 키가 올바르지 않습니다. 설정을 확인해주세요.';
+    } else if (errorMessage.includes('500')) {
+      errorMessage = 'AI 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+    }
+    
+    return { 
+      success: false, 
+      error: errorMessage
+    };
   }
-  
-  return { success: false, error: '최대 재시도 횟수를 초과했습니다.' };
 });
 
 // IPC handler for opening external URLs

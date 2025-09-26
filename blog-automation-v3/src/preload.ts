@@ -64,7 +64,7 @@ declare global {
       getLLMSettings: () => Promise<any>;
       saveLLMSettings: (settings: any) => Promise<void>;
       testLLMConfig: (config: any) => Promise<{ success: boolean; error?: string }>;
-      generateTitles: (data: { systemPrompt: string; userPrompt: string }) => Promise<{ success: boolean; titles?: string[]; error?: string }>;
+      generateTitles: (data: { systemPrompt: string; userPrompt: string }) => Promise<{ success: boolean; content?: string; titles?: string[]; error?: string }>;
       sendLog: (level: string, message: string) => void;
       onLogMessage: (callback: (data: any) => void) => (() => void);
       openExternal: (url: string) => Promise<void>;

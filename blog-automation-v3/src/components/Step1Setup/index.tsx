@@ -6,6 +6,7 @@ import TitleRecommendationSection from './TitleRecommendationSection';
 import GenerationProgressSection from './GenerationProgressSection';
 import ManualUploadSection from './ManualUploadSection';
 import { BlogPromptService } from '../../services/blog-prompt-service';
+import { BlogWritingService } from '../../services/blog-writing-service';
 
 interface Step1Props {
   onComplete: (data: {
@@ -19,6 +20,8 @@ interface Step1Props {
     generatedContent?: string;
     isAIGenerated: boolean;
     generatedTitles: string[];
+    imagePrompts?: any[];
+    imagePromptGenerationFailed?: boolean;
   }) => void;
   initialData?: {
     writingStylePaths: string[];
@@ -31,6 +34,8 @@ interface Step1Props {
     generatedContent?: string;
     isAIGenerated: boolean;
     generatedTitles: string[];
+    imagePrompts?: any[];
+    imagePromptGenerationFailed?: boolean;
   };
 }
 
@@ -209,6 +214,25 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
 
   const cancelDelete = () => {
     setDeleteDialog({ isOpen: false, docId: '', docName: '', type: 'writingStyle' });
+  };
+
+  // 이미지 프롬프트 자동 생성 함수
+  const generateImagePromptsForContent = async (content: string) => {
+    try {
+      console.log('🎨 1단계에서 이미지 프롬프트 자동 생성 시작');
+      const result = await BlogWritingService.generateImagePrompts(content);
+      
+      if (result.success) {
+        console.log(`✅ 이미지 프롬프트 생성 완료: ${result.imagePrompts?.length || 0}개`);
+        return result.imagePrompts || [];
+      } else {
+        console.warn('⚠️ 이미지 프롬프트 생성 실패:', result.error);
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ 이미지 프롬프트 생성 중 오류:', error);
+      return [];
+    }
   };
 
   // 자동 저장 함수
@@ -400,27 +424,82 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   };
 
   // 수동 업로드 콘텐츠 처리 함수
-  const handleFileUploaded = (content: string) => {
-    // 통합된 onComplete 호출 - 수동 업로드
-    onComplete({ 
-      writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
-      seoGuidePath: selectedSeoGuide?.filePath || '',
-      topic: `제목: ${selectedTitle}`,
-      selectedTitle: selectedTitle,
-      mainKeyword: mainKeyword,
-      subKeywords: subKeywords,
-      blogContent: blogContent,
-      generatedContent: content, // 수동 업로드된 콘텐츠
-      isAIGenerated: false, // 수동 업로드
-      generatedTitles: generatedTitles // 생성된 제목들도 유지
-    });
+  const handleFileUploaded = async (content: string) => {
+    setIsGenerating(true);
+    setGenerationStep('업로드된 파일 처리 중...');
+    
+    try {
+      console.log('📄 수동 파일 업로드됨, 이미지 프롬프트 생성 중...');
+      
+      // 수동으로 입력한 제목이 있는지 확인
+      const customTitleInputs = document.querySelectorAll('input[placeholder*="사용하고 싶은 제목"]') as NodeListOf<HTMLInputElement>;
+      let manualTitle = '';
+      
+      // 각 입력 필드에서 값이 있는지 확인
+      for (const input of customTitleInputs) {
+        if (input.value && input.value.trim()) {
+          manualTitle = input.value.trim();
+          break;
+        }
+      }
+      
+      // 제목 결정: 직접 입력한 제목 > AI 추천 제목 > 기본값
+      const finalTitle = manualTitle || selectedTitle || '수동 업로드된 글';
+      
+      // 이미지 프롬프트 자동 생성
+      setGenerationStep('이미지 프롬프트 생성 중...');
+      const imagePrompts = await generateImagePromptsForContent(content);
+      
+      // 이미지 프롬프트 생성 실패 여부 확인
+      const hasImageTags = content.match(/\(이미지\)|\[이미지\]/g);
+      const expectedImageCount = hasImageTags ? hasImageTags.length : 0;
+      const generatedImageCount = imagePrompts ? imagePrompts.length : 0;
+      
+      setGenerationStep('완료!');
+      
+      setTimeout(() => {
+        // 통합된 onComplete 호출 - 수동 업로드
+        onComplete({ 
+          writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
+          seoGuidePath: selectedSeoGuide?.filePath || '',
+          topic: `제목: ${finalTitle}`,
+          selectedTitle: finalTitle,
+          mainKeyword: mainKeyword,
+          subKeywords: subKeywords,
+          blogContent: blogContent,
+          generatedContent: content, // 수동 업로드된 콘텐츠
+          isAIGenerated: false, // 수동 업로드
+          generatedTitles: generatedTitles, // 생성된 제목들도 유지
+          imagePrompts: imagePrompts, // 자동 생성된 이미지 프롬프트들
+          imagePromptGenerationFailed: expectedImageCount > 0 && generatedImageCount === 0 // 이미지 프롬프트 실패 플래그
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('파일 업로드 처리 중 오류:', error);
+      setGenerationStep('오류 발생: ' + (error as Error).message);
+      setIsGenerating(false);
+    }
   };
 
   // 자동 생성 함수 (제목 선택 후 호출됨)
   const handleStartGeneration = async () => {
+    // 먼저 커스텀 제목 입력값 확인
+    const customTitleInputs = document.querySelectorAll('input[placeholder*="사용하고 싶은 제목"]') as NodeListOf<HTMLInputElement>;
+    let customTitle = '';
+    
+    for (const input of customTitleInputs) {
+      if (input.value && input.value.trim()) {
+        customTitle = input.value.trim();
+        break;
+      }
+    }
+    
+    // 실제 사용할 제목 결정 (우선순위: 커스텀 입력 > AI 선택 제목)
+    const finalTitle = customTitle || (selectedTitle !== '__CUSTOM__' ? selectedTitle : '');
+    
     // 필수 요구사항 검증
-    if (!selectedTitle) {
-      alert('제목을 선택해주세요!');
+    if (!finalTitle) {
+      alert('제목을 선택하거나 입력해주세요!');
       return;
     }
 
@@ -443,7 +522,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       
       // 서비스에서 Claude Web용 통합 프롬프트 생성
       const detailedInstructions = BlogPromptService.getClaudeWebPrompt({
-        selectedTitle,
+        selectedTitle: finalTitle,
         mainKeyword,
         subKeywords,
         blogContent,
@@ -464,18 +543,30 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       const content = await window.electronAPI.downloadFromClaude();
       setGenerationStep('완료!');
       
-      setTimeout(() => {
+      setTimeout(async () => {
+        // 이미지 프롬프트 자동 생성
+        setGenerationStep('이미지 프롬프트 생성 중...');
+        const imagePrompts = await generateImagePromptsForContent(content);
+        
+        // 이미지 프롬프트 생성 실패 여부 확인
+        const hasImageTags = content.match(/\(이미지\)|\[이미지\]/g);
+        const expectedImageCount = hasImageTags ? hasImageTags.length : 0;
+        const generatedImageCount = imagePrompts ? imagePrompts.length : 0;
+        
+        // 글쓰기는 성공했으므로 이미지 프롬프트 실패 여부와 관계없이 완료 처리
         onComplete({ 
           writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
           seoGuidePath: selectedSeoGuide?.filePath || '',
-          topic: `제목: ${selectedTitle}`,
-          selectedTitle: selectedTitle, // 순수 제목만 따로 전달
+          topic: `제목: ${finalTitle}`,
+          selectedTitle: finalTitle, // 실제 사용할 제목 전달
           mainKeyword: mainKeyword,
           subKeywords: subKeywords,
           blogContent: blogContent,
           generatedContent: content,
           isAIGenerated: true, // AI로 생성됨
-          generatedTitles: generatedTitles // 생성된 제목들도 유지
+          generatedTitles: generatedTitles, // 생성된 제목들도 유지
+          imagePrompts: imagePrompts, // 자동 생성된 이미지 프롬프트들 (실패해도 빈 배열)
+          imagePromptGenerationFailed: expectedImageCount > 0 && generatedImageCount === 0 // 이미지 프롬프트 실패 플래그
         });
       }, 1000);
       
@@ -485,6 +576,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       setIsGenerating(false);
     }
   };
+
 
   return (
     <div style={{

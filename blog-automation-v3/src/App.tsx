@@ -19,7 +19,9 @@ const App: React.FC = () => {
     blogContent: '',
     generatedContent: undefined as string | undefined,
     isAIGenerated: false,
-    generatedTitles: [] as string[]
+    generatedTitles: [] as string[],
+    imagePrompts: [] as any[],
+    imagePromptGenerationFailed: false
   });
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [showLLMSettings, setShowLLMSettings] = useState<boolean>(false);
@@ -77,7 +79,9 @@ const App: React.FC = () => {
       blogContent: '',
       generatedContent: undefined,
       isAIGenerated: false,
-      generatedTitles: []
+      generatedTitles: [],
+      imagePrompts: [],
+      imagePromptGenerationFailed: false
     });
     setGeneratedContent('');
   };

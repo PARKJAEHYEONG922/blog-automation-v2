@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
 import { ContentProcessor } from './ContentProcessor';
+import { BlogWritingService } from '../../services/blog-writing-service';
 
 interface Step2Props {
   content: string;
@@ -17,6 +18,8 @@ interface Step2Props {
     generatedContent?: string;
     isAIGenerated: boolean;
     generatedTitles: string[];
+    imagePrompts?: any[];
+    imagePromptGenerationFailed?: boolean;
   };
   onReset: () => void;
   onGoBack: () => void;
@@ -43,6 +46,11 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   const [isEditing, setIsEditing] = useState(false);
   const [imageAIInfo, setImageAIInfo] = useState<string>('확인 중...');
   const [activeTab, setActiveTab] = useState<'original' | 'edited'>('edited');
+  const [imagePrompts, setImagePrompts] = useState<any[]>([]);
+  
+  // 이미지 프롬프트 재생성 관련 상태
+  const [isRegeneratingPrompts, setIsRegeneratingPrompts] = useState(false);
+  const [imagePromptError, setImagePromptError] = useState<string | null>(null);
   
   // 컴포넌트 마운트 시 스크롤을 최상단으로 이동
   useEffect(() => {
@@ -373,29 +381,37 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   }, []);
 
   const generateImagePrompts = async () => {
+    if (imagePrompts.length === 0) {
+      alert('이미지 프롬프트가 없습니다. 1단계에서 이미지 프롬프트 생성이 실패했을 수 있습니다.');
+      return;
+    }
+
     setIsGeneratingImages(true);
     
     try {
-      // API를 통해 이미지 프롬프트 생성 (편집된 콘텐츠 사용)
-      const response = await window.electronAPI.generateImagePrompts({
-        content: editedContent,
-        imageCount: imagePositions.length
-      });
+      console.log(`🎨 이미지 생성 시작: ${imagePrompts.length}개 프롬프트 사용`);
       
-      // 각 프롬프트로 이미지 생성
+      // 1단계에서 생성된 각 프롬프트로 이미지 생성
       const generatedImages: {[key: string]: string} = {};
       
-      for (let i = 0; i < response.prompts.length; i++) {
-        const prompt = response.prompts[i];
+      for (let i = 0; i < imagePrompts.length; i++) {
+        const imagePrompt = imagePrompts[i];
         const imageKey = `이미지${i + 1}`;
         
-        const imageUrl = await window.electronAPI.generateImage(prompt);
+        console.log(`🖼️ 이미지 ${i + 1} 생성 중... 프롬프트: ${imagePrompt.prompt.substring(0, 50)}...`);
+        
+        const imageUrl = await window.electronAPI.generateImage(imagePrompt.prompt);
         generatedImages[imageKey] = imageUrl;
+        
+        console.log(`✅ 이미지 ${i + 1} 생성 완료`);
       }
       
       setImages(generatedImages);
+      console.log(`🎉 모든 이미지 생성 완료: ${Object.keys(generatedImages).length}개`);
+      
     } catch (error) {
-      console.error('이미지 생성 실패:', error);
+      console.error('❌ 이미지 생성 실패:', error);
+      alert(`이미지 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setIsGeneratingImages(false);
     }
@@ -582,6 +598,45 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       }, 100);
     }
   }, [activeTab]);
+
+  // 1단계에서 전달된 이미지 프롬프트들 초기화
+  useEffect(() => {
+    if (setupData.imagePrompts && setupData.imagePrompts.length > 0) {
+      console.log(`📋 1단계에서 생성된 이미지 프롬프트 ${setupData.imagePrompts.length}개 로드됨`);
+      setImagePrompts(setupData.imagePrompts);
+      setImagePromptError(null);
+    } else if (setupData.imagePromptGenerationFailed) {
+      console.warn('⚠️ 1단계에서 이미지 프롬프트 생성 실패');
+      setImagePromptError('1단계에서 이미지 프롬프트 생성에 실패했습니다.');
+    }
+  }, [setupData.imagePrompts, setupData.imagePromptGenerationFailed]);
+
+  // 이미지 프롬프트 재생성 함수
+  const regenerateImagePrompts = async () => {
+    if (!content || isRegeneratingPrompts) return;
+
+    setIsRegeneratingPrompts(true);
+    setImagePromptError(null);
+    
+    try {
+      console.log('🔄 이미지 프롬프트 재생성 시작');
+      const result = await BlogWritingService.generateImagePrompts(content);
+      
+      if (result.success && result.imagePrompts && result.imagePrompts.length > 0) {
+        console.log(`✅ 이미지 프롬프트 재생성 성공: ${result.imagePrompts.length}개`);
+        setImagePrompts(result.imagePrompts);
+        setImagePromptError(null);
+      } else {
+        console.warn('⚠️ 이미지 프롬프트 재생성 실패:', result.error);
+        setImagePromptError(result.error || '이미지 프롬프트 재생성에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 이미지 프롬프트 재생성 중 오류:', error);
+      setImagePromptError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setIsRegeneratingPrompts(false);
+    }
+  };
 
   // 콘텐츠 통계는 편집기에서 실시간 계산하므로 제거
 
@@ -901,12 +956,104 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
         </div>
       </div>
 
+      {/* 이미지 프롬프트 재생성 섹션 (오류 시에만 표시) */}
+      {(imagePromptError || (imagePositions.length > 0 && imagePrompts.length === 0)) && (
+        <div className="section-card" style={{padding: '20px', marginBottom: '16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca'}}>
+          <div className="section-header" style={{marginBottom: '16px'}}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="section-icon" style={{
+                width: '32px', 
+                height: '32px', 
+                backgroundColor: '#fee2e2',
+                color: '#dc2626',
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%'
+              }}>⚠️</div>
+              <h2 className="section-title" style={{fontSize: '16px', margin: '0', lineHeight: '1', color: '#dc2626'}}>
+                이미지 프롬프트 생성 오류
+              </h2>
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ 
+              fontSize: '14px', 
+              color: '#7f1d1d', 
+              marginBottom: '8px',
+              backgroundColor: '#fef7f7',
+              padding: '12px',
+              borderRadius: '6px',
+              border: '1px solid #fecaca'
+            }}>
+              {imagePromptError || '이미지 프롬프트가 생성되지 않았습니다. 글에는 이미지 태그가 있지만 프롬프트가 생성되지 않았습니다.'}
+            </div>
+            
+            <div style={{ fontSize: '13px', color: '#991b1b', marginBottom: '16px' }}>
+              💡 <strong>해결 방법:</strong>
+              <ul style={{ margin: '8px 0 0 16px', padding: 0 }}>
+                <li>API 설정에서 다른 AI 제공자로 변경 후 재생성 시도</li>
+                <li>현재 설정 그대로 재생성 시도 (일시적 오류일 경우)</li>
+                <li>수동으로 이미지 업로드하여 사용</li>
+              </ul>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button
+                onClick={regenerateImagePrompts}
+                disabled={isRegeneratingPrompts}
+                style={{
+                  backgroundColor: isRegeneratingPrompts ? '#9ca3af' : '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: isRegeneratingPrompts ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isRegeneratingPrompts) {
+                    e.currentTarget.style.backgroundColor = '#b91c1c';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isRegeneratingPrompts) {
+                    e.currentTarget.style.backgroundColor = '#dc2626';
+                  }
+                }}
+              >
+                🔄 이미지 프롬프트 재생성
+                {isRegeneratingPrompts && (
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid transparent',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                )}
+              </button>
+              
+              <span style={{ fontSize: '12px', color: '#7f1d1d' }}>
+                {isRegeneratingPrompts ? '프롬프트 재생성 중...' : 'API 설정을 변경한 후 재생성하면 더 성공 가능성이 높습니다'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 이미지 생성 섹션 */}
       <ImageGenerator
         imagePositions={imagePositions}
-        images={images}
-        isGeneratingImages={isGeneratingImages}
-        onGenerateImages={generateImagePrompts}
+        imagePrompts={imagePrompts}
       />
 
       {/* 최종 완성본 */}

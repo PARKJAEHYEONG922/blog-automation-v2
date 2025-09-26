@@ -34,10 +34,34 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   const [imageStatus, setImageStatus] = useState<{ [key: number]: ImageStatus }>({});
   const [imageUrls, setImageUrls] = useState<{ [key: number]: string }>({});
   
+  // v2와 동일한 이미지 히스토리 관리
+  const [imageHistory, setImageHistory] = useState<{ [key: number]: string[] }>(() => {
+    try {
+      const saved = sessionStorage.getItem('step2-image-history');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  
+  // 이미지 선택 모달 (v2와 동일)
+  const [selectionModal, setSelectionModal] = useState<{
+    isOpen: boolean;
+    imageIndex: number;
+    currentUrl: string;
+    newUrl: string;
+  }>({
+    isOpen: false,
+    imageIndex: 0,
+    currentUrl: '',
+    newUrl: ''
+  });
+  
   // AI 설정 상태 (Gemini 전용)
   const [hasImageClient, setHasImageClient] = useState(false);
   const [imageClientInfo, setImageClientInfo] = useState('미설정');
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  const [shouldStopGeneration, setShouldStopGeneration] = useState(false);
   const [imageQuality, setImageQuality] = useState<'high'>('high');
   const [imageSize, setImageSize] = useState<'1024x1024'>('1024x1024');
   const [imageStyle, setImageStyle] = useState<'realistic' | 'photographic' | 'anime' | 'illustration' | 'dreamy'>('realistic');
@@ -70,6 +94,15 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     
     loadImageSettings();
   }, []);
+
+  // v2와 동일한 이미지 히스토리 세션스토리지 저장
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('step2-image-history', JSON.stringify(imageHistory));
+    } catch (error) {
+      console.warn('이미지 히스토리 저장 실패:', error);
+    }
+  }, [imageHistory]);
 
   // 이미지 개수 계산
   const imageCount = imagePositions.length;
@@ -112,7 +145,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   };
 
   
-  // 이미지 업로드 처리
+  // 이미지 업로드 처리 (기존 이미지를 히스토리에 저장)
   const handleImageUpload = (imageIndex: number, file: File | null) => {
     if (!file) return;
     
@@ -123,12 +156,110 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     
     // 업로드 시뮬레이션
     setTimeout(() => {
-      setImageUrls(prev => ({ ...prev, [imageIndex]: imageUrl }));
-      setImageStatus(prev => ({ ...prev, [imageIndex]: 'completed' }));
+      // 기존 이미지가 있으면 히스토리에 저장하고 새 이미지 적용
+      const currentUrl = imageUrls[imageIndex];
+      applyNewImage(imageIndex, imageUrl, currentUrl);
     }, 1500);
   };
   
-  // AI 이미지 생성 처리
+  // v2와 동일한 이미지 히스토리 관리 함수들
+  const applyNewImage = (imageIndex: number, newUrl: string, currentUrl?: string) => {
+    // 현재 이미지가 있으면 히스토리에 추가
+    if (currentUrl) {
+      setImageHistory(prev => ({
+        ...prev,
+        [imageIndex]: [...(prev[imageIndex] || []), currentUrl]
+      }));
+    }
+    
+    // 새 이미지 적용
+    setImageUrls(prev => ({ ...prev, [imageIndex]: newUrl }));
+    setImageStatus(prev => ({ ...prev, [imageIndex]: 'completed' }));
+  };
+
+  const handleImageSelection = (useNew: boolean) => {
+    const { imageIndex, currentUrl, newUrl } = selectionModal;
+    
+    if (useNew) {
+      // 새 이미지 사용: 현재를 히스토리에 추가하고 새것을 현재로
+      applyNewImage(imageIndex, newUrl, currentUrl);
+    } else {
+      // 현재 유지: 새것을 히스토리에 추가 (갤러리 선택용)
+      if (newUrl) {
+        setImageHistory(prev => ({
+          ...prev,
+          [imageIndex]: [...(prev[imageIndex] || []), newUrl]
+        }));
+      }
+    }
+    
+    setSelectionModal({ isOpen: false, imageIndex: 0, currentUrl: '', newUrl: '' });
+  };
+
+  const selectImageFromGallery = (imageIndex: number, selectedImageUrl: string) => {
+    // 현재 이미지가 다르면 히스토리에 추가
+    const currentUrl = imageUrls[imageIndex];
+    if (currentUrl && currentUrl !== selectedImageUrl) {
+      setImageHistory(prev => ({
+        ...prev,
+        [imageIndex]: [...(prev[imageIndex] || []), currentUrl]
+      }));
+    }
+
+    // 선택된 이미지를 현재로 설정
+    setImageUrls(prev => ({ ...prev, [imageIndex]: selectedImageUrl }));
+    setImageStatus(prev => ({ ...prev, [imageIndex]: 'completed' }));
+    
+    // 히스토리에서 중복 제거
+    setImageHistory(prev => ({
+      ...prev,
+      [imageIndex]: (prev[imageIndex] || []).filter(url => url !== selectedImageUrl)
+    }));
+
+    // 프리뷰 모달 업데이트
+    setPreviewModal(prev => ({ ...prev, imageUrl: selectedImageUrl }));
+  };
+
+  const downloadImage = async (imageUrl: string, imageIndex: number) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `blog-image-${imageIndex}-${timestamp}.png`;
+      
+      // Electron API 사용 (v3 구조에 맞게)
+      if (window.electronAPI) {
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // TODO: saveFile API 구현 필요 (현재는 브라우저 다운로드로 대체)
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // 브라우저 fallback
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('이미지 다운로드 실패:', error);
+    }
+  };
+
+  // AI 이미지 생성 처리 (v2 스타일)
   const handleAIImageGeneration = async (imageIndex: number) => {
     const prompt = getCurrentPrompt(imageIndex);
     if (!hasImageClient || !prompt.trim()) return;
@@ -145,9 +276,22 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       const imageUrl = await window.electronAPI?.generateImage?.(styledPrompt);
       
       if (imageUrl) {
-        // 생성된 이미지 URL 저장
-        setImageUrls(prev => ({ ...prev, [imageIndex]: imageUrl }));
-        setImageStatus(prev => ({ ...prev, [imageIndex]: 'completed' }));
+        const currentUrl = imageUrls[imageIndex];
+        
+        // 기존 이미지가 있으면 선택 모달 표시
+        if (currentUrl) {
+          setSelectionModal({
+            isOpen: true,
+            imageIndex,
+            currentUrl,
+            newUrl: imageUrl
+          });
+          setImageStatus(prev => ({ ...prev, [imageIndex]: 'completed' }));
+        } else {
+          // 새 이미지 직접 적용
+          applyNewImage(imageIndex, imageUrl);
+        }
+        
         console.log(`이미지 ${imageIndex} 생성 완료:`, imageUrl);
       } else {
         throw new Error('이미지 생성 실패');
@@ -155,7 +299,6 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     } catch (error) {
       console.error(`이미지 ${imageIndex} 생성 실패:`, error);
       setImageStatus(prev => ({ ...prev, [imageIndex]: 'empty' }));
-      // TODO: 사용자에게 에러 메시지 표시
     }
   };
   
@@ -193,17 +336,24 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     });
   };
   
-  // 빈 이미지 모두 AI 생성
+  // 빈 이미지 모두 AI 생성 (정지 기능 포함)
   const handleGenerateAllEmpty = async () => {
     if (!hasImageClient || isGeneratingAll) return;
     
     setIsGeneratingAll(true);
+    setShouldStopGeneration(false);
     const emptySlots = Array.from({ length: imageCount }, (_, idx) => idx + 1)
       .filter(index => getImageStatus(index) === 'empty' && getCurrentPrompt(index).trim());
     
     console.log(`배치 생성 시작: ${emptySlots.length}개 이미지, 스타일: ${imageStyle}`);
     
     for (let i = 0; i < emptySlots.length; i++) {
+      // 정지 신호 확인
+      if (shouldStopGeneration) {
+        console.log('배치 생성 정지됨');
+        break;
+      }
+      
       const imageIndex = emptySlots[i];
       const prompt = getCurrentPrompt(imageIndex);
       
@@ -216,8 +366,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
         const imageUrl = await window.electronAPI?.generateImage?.(styledPrompt);
         
         if (imageUrl) {
-          setImageUrls(prev => ({ ...prev, [imageIndex]: imageUrl }));
-          setImageStatus(prev => ({ ...prev, [imageIndex]: 'completed' }));
+          // 배치 생성에서는 선택 모달 없이 바로 적용
+          applyNewImage(imageIndex, imageUrl);
           console.log(`배치 생성 완료 ${i + 1}/${emptySlots.length} - 이미지 ${imageIndex}`);
         } else {
           throw new Error('이미지 생성 실패');
@@ -234,7 +384,14 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     }
     
     setIsGeneratingAll(false);
-    console.log('배치 생성 완료');
+    setShouldStopGeneration(false);
+    console.log('배치 생성 완료 또는 정지됨');
+  };
+  
+  // 배치 생성 정지
+  const handleStopGeneration = () => {
+    setShouldStopGeneration(true);
+    console.log('배치 생성 정지 요청');
   };
   
   // 이미지 설정을 API 설정에 저장
@@ -515,11 +672,12 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
           )}
         </div>
         
-        {/* 배치 생성 버튼 */}
+        {/* 배치 생성 버튼 및 정지 버튼 */}
         {hasImageClient && imageCount > 0 && (
           <div style={{
             display: 'flex',
             justifyContent: 'center',
+            gap: '12px',
             marginBottom: '20px',
             padding: '16px',
             backgroundColor: '#f8fafc',
@@ -569,6 +727,38 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                 }}></div>
               )}
             </button>
+            
+            {/* 정지 버튼 */}
+            {isGeneratingAll && (
+              <button
+                onClick={handleStopGeneration}
+                style={{
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ef4444';
+                  e.currentTarget.style.transform = 'translateY(0px)';
+                }}
+              >
+                ⏹️ 정지
+              </button>
+            )}
           </div>
         )}
         
@@ -861,7 +1051,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
         </div>
       </div>
 
-      {/* 이미지 미리보기 모달 */}
+      {/* 이미지 미리보기 모달 (v2 스타일 - 갤러리 포함) */}
       {previewModal.isOpen && (
         <div 
           style={{
@@ -870,49 +1060,314 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000
+            zIndex: 1000,
+            padding: '20px'
           }}
           onClick={closePreviewModal}
         >
           <div 
             style={{
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              position: 'relative'
+              maxWidth: '1152px', // max-w-6xl 상당
+              maxHeight: '70vh',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <img 
-              src={previewModal.imageUrl}
-              alt={`이미지 ${previewModal.imageIndex}`}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain'
-              }}
-            />
-            <button
-              onClick={closePreviewModal}
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                fontSize: '20px',
-                cursor: 'pointer'
-              }}
-            >
-              ✕
-            </button>
+            {/* 메인 이미지 */}
+            <div style={{ position: 'relative', marginBottom: '20px' }}>
+              <img 
+                src={previewModal.imageUrl}
+                alt={`이미지 ${previewModal.imageIndex}`}
+                style={{
+                  maxWidth: '1152px',
+                  maxHeight: '60vh',
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+              />
+              
+              {/* 닫기 버튼 */}
+              <button
+                onClick={closePreviewModal}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  fontSize: '20px',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+              
+              {/* 저장 버튼 (v2 원본처럼 우하단에 배치) */}
+              <button
+                onClick={() => downloadImage(previewModal.imageUrl, previewModal.imageIndex)}
+                style={{
+                  position: 'absolute',
+                  bottom: '16px',
+                  right: '16px',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'background-color 0.2s',
+                  zIndex: 10
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              >
+                💾 저장
+              </button>
+            </div>
+            
+            {/* 이미지 갤러리 (히스토리가 있는 경우) */}
+            {(() => {
+              const currentImageUrl = imageUrls[previewModal.imageIndex];
+              const historyImages = imageHistory[previewModal.imageIndex] || [];
+              const allImages = [currentImageUrl, ...historyImages].filter(Boolean);
+              
+              return allImages.length > 1 && (
+                <div style={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  maxWidth: '1152px'
+                }}>
+                  <div style={{
+                    color: 'white',
+                    fontSize: '14px',
+                    marginBottom: '12px',
+                    textAlign: 'center'
+                  }}>
+                    📸 이미지 갤러리 ({allImages.length}개) - 클릭해서 선택하세요
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    overflowX: 'auto',
+                    justifyContent: 'center',
+                    paddingBottom: '4px'
+                  }}>
+                    {allImages.map((imageUrl, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          position: 'relative',
+                          flexShrink: 0,
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          border: imageUrl === previewModal.imageUrl ? '2px solid #3b82f6' : '2px solid #6b7280',
+                          transform: imageUrl === previewModal.imageUrl ? 'scale(1.05)' : 'scale(1)',
+                          transition: 'all 0.2s',
+                          boxShadow: imageUrl === previewModal.imageUrl ? '0 4px 8px 0 rgba(0, 0, 0, 0.1), 0 2px 4px 0 rgba(0, 0, 0, 0.06)' : 'none'
+                        }}
+                        onClick={() => selectImageFromGallery(previewModal.imageIndex, imageUrl)}
+                        onMouseEnter={(e) => {
+                          if (imageUrl !== previewModal.imageUrl) {
+                            e.currentTarget.style.borderColor = '#9ca3af';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (imageUrl !== previewModal.imageUrl) {
+                            e.currentTarget.style.borderColor = '#6b7280';
+                          }
+                        }}
+                      >
+                        <img
+                          src={imageUrl}
+                          alt={`버전 ${index + 1}`}
+                          style={{
+                            width: '96px',
+                            height: '96px',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        {imageUrl === previewModal.imageUrl && (
+                          <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <div style={{
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              fontSize: '12px',
+                              padding: '4px 8px',
+                              borderRadius: '4px'
+                            }}>
+                              현재
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+      
+      {/* 이미지 선택 모달 (현재 vs 새로운) */}
+      {selectionModal.isOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '1024px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              textAlign: 'center',
+              marginBottom: '16px'
+            }}>
+              🎨 이미지 {selectionModal.imageIndex} - 새로운 버전이 생성되었습니다!
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              textAlign: 'center',
+              marginBottom: '24px'
+            }}>
+              어떤 이미지를 사용하시겠습니까?
+            </p>
+            
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '24px',
+              marginBottom: '24px'
+            }}>
+              {/* 현재 이미지 */}
+              <div style={{ textAlign: 'center' }}>
+                <h4 style={{
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  color: '#2563eb'
+                }}>
+                  🔷 현재 이미지 (기존)
+                </h4>
+                <div style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  backgroundColor: '#f9fafb'
+                }}>
+                  <img 
+                    src={selectionModal.currentUrl} 
+                    alt="현재 이미지" 
+                    style={{
+                      width: '100%',
+                      height: '256px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={() => handleImageSelection(false)}
+                  style={{
+                    marginTop: '12px',
+                    padding: '8px 16px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                >
+                  ✅ 현재 이미지 유지
+                </button>
+              </div>
+              
+              {/* 새 이미지 */}
+              <div style={{ textAlign: 'center' }}>
+                <h4 style={{
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  color: '#16a34a'
+                }}>
+                  🔶 새 이미지 (AI 생성)
+                </h4>
+                <div style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  backgroundColor: '#f9fafb'
+                }}>
+                  <img 
+                    src={selectionModal.newUrl} 
+                    alt="새 이미지" 
+                    style={{
+                      width: '100%',
+                      height: '256px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={() => handleImageSelection(true)}
+                  style={{
+                    marginTop: '12px',
+                    padding: '8px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                >
+                  🆕 새 이미지 사용
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

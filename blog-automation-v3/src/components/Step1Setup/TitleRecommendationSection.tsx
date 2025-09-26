@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface TitleRecommendationSectionProps {
   generatedTitles: string[];
@@ -23,6 +23,8 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
   onStartGeneration,
   onLoadDummyTitles,
 }) => {
+  const [customTitle, setCustomTitle] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
   
   // 더미 제목 데이터
   const dummyTitles = [
@@ -136,18 +138,109 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
         </div>
       </div>
       
-      {/* 제목이 생성되기 전 안내 메시지 */}
+      {/* 제목이 생성되기 전 안내 메시지 및 직접 입력 */}
       {generatedTitles.length === 0 && !isGeneratingTitles && (
-        <div style={{
-          textAlign: 'center',
-          padding: '30px',
-          color: '#6c757d',
-          fontSize: '14px',
-          backgroundColor: '#fff',
-          border: '2px dashed #dee2e6',
-          borderRadius: '8px'
-        }}>
-          📝 메인키워드를 입력하고 "제목 생성" 버튼을 클릭해주세요
+        <div>
+          <div style={{
+            textAlign: 'center',
+            padding: '20px',
+            color: '#6c757d',
+            fontSize: '14px',
+            backgroundColor: '#fff',
+            border: '2px dashed #dee2e6',
+            borderRadius: '8px',
+            marginBottom: '16px'
+          }}>
+            📝 메인키워드를 입력하고 "제목 생성" 버튼을 클릭해주세요
+          </div>
+          
+          <div style={{ 
+            textAlign: 'center', 
+            fontSize: '12px', 
+            color: '#6c757d',
+            marginBottom: '16px'
+          }}>
+            또는
+          </div>
+          
+          {/* 직접 제목 입력 (항상 표시) */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
+              ✍️ 직접 제목 입력
+            </label>
+            <input
+              type="text"
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+              placeholder="사용하고 싶은 제목을 입력해주세요..."
+              style={{
+                width: '100%',
+                border: '2px solid #dee2e6',
+                borderRadius: '8px',
+                padding: '12px',
+                fontSize: '14px',
+                backgroundColor: '#fff',
+                boxSizing: 'border-box'
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = '#007bff'}
+              onBlur={(e) => e.currentTarget.style.borderColor = '#dee2e6'}
+            />
+            {customTitle.trim() && (
+              <div style={{
+                marginTop: '12px',
+                padding: '12px',
+                backgroundColor: '#e8f5e8',
+                border: '1px solid #c3e6cb',
+                borderRadius: '6px'
+              }}>
+                <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
+                  ✅ 입력된 제목
+                </div>
+                <div style={{ fontSize: '14px', color: '#155724', fontWeight: 'bold' }}>
+                  {customTitle}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* 직접 입력 제목으로 글 생성 버튼 */}
+          {customTitle.trim() && (
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={onStartGeneration}
+                disabled={isGenerating}
+                style={{
+                  backgroundColor: isGenerating ? '#6c757d' : '#28a745',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '14px 28px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: isGenerating ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  margin: '0 auto',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isGenerating) {
+                    e.currentTarget.style.backgroundColor = '#218838';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isGenerating) {
+                    e.currentTarget.style.backgroundColor = '#28a745';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }
+                }}
+              >
+                🚀 입력한 제목으로 글 생성하기
+              </button>
+            </div>
+          )}
         </div>
       )}
       
@@ -201,11 +294,54 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
                   {index + 1}. {title}
                 </option>
               ))}
+              <option value="__CUSTOM__">✍️ 직접 입력하기</option>
             </select>
           </div>
           
-          {/* 선택된 제목 표시 */}
-          {selectedTitle && (
+          {/* 커스텀 제목 입력 */}
+          {selectedTitle === '__CUSTOM__' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
+                ✍️ 직접 제목 입력
+              </label>
+              <input
+                type="text"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                placeholder="사용하고 싶은 제목을 입력해주세요..."
+                style={{
+                  width: '100%',
+                  border: '2px solid #dee2e6',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  fontSize: '14px',
+                  backgroundColor: '#fff',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#007bff'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#dee2e6'}
+              />
+              {customTitle.trim() && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  backgroundColor: '#e8f5e8',
+                  border: '1px solid #c3e6cb',
+                  borderRadius: '6px'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
+                    ✅ 입력된 제목
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#155724', fontWeight: 'bold' }}>
+                    {customTitle}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* 선택된 제목 표시 (AI 추천 제목인 경우) */}
+          {selectedTitle && selectedTitle !== '__CUSTOM__' && (
             <div style={{
               marginBottom: '20px',
               padding: '12px',
@@ -223,10 +359,12 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
           )}
           
           {/* 글 생성 버튼 */}
-          {selectedTitle && (
+          {((selectedTitle && selectedTitle !== '__CUSTOM__') || (selectedTitle === '__CUSTOM__' && customTitle.trim())) && (
             <div style={{ textAlign: 'center' }}>
               <button
-                onClick={onStartGeneration}
+                onClick={() => {
+                  onStartGeneration();
+                }}
                 disabled={isGenerating}
                 style={{
                   backgroundColor: isGenerating ? '#6c757d' : '#28a745',
@@ -270,7 +408,7 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
                   </>
                 ) : (
                   <>
-                    🚀 선택한 제목으로 글 생성하기
+                    🚀 {selectedTitle === '__CUSTOM__' ? '입력한' : '선택한'} 제목으로 글 생성하기
                   </>
                 )}
               </button>

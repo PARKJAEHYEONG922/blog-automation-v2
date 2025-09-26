@@ -51,20 +51,21 @@ export class ImageService {
 
   async generateImage(prompt: string): Promise<string> {
     try {
-      // 여기서는 실제 이미지 생성 API 호출
-      // 예시: DALL-E, Midjourney, 또는 다른 이미지 생성 서비스
-      
-      // 임시로 플레이스홀더 이미지 URL 반환
-      const placeholderUrl = `https://via.placeholder.com/400x300/4A90E2/ffffff?text=${encodeURIComponent(prompt.slice(0, 20))}`;
-      
-      // TODO: 실제 이미지 생성 API 구현
-      console.log('이미지 생성 프롬프트:', prompt);
-      
-      return placeholderUrl;
+      console.log(`이미지 생성 시작 - IPC 통신 사용`);
+      console.log(`프롬프트: ${prompt.substring(0, 100)}...`);
+
+      // IPC 통신으로 main process의 이미지 생성 호출
+      const imageUrl = await window.electronAPI.generateImage(prompt);
+
+      console.log(`이미지 생성 완료: ${imageUrl}`);
+      return imageUrl;
 
     } catch (error) {
       console.error('이미지 생성 실패:', error);
-      return 'https://via.placeholder.com/400x300/cccccc/ffffff?text=이미지 생성 실패';
+      
+      // 실패한 경우 에러 메시지와 함께 placeholder 반환
+      const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
+      return `https://via.placeholder.com/400x300/ff6b6b/ffffff?text=${encodeURIComponent(errorMsg.substring(0, 30))}`;
     }
   }
 }
