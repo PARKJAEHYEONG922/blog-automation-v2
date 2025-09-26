@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import { ClaudeWebService } from './services/claude-web-service';
 import { ImageService } from './services/image-service';
+import { registerPlaywrightHandlers } from './services/playwright-service';
 
 let mainWindow: BrowserWindow;
 const claudeWebService = new ClaudeWebService();
@@ -61,6 +62,7 @@ function createWindow(): void {
 app.whenReady().then(() => {
   createWindow();
   createDefaultSEOGuide();
+  registerPlaywrightHandlers();
 });
 
 // 기본 SEO 가이드 문서 생성
@@ -505,3 +507,73 @@ ipcMain.handle('llm:generate-titles', async (event, data: { systemPrompt: string
 ipcMain.handle('open-external', async (event, url: string) => {
   await shell.openExternal(url);
 });
+
+// IPC handlers for temporary file operations
+ipcMain.handle('file:saveTempFile', async (event, { fileName, data }: { fileName: string; data: number[] }) => {
+  const fs = require('fs');
+  const path = require('path');
+  const os = require('os');
+  
+  try {
+    console.log(`💾 임시 파일 저장 시작: ${fileName}`);
+    
+    const tempDir = os.tmpdir();
+    const tempFilePath = path.join(tempDir, fileName);
+    
+    // Uint8Array로 변환하여 파일 저장
+    const buffer = Buffer.from(data);
+    await fs.promises.writeFile(tempFilePath, buffer);
+    
+    console.log(`✅ 임시 파일 저장 완료: ${tempFilePath}`);
+    return { success: true, filePath: tempFilePath };
+  } catch (error) {
+    console.error('임시 파일 저장 실패:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+ipcMain.handle('clipboard:copyImage', async (event, filePath: string) => {
+  const { clipboard, nativeImage } = require('electron');
+  const fs = require('fs');
+  
+  try {
+    console.log(`📋 클립보드에 이미지 복사: ${filePath}`);
+    
+    // 파일이 존재하는지 확인
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`파일이 존재하지 않습니다: ${filePath}`);
+    }
+    
+    // 이미지 파일을 nativeImage로 생성
+    const image = nativeImage.createFromPath(filePath);
+    
+    if (image.isEmpty()) {
+      throw new Error('이미지를 로드할 수 없습니다');
+    }
+    
+    // 클립보드에 이미지 복사
+    clipboard.writeImage(image);
+    
+    console.log(`✅ 클립보드에 이미지 복사 완료: ${filePath}`);
+    return { success: true };
+    
+  } catch (error) {
+    console.error('클립보드 이미지 복사 실패:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+ipcMain.handle('file:deleteTempFile', async (event, filePath: string) => {
+  const fs = require('fs');
+  
+  try {
+    console.log(`🗑️ 임시 파일 삭제: ${filePath}`);
+    await fs.promises.unlink(filePath);
+    console.log(`✅ 임시 파일 삭제 완료: ${filePath}`);
+    return { success: true };
+  } catch (error) {
+    console.error('임시 파일 삭제 실패:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+

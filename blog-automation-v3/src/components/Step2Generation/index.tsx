@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
@@ -58,6 +58,11 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   
   // 발행 플랫폼 선택 상태
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
+  
+  // 이미지 변경 콜백 메모이제이션
+  const handleImagesChange = useCallback((newImages: { [key: string]: string }) => {
+    setImages(newImages);
+  }, []);
   
   // 컴포넌트 마운트 시 스크롤을 최상단으로 이동
   useEffect(() => {
@@ -160,7 +165,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     
     if (rows.length === 0) return '';
     
-    let tableHtml = '<div class="se-component se-table"><table class="se-table-content">';
+    let tableHtml = '<div class="se-component se-table" style="text-align: center; margin: 16px auto;"><table class="se-table-content" style="margin: 0 auto;">';
     
     rows.forEach((row, rowIndex) => {
       const isHeader = rowIndex === 0;
@@ -1138,6 +1143,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       <ImageGenerator
         imagePositions={imagePositions}
         imagePrompts={imagePrompts}
+        onImagesChange={handleImagesChange}
       />
 
       {/* 최종 완성본 */}
@@ -1196,11 +1202,47 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
         <NaverPublish
           data={setupData}
           editedContent={editedContent}
-          imageUrls={Object.values(images)}
+          imageUrls={images}
           onComplete={(result) => {
             console.log('네이버 발행 완료:', result);
           }}
-          copyToClipboard={() => {}}
+          copyToClipboard={async () => {
+            try {
+              // editorRef (실제 DOM 요소)를 사용하여 복사
+              if (editorRef.current) {
+                // HTML 형식으로 복사하기 위해 선택 영역 생성
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(editorRef.current);
+                selection?.removeAllRanges();
+                selection?.addRange(range);
+                
+                // 복사 실행
+                const success = document.execCommand('copy');
+                
+                // 선택 해제
+                selection?.removeAllRanges();
+                
+                if (success) {
+                  console.log('✅ HTML 형식으로 클립보드에 복사되었습니다! (editorRef 사용)');
+                  return true;
+                } else {
+                  throw new Error('복사 명령 실행 실패');
+                }
+              } else {
+                throw new Error('에디터 참조를 찾을 수 없습니다');
+              }
+            } catch (err) {
+              console.error('복사 실패:', err);
+              // 대체 방법: editedContent로 텍스트 복사
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = editedContent;
+              const textContent = tempDiv.innerText || '';
+              await navigator.clipboard.writeText(textContent);
+              console.log('⚠️ 텍스트 형식으로 복사되었습니다.');
+              return false;
+            }
+          }}
         />
       )}
 

@@ -10,6 +10,7 @@ interface ImagePrompt {
 interface ImageGeneratorProps {
   imagePositions: string[];
   imagePrompts?: ImagePrompt[];
+  onImagesChange?: (images: { [key: string]: string }) => void;
 }
 
 // 이미지 상태 타입
@@ -17,7 +18,8 @@ type ImageStatus = 'empty' | 'uploading' | 'completed' | 'generating';
 
 const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   imagePositions,
-  imagePrompts = []
+  imagePrompts = [],
+  onImagesChange
 }) => {
   const [editingPrompts, setEditingPrompts] = useState<{ [key: number]: string }>({});
   const [previewModal, setPreviewModal] = useState<{ 
@@ -107,6 +109,19 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
   // 이미지 개수 계산
   const imageCount = imagePositions.length;
+  
+  // 부모 컴포넌트에 이미지 변경 알림
+  useEffect(() => {
+    if (onImagesChange) {
+      // imageUrls를 string key 형태로 변환하여 전달
+      const stringKeyImageUrls = Object.entries(imageUrls).reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {} as { [key: string]: string });
+      
+      onImagesChange(stringKeyImageUrls);
+    }
+  }, [imageUrls, onImagesChange]);
   
   // 이미지 상태 가져오기 헬퍼
   const getImageStatus = (imageIndex: number): ImageStatus => imageStatus[imageIndex] || 'empty';
@@ -472,12 +487,11 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
               🖼️
             </div>
-            <h2 className="text-xl font-bold text-gray-800">이미지 관리 ({imageCount}개)</h2>
+            <h2 className="text-xl font-bold text-gray-800">
+              이미지 관리 - 준비 현황: {Object.keys(imageUrls).length} / {imageCount} 완료
+            </h2>
           </div>
           
-          <div className="text-sm text-gray-600 font-medium bg-purple-50 px-3 py-1 rounded-full">
-            이미지 준비 현황: {completedCount} / {imageCount} 완료
-          </div>
         </div>
         
         {/* 이미지 생성 AI 상태 카드 */}

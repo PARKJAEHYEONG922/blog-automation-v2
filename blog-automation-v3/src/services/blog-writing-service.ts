@@ -78,9 +78,12 @@ ${blogContent}
     try {
       console.log('🎨 이미지 프롬프트 생성 시작');
 
-      // 🔥 무조건 실패 처리 (테스트용)
-      console.log('⚠️ 테스트를 위해 이미지 프롬프트 생성을 무조건 실패로 처리합니다.');
-      
+      // 글쓰기 AI 설정 확인 (IPC 통신 사용)
+      const llmSettings = await window.electronAPI?.getLLMSettings?.();
+      if (!llmSettings?.appliedSettings?.writing?.provider) {
+        throw new Error('글쓰기 AI가 설정되지 않았습니다.');
+      }
+
       // 블로그 글에서 (이미지) 태그 개수 정확히 계산
       const imageMatches = blogContent.match(/\(이미지\)|\[이미지\]/g);
       const expectedImageCount = imageMatches ? imageMatches.length : 0;
@@ -95,9 +98,6 @@ ${blogContent}
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
         };
       }
-
-      // 🔥 무조건 실패 반환
-      throw new Error('테스트용: 이미지 프롬프트 생성 강제 실패');
 
       const maxRetries = 3;
       let totalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };

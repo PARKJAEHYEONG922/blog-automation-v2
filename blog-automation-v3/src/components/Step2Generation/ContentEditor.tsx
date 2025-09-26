@@ -244,20 +244,25 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         }
         /* 네이버 블로그 표 스타일 */
         .se-component {
-          margin: 16px 0;
+          margin: 16px auto;
+          text-align: center;
         }
         .se-table {
           width: 100%;
+          margin: 0 auto;
+          text-align: center;
         }
         .se-table-content {
           width: 100%;
           border-collapse: collapse;
           border: 1px solid #ddd;
+          margin: 0 auto;
         }
         .se-cell {
           border: 1px solid #ddd;
           padding: 8px;
           vertical-align: top;
+          text-align: center;
         }
         .se-tr {
           border: none;

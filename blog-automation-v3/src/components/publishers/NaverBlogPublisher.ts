@@ -508,7 +508,7 @@ export class NaverBlogPublisher {
             await this.page.waitForTimeout(1000); // 시간 설정 영역이 나타날 때까지 대기
           }
         } catch (error) {
-          console.log('❌ 예약 라벨 클릭 실패:', error.message);
+          console.log('❌ 예약 라벨 클릭 실패:', error instanceof Error ? error.message : String(error));
         }
         
         // 예약 버튼 클릭 실패시 발행 중단

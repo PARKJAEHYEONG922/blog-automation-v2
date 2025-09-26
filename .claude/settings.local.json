@@ -27,7 +27,9 @@
       "Bash(npm run typecheck:*)",
       "Bash(node:*)",
       "Bash(npx tailwindcss init:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }
