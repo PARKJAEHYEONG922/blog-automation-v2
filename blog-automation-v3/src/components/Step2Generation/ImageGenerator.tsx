@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface ImagePrompt {
   index: number;
@@ -62,6 +62,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   const [imageClientInfo, setImageClientInfo] = useState('미설정');
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [shouldStopGeneration, setShouldStopGeneration] = useState(false);
+  const shouldStopRef = useRef(false);
   const [imageQuality, setImageQuality] = useState<'high'>('high');
   const [imageSize, setImageSize] = useState<'1024x1024'>('1024x1024');
   const [imageStyle, setImageStyle] = useState<'realistic' | 'photographic' | 'anime' | 'illustration' | 'dreamy'>('realistic');
@@ -259,8 +260,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     }
   };
 
-  // AI 이미지 생성 처리 (v2 스타일)
-  const handleAIImageGeneration = async (imageIndex: number) => {
+  // AI 이미지 생성 처리 (v2 스타일) - 배치 모드 지원
+  const handleAIImageGeneration = async (imageIndex: number, isPartOfBatch = false) => {
     const prompt = getCurrentPrompt(imageIndex);
     if (!hasImageClient || !prompt.trim()) return;
     
@@ -275,11 +276,18 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       // 실제 API 호출
       const imageUrl = await window.electronAPI?.generateImage?.(styledPrompt);
       
+      // 정지 요청 확인 (배치 모드일 때만)
+      if (shouldStopRef.current && isPartOfBatch) {
+        console.log(`이미지 ${imageIndex} 생성 중단됨 (배치 모드)`);
+        setImageStatus(prev => ({ ...prev, [imageIndex]: 'empty' }));
+        return;
+      }
+      
       if (imageUrl) {
         const currentUrl = imageUrls[imageIndex];
         
-        // 기존 이미지가 있으면 선택 모달 표시
-        if (currentUrl) {
+        // 기존 이미지가 있으면 선택 모달 표시 (배치 모드가 아닐 때만)
+        if (currentUrl && !isPartOfBatch) {
           setSelectionModal({
             isOpen: true,
             imageIndex,
@@ -317,6 +325,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     });
     setImageStatus(prev => ({ ...prev, [imageIndex]: 'empty' }));
   };
+
   
   // 이미지 미리보기 모달 열기
   const openPreviewModal = (imageUrl: string, imageIndex: number) => {
@@ -342,40 +351,32 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     
     setIsGeneratingAll(true);
     setShouldStopGeneration(false);
+    shouldStopRef.current = false;
     const emptySlots = Array.from({ length: imageCount }, (_, idx) => idx + 1)
       .filter(index => getImageStatus(index) === 'empty' && getCurrentPrompt(index).trim());
     
     console.log(`배치 생성 시작: ${emptySlots.length}개 이미지, 스타일: ${imageStyle}`);
     
     for (let i = 0; i < emptySlots.length; i++) {
-      // 정지 신호 확인
-      if (shouldStopGeneration) {
-        console.log('배치 생성 정지됨');
+      // 정지 신호 확인 (루프 시작 시)
+      if (shouldStopRef.current) {
+        console.log('배치 생성 정지됨 (루프 시작)');
         break;
       }
       
       const imageIndex = emptySlots[i];
-      const prompt = getCurrentPrompt(imageIndex);
+      console.log(`배치 생성 ${i + 1}/${emptySlots.length} - 이미지 ${imageIndex} 시작`);
       
-      setImageStatus(prev => ({ ...prev, [imageIndex]: 'generating' }));
+      // v2와 동일하게 handleAIImageGeneration에 배치 모드 플래그 전달
+      await handleAIImageGeneration(imageIndex, true);
       
-      try {
-        const styledPrompt = `${prompt}, style: ${imageStyle}`;
-        console.log(`배치 생성 ${i + 1}/${emptySlots.length} - 이미지 ${imageIndex}:`, styledPrompt);
-        
-        const imageUrl = await window.electronAPI?.generateImage?.(styledPrompt);
-        
-        if (imageUrl) {
-          // 배치 생성에서는 선택 모달 없이 바로 적용
-          applyNewImage(imageIndex, imageUrl);
-          console.log(`배치 생성 완료 ${i + 1}/${emptySlots.length} - 이미지 ${imageIndex}`);
-        } else {
-          throw new Error('이미지 생성 실패');
-        }
-      } catch (error) {
-        console.error(`배치 생성 실패 - 이미지 ${imageIndex}:`, error);
-        setImageStatus(prev => ({ ...prev, [imageIndex]: 'empty' }));
+      // 이미지 생성 완료 후 정지 신호 재확인
+      if (shouldStopRef.current) {
+        console.log('배치 생성 정지됨 (이미지 생성 완료 후)');
+        break;
       }
+      
+      console.log(`배치 생성 완료 ${i + 1}/${emptySlots.length} - 이미지 ${imageIndex}`);
       
       // 다음 이미지 생성 전 잠시 대기 (API 과부하 방지)
       if (i < emptySlots.length - 1) {
@@ -385,12 +386,14 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     
     setIsGeneratingAll(false);
     setShouldStopGeneration(false);
+    shouldStopRef.current = false;
     console.log('배치 생성 완료 또는 정지됨');
   };
   
   // 배치 생성 정지
   const handleStopGeneration = () => {
     setShouldStopGeneration(true);
+    shouldStopRef.current = true;
     console.log('배치 생성 정지 요청');
   };
   

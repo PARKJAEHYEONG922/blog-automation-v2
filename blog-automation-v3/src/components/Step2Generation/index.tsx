@@ -1143,39 +1143,10 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       <div className="action-buttons" style={{ 
         marginTop: '32px',
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: '12px'
       }}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button onClick={onGoBack} style={{ 
-            backgroundColor: '#6b7280', 
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '12px 20px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600',
-            transition: 'background-color 0.2s'
-          }}>
-            ← 이전으로 가기
-          </button>
-          
-          <button onClick={onReset} style={{
-            backgroundColor: '#ef4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '12px 20px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600',
-            transition: 'background-color 0.2s'
-          }}>
-            🔄 처음부터 다시
-          </button>
-        </div>
-        
         {(Object.keys(images).length === imagePositions.length || imagePositions.length === 0) && (
           <button 
             className="publish-button"
@@ -1195,6 +1166,34 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
             📤 블로그에 발행하기
           </button>
         )}
+        
+        <button onClick={onGoBack} style={{ 
+          backgroundColor: '#6b7280', 
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          padding: '12px 20px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '600',
+          transition: 'background-color 0.2s'
+        }}>
+          ← 이전으로 가기
+        </button>
+        
+        <button onClick={onReset} style={{
+          backgroundColor: '#ef4444',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          padding: '12px 20px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '600',
+          transition: 'background-color 0.2s'
+        }}>
+          🔄 처음부터 다시
+        </button>
       </div>
 
       <style>
