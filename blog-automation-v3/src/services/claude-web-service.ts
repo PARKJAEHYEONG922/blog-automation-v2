@@ -85,7 +85,7 @@ export class ClaudeWebService {
     }
   }
 
-  async sendPrompt(writingStylePaths: string[], seoGuidePath: string, topic: string) {
+  async sendPrompt(writingStylePaths: string[], seoGuidePath: string, prompt: string) {
     if (!this.page) {
       throw new Error('브라우저가 열려있지 않습니다.');
     }
@@ -94,7 +94,7 @@ export class ClaudeWebService {
     console.log('말투 문서 파일 개수:', writingStylePaths?.length);
     console.log('말투 문서 파일들:', writingStylePaths);
     console.log('SEO 가이드 파일:', seoGuidePath || '없음');
-    console.log('주제:', topic);
+    console.log('프롬프트 길이:', prompt.length);
     console.log('=====================================');
 
     try {
@@ -142,54 +142,8 @@ export class ClaudeWebService {
         return navigator.clipboard.writeText('');
       });
       
-      // 3. 전체 프롬프트 한 번에 입력 - 말투/SEO 설명 먼저, 주제는 마지막
-      let finalPrompt = '';
-      
-      // 첨부된 파일에 따른 구체적인 설명
-      if (writingStylePaths.length > 0) {
-        if (writingStylePaths.length === 1) {
-          finalPrompt += `1번 문서는 블로그 말투 참고 문서입니다. 이 말투를 참고해서 `;
-        } else {
-          finalPrompt += `1번, 2번 문서는 블로그 말투 참고 문서입니다. 이 말투들을 참고해서 `;
-        }
-      }
-      
-      if (seoGuidePath && seoGuidePath.trim() !== '') {
-        if (writingStylePaths.length > 0) {
-          finalPrompt += `자연스럽게 글을 작성하되, ${writingStylePaths.length + 1}번 문서의 네이버 블로그 SEO 최적화 가이드를 지켜서 글을 작성해주세요.\n\n`;
-        } else {
-          finalPrompt += `1번 문서의 네이버 블로그 SEO 최적화 가이드를 지켜서 글을 작성해주세요.\n\n`;
-        }
-      }
-      
-      
-      // 현재 날짜 추가
-      const today = new Date();
-      const currentDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-      
-      finalPrompt += `주제: ${topic}\n\n`;
-      finalPrompt += `**중요 지시사항:**\n`;
-      finalPrompt += `- 현재 날짜: ${currentDate}일 기준으로 작성\n`;
-      finalPrompt += `- 아티팩트(Artifacts) 기능을 사용하여 블로그 글을 작성해주세요\n`;
-      finalPrompt += `- 다른 설명이나 부가 내용 없이 블로그 글 내용만 작성\n`;
-      finalPrompt += `- 글 중간에 "---" 같은 구분선이나 메타데이터는 절대 포함하지 마세요\n`;
-      finalPrompt += `- SEO 요구사항: 글자 수 1,700-2,500자(공백 제외), 메인 키워드 5-6회 자연 반복, 보조 키워드 각각 3-4회 사용, 이미지 5개 이상 배치\n`;
-      finalPrompt += `\n**이미지 배치 규칙 (중요):**\n`;
-      finalPrompt += `- **소제목과 설명이 완전히 끝난 후**에만 (이미지) 배치\n`;
-      finalPrompt += `- **단계별 설명 중간에는 절대 이미지 배치 금지** (1단계, 2단계, - 항목 등의 중간)\n`;
-      finalPrompt += `- **최적 배치 위치**: 소제목 → 설명 → (이미지) 순서\n`;
-      finalPrompt += `- **이미지 집중 배치**: 소제목이 적고 이미지가 많이 필요한 경우 한 곳에 (이미지)(이미지) 연속 배치 가능\n`;
-      finalPrompt += `- **안정적인 패턴**: 큰 주제가 완료된 후 관련 이미지들을 모아서 배치\n`;
-      finalPrompt += `\n**출력 형식:**\n`;
-      finalPrompt += `다른 설명 없이 아래 형식으로만 출력하세요:\n\n`;
-      finalPrompt += `[서론 - 3초의 법칙으로 핵심 답변 즉시 제시]\n\n`;
-      finalPrompt += `[본문은 주제에 맞는 다양한 형식 중에서 적절히 선택하여 구성하세요]\n`;
-      finalPrompt += `옵션: 소제목+본문+(이미지) / 체크리스트(✓)+(이미지) / 비교표+(이미지) / TOP5 순위+(이미지) / 단계별 가이드+(이미지) / Q&A+(이미지) 등\n\n`;
-      finalPrompt += `[결론 - 요약 및 독자 행동 유도]\n\n`;
-      finalPrompt += `[작성한 글 내용을 토대로 적합한 태그 5개 이상을 # 형태로 작성]\n\n`;
-      finalPrompt += `- 바로 복사해서 붙여넣을 수 있는 완성된 블로그 글만 작성`;
-      
-      await this.typeInEditor(finalPrompt);
+      // 3. 전달받은 프롬프트를 그대로 사용
+      await this.typeInEditor(prompt);
       
       // 4. 전송
       await this.sendMessage();
