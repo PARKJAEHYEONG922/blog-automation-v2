@@ -90,3 +90,8 @@ electron_1.ipcMain.handle('blog:publish', async (event, content) => {
     console.log('Publishing content:', content.slice(0, 100) + '...');
     return { success: true };
 });
+
+// IPC handler for opening external URLs
+electron_1.ipcMain.handle('open-external', async (event, url) => {
+    await electron_1.shell.openExternal(url);
+});

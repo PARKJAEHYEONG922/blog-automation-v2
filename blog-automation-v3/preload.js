@@ -14,4 +14,6 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     generateImage: (prompt) => electron_1.ipcRenderer.invoke('image:generate', prompt),
     // Blog publishing
     publishToBlog: (content) => electron_1.ipcRenderer.invoke('blog:publish', content),
+    // External URL opening
+    openExternal: (url) => electron_1.ipcRenderer.invoke('open-external', url),
 });

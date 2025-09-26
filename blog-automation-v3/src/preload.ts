@@ -24,6 +24,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Blog publishing
   publishToBlog: (content: string) => ipcRenderer.invoke('blog:publish', content),
+  
+  // LLM Settings
+  getLLMSettings: () => ipcRenderer.invoke('llm:get-settings'),
+  saveLLMSettings: (settings: any) => ipcRenderer.invoke('llm:save-settings', settings),
+  testLLMConfig: (config: any) => ipcRenderer.invoke('llm:test-config', config),
+  
+  // Log handling
+  sendLog: (level: string, message: string) => ipcRenderer.send('log:add', level, message),
+  onLogMessage: (callback: (data: any) => void) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('log:message', handler);
+    return () => ipcRenderer.removeListener('log:message', handler);
+  },
+  
+  // External URL opening
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 });
 
 // Type definitions for renderer
@@ -41,6 +57,12 @@ declare global {
       generateImagePrompts: (data: { content: string; imageCount: number }) => Promise<{ prompts: string[] }>;
       generateImage: (prompt: string) => Promise<string>;
       publishToBlog: (content: string) => Promise<{ success: boolean }>;
+      getLLMSettings: () => Promise<any>;
+      saveLLMSettings: (settings: any) => Promise<void>;
+      testLLMConfig: (config: any) => Promise<{ success: boolean; error?: string }>;
+      sendLog: (level: string, message: string) => void;
+      onLogMessage: (callback: (data: any) => void) => (() => void);
+      openExternal: (url: string) => Promise<void>;
     };
   }
 }

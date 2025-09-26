@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import { ClaudeWebService } from './services/claude-web-service';
 import { ImageService } from './services/image-service';
@@ -236,4 +236,124 @@ ipcMain.handle('file:load-documents', async (event, type: 'writingStyle' | 'seoG
     console.error(`${type} 문서 로드 실패:`, error);
     return [];
   }
+});
+
+// LLM Settings handlers
+ipcMain.handle('llm:get-settings', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    const userDataPath = app.getPath('userData');
+    const settingsPath = path.join(userDataPath, 'llm-settings.json');
+    
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf-8');
+      return JSON.parse(data);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('LLM 설정 로드 실패:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('llm:save-settings', async (event, settings) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    const userDataPath = app.getPath('userData');
+    const settingsPath = path.join(userDataPath, 'llm-settings.json');
+    
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+    console.log('LLM 설정 저장 완료:', settingsPath);
+    
+    return true;
+  } catch (error) {
+    console.error('LLM 설정 저장 실패:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('llm:test-config', async (event, config) => {
+  try {
+    console.log(`API 테스트 시작: ${config.provider}`);
+    
+    const { provider, apiKey } = config;
+    
+    if (!apiKey) {
+      return { success: false, message: 'API 키가 필요합니다.' };
+    }
+    
+    // 간단한 API 테스트 구현
+    if (provider === 'openai') {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        return { success: true, message: 'OpenAI API 연결 성공' };
+      } else {
+        return { success: false, message: `OpenAI API 오류: ${response.status}` };
+      }
+    } else if (provider === 'anthropic' || provider === 'claude') {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'test' }]
+        })
+      });
+      
+      if (response.ok) {
+        return { success: true, message: 'Claude API 연결 성공' };
+      } else {
+        return { success: false, message: `Claude API 오류: ${response.status}` };
+      }
+    } else if (provider === 'gemini') {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      
+      if (response.ok) {
+        return { success: true, message: 'Gemini API 연결 성공' };
+      } else {
+        return { success: false, message: `Gemini API 오류: ${response.status}` };
+      }
+    } else {
+      return { success: false, message: '지원하지 않는 API 제공자입니다' };
+    }
+  } catch (error) {
+    console.error(`API 테스트 실패 (${config.provider}):`, error);
+    return { success: false, message: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+// 로그 IPC 핸들러
+ipcMain.on('log:add', (event, level: string, message: string) => {
+  // 렌더러 프로세스로 로그 메시지 전송
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('log:message', {
+      level,
+      message,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // 메인 프로세스 콘솔에도 출력
+  console.log(`[${level.toUpperCase()}] ${message}`);
+});
+
+// IPC handler for opening external URLs
+ipcMain.handle('open-external', async (event, url: string) => {
+  await shell.openExternal(url);
 });

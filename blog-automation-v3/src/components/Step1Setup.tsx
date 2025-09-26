@@ -90,6 +90,15 @@ const ConfirmDialog: React.FC<{
 const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
   const [topic, setTopic] = useState('');
   
+  // 키워드 입력 상태
+  const [mainKeyword, setMainKeyword] = useState('');
+  const [subKeywords, setSubKeywords] = useState('');
+  
+  // 제목 추천 관련 상태
+  const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
+  const [selectedTitle, setSelectedTitle] = useState('');
+  
   // 생성 관련 상태
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState<string>('');
@@ -320,6 +329,66 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
     reader.readAsText(file);
   };
 
+  // 제목 추천 함수
+  const generateTitleRecommendations = async () => {
+    if (!mainKeyword.trim()) {
+      alert('메인키워드를 입력해주세요!');
+      return;
+    }
+
+    setIsGeneratingTitles(true);
+    setGeneratedTitles([]);
+    setSelectedTitle('');
+    
+    try {
+      // Claude Web 브라우저 열기
+      await window.electronAPI.openClaudeWeb();
+      
+      // 제목 생성 프롬프트 구성
+      const subKeywordList = subKeywords.split(',').map(k => k.trim()).filter(k => k);
+      const titlePrompt = `메인키워드: ${mainKeyword}
+${subKeywordList.length > 0 ? `보조키워드: ${subKeywordList.join(', ')}` : ''}
+
+위 키워드를 활용해서 네이버 블로그 최적화에 맞는 매력적인 제목 10개를 추천해주세요.
+
+요구사항:
+- 메인키워드는 제목에 자연스럽게 포함
+- 보조키워드 중 1-2개는 제목에 활용
+- 클릭하고 싶은 매력적인 제목
+- 검색 최적화 고려
+- 다양한 스타일 (방법, 후기, 추천, 비교, 정보 등)
+
+제목만 번호와 함께 목록으로 작성해주세요.`;
+
+      // 프롬프트 전송 (파일 업로드 없이)
+      await window.electronAPI.sendToClaudeWeb([], '', titlePrompt);
+      
+      // 응답 대기
+      await window.electronAPI.waitForClaudeResponse();
+      
+      // 응답 다운로드
+      const response = await window.electronAPI.downloadFromClaude();
+      
+      // 제목 파싱 (번호가 있는 목록에서 제목만 추출)
+      const titleMatches = response.match(/^\d+\.\s*(.+)$/gm);
+      if (titleMatches && titleMatches.length > 0) {
+        const titles = titleMatches
+          .map(match => match.replace(/^\d+\.\s*/, '').trim())
+          .slice(0, 10); // 최대 10개
+        
+        setGeneratedTitles(titles);
+      } else {
+        alert('제목 생성에 실패했습니다. 다시 시도해주세요.');
+      }
+      
+    } catch (error) {
+      console.error('제목 생성 실패:', error);
+      alert('제목 생성 중 오류가 발생했습니다: ' + (error as Error).message);
+    } finally {
+      setIsGeneratingTitles(false);
+    }
+  };
+
   // 자동 생성 함수
   const handleStartGeneration = async () => {
     if (!topic.trim()) {
@@ -353,10 +422,15 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
       setGenerationStep('완료!');
       
       setTimeout(() => {
+        // 선택된 제목이 있으면 주제에 포함
+        const finalTopic = selectedTitle ? 
+          `제목: ${selectedTitle}\n주제: ${topic}\n메인키워드: ${mainKeyword}\n보조키워드: ${subKeywords}` : 
+          topic;
+          
         onComplete({ 
           writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
           seoGuidePath: selectedSeoGuide?.filePath || '',
-          topic,
+          topic: finalTopic,
           generatedContent: content
         });
       }, 1000);
@@ -376,13 +450,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
       backgroundColor: '#ffffff',
       minHeight: '100vh'
     }}>
-      <h2 style={{
-        textAlign: 'center',
-        color: '#495057',
-        marginBottom: '40px',
-        fontSize: '28px',
-        fontWeight: 'bold'
-      }}>📝 1단계: 설정 & 생성</h2>
+      {/* 단계 제목 제거 */}
       
       {/* 문서 업로드 통합 섹션 */}
       <div style={{
@@ -552,6 +620,182 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
         </div>
       </div>
 
+      {/* 키워드 입력 및 제목 추천 */}
+      <div style={{
+        backgroundColor: '#fff',
+        border: '2px solid #e9ecef',
+        borderRadius: '16px',
+        padding: '25px',
+        marginBottom: '20px'
+      }}>
+        <h3 style={{ color: '#495057', marginBottom: '8px', fontSize: '20px' }}>🔍 키워드 입력 및 제목 추천</h3>
+        <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '20px' }}>
+          메인키워드와 보조키워드를 입력하고 AI가 추천하는 제목을 선택하세요
+        </p>
+        
+        {/* 키워드 입력 섹션 */}
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+          <div style={{ flex: '1' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
+              메인키워드 *
+            </label>
+            <input
+              type="text"
+              value={mainKeyword}
+              onChange={(e) => setMainKeyword(e.target.value)}
+              placeholder="예: 강아지 산책"
+              style={{
+                width: '100%',
+                border: '2px solid #dee2e6',
+                borderRadius: '8px',
+                padding: '12px',
+                fontSize: '14px',
+                backgroundColor: '#fafafa'
+              }}
+            />
+            <small style={{ color: '#6c757d', fontSize: '12px' }}>
+              블로그 글의 핵심 키워드를 입력하세요
+            </small>
+          </div>
+          
+          <div style={{ flex: '1' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#495057' }}>
+              보조키워드
+            </label>
+            <input
+              type="text"
+              value={subKeywords}
+              onChange={(e) => setSubKeywords(e.target.value)}
+              placeholder="예: 훈련, 방법, 팁 (쉼표로 구분)"
+              style={{
+                width: '100%',
+                border: '2px solid #dee2e6',
+                borderRadius: '8px',
+                padding: '12px',
+                fontSize: '14px',
+                backgroundColor: '#fafafa'
+              }}
+            />
+            <small style={{ color: '#6c757d', fontSize: '12px' }}>
+              관련 키워드를 쉼표(,)로 구분해서 입력하세요
+            </small>
+          </div>
+        </div>
+
+        {/* 제목 생성 버튼 */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <button
+            onClick={generateTitleRecommendations}
+            disabled={isGeneratingTitles || !mainKeyword.trim()}
+            style={{
+              backgroundColor: isGeneratingTitles ? '#6c757d' : '#007bff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: isGeneratingTitles ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              margin: '0 auto',
+              opacity: !mainKeyword.trim() ? 0.5 : 1
+            }}
+          >
+            {isGeneratingTitles ? (
+              <>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid #fff',
+                  borderTop: '2px solid transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                AI 제목 생성 중...
+              </>
+            ) : (
+              <>
+                🎯 AI 제목 10개 추천받기
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* 생성된 제목 목록 */}
+        {generatedTitles.length > 0 && (
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '10px',
+            padding: '20px'
+          }}>
+            <h4 style={{ color: '#495057', marginBottom: '15px', fontSize: '16px' }}>
+              🎯 AI 추천 제목 ({generatedTitles.length}개)
+            </h4>
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {generatedTitles.map((title, index) => (
+                <label
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px',
+                    backgroundColor: selectedTitle === title ? '#e3f2fd' : '#fff',
+                    border: selectedTitle === title ? '2px solid #2196f3' : '1px solid #dee2e6',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedTitle !== title) {
+                      e.currentTarget.style.backgroundColor = '#f0f0f0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedTitle !== title) {
+                      e.currentTarget.style.backgroundColor = '#fff';
+                    }
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="selectedTitle"
+                    value={title}
+                    checked={selectedTitle === title}
+                    onChange={(e) => setSelectedTitle(e.target.value)}
+                    style={{ margin: 0 }}
+                  />
+                  <span style={{ fontWeight: selectedTitle === title ? 'bold' : 'normal' }}>
+                    {index + 1}. {title}
+                  </span>
+                </label>
+              ))}
+            </div>
+            
+            {selectedTitle && (
+              <div style={{
+                marginTop: '15px',
+                padding: '12px',
+                backgroundColor: '#e8f5e8',
+                border: '1px solid #c3e6cb',
+                borderRadius: '6px'
+              }}>
+                <div style={{ fontSize: '12px', color: '#155724', fontWeight: 'bold', marginBottom: '4px' }}>
+                  ✅ 선택된 제목:
+                </div>
+                <div style={{ fontSize: '14px', color: '#155724' }}>
+                  {selectedTitle}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* 블로그 주제 입력 및 버튼들 */}
       <div style={{
         backgroundColor: '#fff',
@@ -561,7 +805,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
       }}>
         <h3 style={{ color: '#495057', marginBottom: '8px', fontSize: '20px' }}>🎯 블로그 주제 입력</h3>
         <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '20px' }}>
-          어떤 주제로 글을 작성하고 싶은지 입력하세요
+          어떤 주제로 글을 작성하고 싶은지 입력하세요 (위에서 제목을 선택했다면 관련 내용을 입력하세요)
         </p>
         
         <textarea
@@ -651,10 +895,16 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete }) => {
                       const reader = new FileReader();
                       reader.onload = (event) => {
                         const content = event.target?.result as string;
+                        
+                        // 선택된 제목이 있으면 주제에 포함
+                        const finalTopic = selectedTitle ? 
+                          `제목: ${selectedTitle}\n주제: ${topic || '수동 업로드된 글'}\n메인키워드: ${mainKeyword}\n보조키워드: ${subKeywords}` : 
+                          (topic || '수동 업로드된 글');
+                          
                         onComplete({ 
                           writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
                           seoGuidePath: selectedSeoGuide?.filePath || '',
-                          topic: topic || '수동 업로드된 글',
+                          topic: finalTopic,
                           generatedContent: content
                         });
                       };
