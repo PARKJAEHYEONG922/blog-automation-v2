@@ -3,6 +3,7 @@ import Step1Setup from './components/Step1Setup';
 import Step2Generation from './components/Step2Generation';
 import LLMSettings from './components/LLMSettings';
 import LogPanel from './components/LogPanel';
+import UpdateModal from './components/UpdateModal';
 
 type Step = 1 | 2;
 
@@ -25,6 +26,9 @@ const App: React.FC = () => {
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [showLLMSettings, setShowLLMSettings] = useState<boolean>(false);
   const [showLogs, setShowLogs] = useState<boolean>(false);
+  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(false);
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+
   
   // AI 모델 상태
   const [aiModelStatus, setAiModelStatus] = useState({
@@ -55,6 +59,18 @@ const App: React.FC = () => {
   useEffect(() => {
     refreshModelStatus();
   }, [refreshModelStatus]);
+
+  // 업데이트 확인 결과 리스너
+  useEffect(() => {
+    const handleUpdateCheckResult = (data: any) => {
+      setUpdateInfo(data);
+      setShowUpdateModal(true);
+    };
+
+    const cleanup = window.electronAPI?.onUpdateCheckResult?.(handleUpdateCheckResult);
+    return cleanup;
+  }, []);
+
 
   const handleSetupComplete = (data: typeof setupData) => {
     setSetupData(data);
@@ -106,6 +122,19 @@ const App: React.FC = () => {
   const handleGoBack = () => {
     setCurrentStep(1);
     // 기존 데이터는 유지
+  };
+
+  const handleUpdateDownload = async (downloadUrl: string) => {
+    try {
+      const result = await window.electronAPI?.downloadUpdate?.(downloadUrl);
+      if (result?.success) {
+        console.log('업데이트 다운로드 시작됨');
+      } else {
+        console.error('업데이트 다운로드 실패:', result?.error);
+      }
+    } catch (error) {
+      console.error('업데이트 다운로드 오류:', error);
+    }
   };
 
   return (
@@ -204,6 +233,15 @@ const App: React.FC = () => {
           }}
         />
       )}
+
+      {/* Update Modal */}
+      <UpdateModal
+        isVisible={showUpdateModal}
+        updateInfo={updateInfo}
+        onClose={() => setShowUpdateModal(false)}
+        onDownload={handleUpdateDownload}
+      />
+
     </div>
   );
 };

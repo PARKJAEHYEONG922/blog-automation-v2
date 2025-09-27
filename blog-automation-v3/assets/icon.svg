@@ -1,0 +1,55 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="50%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+    <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F3F4F6"/>
+      <stop offset="100%" stop-color="#E5E7EB"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="128" cy="128" r="120" fill="url(#bgGradient)"/>
+
+  <!-- Robot head -->
+  <rect x="88" y="80" width="80" height="70" rx="12" fill="url(#robotGradient)" stroke="#6B7280" stroke-width="2"/>
+
+  <!-- Robot eyes -->
+  <circle cx="108" cy="105" r="8" fill="#3B82F6"/>
+  <circle cx="148" cy="105" r="8" fill="#3B82F6"/>
+  <circle cx="108" cy="105" r="4" fill="#1E40AF"/>
+  <circle cx="148" cy="105" r="4" fill="#1E40AF"/>
+
+  <!-- Robot mouth -->
+  <rect x="118" y="125" width="20" height="4" rx="2" fill="#6B7280"/>
+
+  <!-- Robot antenna -->
+  <line x1="128" y1="80" x2="128" y2="65" stroke="#6B7280" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="128" cy="60" r="5" fill="#EF4444"/>
+
+  <!-- Blog/Document symbol -->
+  <rect x="100" y="170" width="56" height="40" rx="4" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+  <line x1="110" y1="180" x2="146" y2="180" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+  <line x1="110" y1="190" x2="140" y2="190" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+  <line x1="110" y1="200" x2="143" y2="200" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- AI/Automation symbol (gears) -->
+  <g transform="translate(180, 90)">
+    <circle cx="0" cy="0" r="12" fill="#10B981" stroke="#059669" stroke-width="2"/>
+    <circle cx="0" cy="0" r="6" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+    <circle cx="0" cy="0" r="2" fill="#FFFFFF"/>
+  </g>
+
+  <g transform="translate(195, 110)">
+    <circle cx="0" cy="0" r="8" fill="#F59E0B" stroke="#D97706" stroke-width="2"/>
+    <circle cx="0" cy="0" r="4" fill="none" stroke="#FFFFFF" stroke-width="1"/>
+    <circle cx="0" cy="0" r="1" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Version text -->
+  <text x="128" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF">V3</text>
+</svg>

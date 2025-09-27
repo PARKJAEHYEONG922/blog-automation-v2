@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Menu } from 'electron';
 import * as path from 'path';
 import { ClaudeWebService } from './services/claude-web-service';
 import { ImageService } from './services/image-service';
 import { registerPlaywrightHandlers } from './services/playwright-service';
+import * as https from 'https';
 
 let mainWindow: BrowserWindow;
 const claudeWebService = new ClaudeWebService();
@@ -42,6 +43,86 @@ console.warn = (...args: any[]) => {
   sendLogToUI('warning', message);
 };
 
+// GitHub API로 최신 릴리즈 확인
+async function checkForUpdates(): Promise<{ hasUpdate: boolean; latestVersion?: string; downloadUrl?: string; error?: string }> {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/PARKJAEHYEONG922/blog-automation-v2/releases',
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Blog-Automation-V3'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          if (res.statusCode === 404) {
+            resolve({ hasUpdate: false, error: '릴리즈를 찾을 수 없습니다.' });
+            return;
+          }
+
+          if (res.statusCode !== 200) {
+            resolve({ hasUpdate: false, error: `GitHub API 오류: ${res.statusCode}` });
+            return;
+          }
+
+          const releases = JSON.parse(data);
+
+          // V3 릴리즈만 필터링 (v3.x.x 형태의 태그)
+          const v3Releases = releases.filter((release: any) =>
+            release.tag_name && release.tag_name.startsWith('v3.')
+          );
+
+          if (v3Releases.length === 0) {
+            resolve({ hasUpdate: false, error: 'V3 릴리즈를 찾을 수 없습니다.' });
+            return;
+          }
+
+          // 최신 V3 릴리즈
+          const latestRelease = v3Releases[0];
+          const latestVersion = latestRelease.tag_name?.replace('v', '') || latestRelease.name;
+          const currentVersion = app.getVersion();
+
+          // 다운로드 URL 찾기 (V3 Setup.exe 파일)
+          const setupAsset = latestRelease.assets?.find((asset: any) =>
+            asset.name.includes('v3') && asset.name.includes('Setup') && asset.name.endsWith('.exe')
+          );
+
+          const hasUpdate = latestVersion !== currentVersion;
+
+          resolve({
+            hasUpdate,
+            latestVersion,
+            downloadUrl: setupAsset?.browser_download_url,
+            error: hasUpdate && !setupAsset ? '설치 파일을 찾을 수 없습니다.' : undefined
+          });
+        } catch (error) {
+          resolve({ hasUpdate: false, error: '응답 파싱 실패: ' + (error as Error).message });
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      resolve({ hasUpdate: false, error: '네트워크 오류: ' + error.message });
+    });
+
+    req.setTimeout(10000, () => {
+      req.destroy();
+      resolve({ hasUpdate: false, error: '요청 시간 초과' });
+    });
+
+    req.end();
+  });
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     height: 1000,
@@ -56,14 +137,110 @@ function createWindow(): void {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools(); // 운영 버전에서는 개발자 도구 비활성화
 }
 
 app.whenReady().then(() => {
   createWindow();
   createDefaultSEOGuide();
   registerPlaywrightHandlers();
+  createMenu();
 });
+
+// 메뉴 생성
+function createMenu() {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: '새 프로젝트',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            // 새 프로젝트 기능
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '종료',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo', label: '실행 취소' },
+        { role: 'redo', label: '다시 실행' },
+        { type: 'separator' },
+        { role: 'cut', label: '잘라내기' },
+        { role: 'copy', label: '복사' },
+        { role: 'paste', label: '붙여넣기' },
+        { role: 'selectall', label: '모두 선택' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload', label: '새로고침' },
+        { role: 'forceReload', label: '강제 새로고침' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: '확대/축소 재설정' },
+        { role: 'zoomIn', label: '확대' },
+        { role: 'zoomOut', label: '축소' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '전체화면 토글' }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: '업데이트 확인',
+          click: async () => {
+            try {
+              console.log('업데이트 확인 시작...');
+              const updateInfo = await checkForUpdates();
+
+              if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-check-result', updateInfo);
+              }
+
+              if (updateInfo.error) {
+                console.error('업데이트 확인 실패:', updateInfo.error);
+              } else if (updateInfo.hasUpdate) {
+                console.log(`새 버전 발견: ${updateInfo.latestVersion}`);
+              } else {
+                console.log('최신 버전을 사용 중입니다.');
+              }
+            } catch (error) {
+              console.error('업데이트 확인 실패:', error);
+              if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('update-check-result', {
+                  hasUpdate: false,
+                  error: '업데이트 확인 중 오류가 발생했습니다.'
+                });
+              }
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '블로그 자동화 v3 정보',
+          click: () => {
+            // 정보 다이얼로그
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 // 기본 SEO 가이드 문서 생성
 async function createDefaultSEOGuide() {
@@ -617,7 +794,7 @@ ipcMain.handle('clipboard:copyImage', async (event, filePath: string) => {
 
 ipcMain.handle('file:deleteTempFile', async (event, filePath: string) => {
   const fs = require('fs');
-  
+
   try {
     console.log(`🗑️ 임시 파일 삭제: ${filePath}`);
     await fs.promises.unlink(filePath);
@@ -626,6 +803,27 @@ ipcMain.handle('file:deleteTempFile', async (event, filePath: string) => {
   } catch (error) {
     console.error('임시 파일 삭제 실패:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+// App version handler
+ipcMain.handle('app:get-version', async () => {
+  return app.getVersion();
+});
+
+// Update checker handler
+ipcMain.handle('app:check-for-updates', async () => {
+  return await checkForUpdates();
+});
+
+// Update download handler
+ipcMain.handle('app:download-update', async (event, downloadUrl: string) => {
+  try {
+    await shell.openExternal(downloadUrl);
+    return { success: true };
+  } catch (error) {
+    console.error('업데이트 다운로드 실패:', error);
+    return { success: false, error: (error as Error).message };
   }
 });
 

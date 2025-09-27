@@ -65,12 +65,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playwrightCleanup: () => ipcRenderer.invoke('playwright-cleanup'),
   
   // File operations for images
-  saveTempFile: (fileName: string, data: number[]) => 
+  saveTempFile: (fileName: string, data: number[]) =>
     ipcRenderer.invoke('file:saveTempFile', { fileName, data }),
-  copyImageToClipboard: (filePath: string) => 
+  copyImageToClipboard: (filePath: string) =>
     ipcRenderer.invoke('clipboard:copyImage', filePath),
-  deleteTempFile: (filePath: string) => 
+  deleteTempFile: (filePath: string) =>
     ipcRenderer.invoke('file:deleteTempFile', filePath),
+
+  // App info
+  getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+
+  // Update checker
+  checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
+  downloadUpdate: (downloadUrl: string) => ipcRenderer.invoke('app:download-update', downloadUrl),
+  onUpdateCheckResult: (callback: (data: any) => void) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('update-check-result', handler);
+    return () => ipcRenderer.removeListener('update-check-result', handler);
+  },
 });
 
 // Type definitions for renderer
@@ -115,6 +127,10 @@ declare global {
       saveTempFile: (fileName: string, data: number[]) => Promise<{ success: boolean; filePath?: string; error?: string }>;
       copyImageToClipboard: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       deleteTempFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+      getAppVersion: () => Promise<string>;
+      checkForUpdates: () => Promise<{ hasUpdate: boolean; latestVersion?: string; downloadUrl?: string; error?: string }>;
+      downloadUpdate: (downloadUrl: string) => Promise<{ success: boolean; error?: string }>;
+      onUpdateCheckResult: (callback: (data: any) => void) => (() => void);
     };
   }
 }

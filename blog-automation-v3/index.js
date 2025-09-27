@@ -51,7 +51,7 @@ function createWindow() {
         },
     });
     mainWindow.loadURL('http://localhost:8081');
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools(); // 개발자 도구 비활성화
 }
 electron_1.app.whenReady().then(createWindow);
 electron_1.app.on('window-all-closed', () => {
