@@ -4,10 +4,35 @@ import * as fs from 'fs';
 export class ClaudeWebService {
   private browser: any;
   private page: any;
+  private debugPort: number;
 
   constructor() {
     this.browser = null;
     this.page = null;
+    this.debugPort = 9222; // 기본 포트
+  }
+
+  // 사용 가능한 포트 찾기
+  private async findAvailablePort(startPort: number = 9222): Promise<number> {
+    const { exec } = require('child_process');
+
+    for (let port = startPort; port < startPort + 100; port++) {
+      const isAvailable = await new Promise<boolean>((resolve) => {
+        exec(`netstat -ano | findstr :${port}`, (error: any, stdout: string) => {
+          // 포트가 사용중이면 stdout에 결과가 있음
+          resolve(!stdout || stdout.trim() === '');
+        });
+      });
+
+      if (isAvailable) {
+        console.log(`✅ 사용 가능한 포트 발견: ${port}`);
+        return port;
+      } else {
+        console.log(`⚠️ 포트 ${port} 사용중, 다음 포트 확인...`);
+      }
+    }
+
+    throw new Error('사용 가능한 포트를 찾을 수 없습니다 (9222-9321 범위)');
   }
 
   async openBrowser() {
@@ -15,34 +40,22 @@ export class ClaudeWebService {
       const { exec } = require('child_process');
       const os = require('os');
       const path = require('path');
-      
-      // 기존 디버깅 모드 Chrome 종료 (포트 9222 사용하는 프로세스만)
-      await new Promise((resolve) => {
-        exec('netstat -ano | findstr :9222', (error: any, stdout: string) => {
-          if (stdout) {
-            const lines = stdout.split('\n');
-            lines.forEach((line: string) => {
-              const pid = line.trim().split(/\s+/).pop();
-              if (pid && pid !== 'PID') {
-                exec(`taskkill /F /PID ${pid}`, () => {});
-              }
-            });
-          }
-          setTimeout(resolve, 2000);
-        });
-      });
-      
+
+      // 사용 가능한 포트 찾기
+      this.debugPort = await this.findAvailablePort(9222);
+      console.log(`🚀 Chrome을 포트 ${this.debugPort}에서 실행합니다`);
+
       // 자동화 전용 프로필 디렉토리
       const automationProfileDir = path.join(os.homedir(), 'AppData', 'Local', 'BlogAutomation', 'Chrome_Profile');
-      
-      // 자동화용 Chrome을 별도 프로필로 실행 (클립보드 권한만 허용)
-      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=9222 --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check --disable-background-timer-throttling`);
-      
+
+      // 자동화용 Chrome을 별도 프로필로 실행 (동적 포트 사용)
+      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=${this.debugPort} --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check --disable-background-timer-throttling`);
+
       // Chrome 시작 대기
       await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      // 실행중인 Chrome에 연결
-      this.browser = await chromium.connectOverCDP('http://localhost:9222');
+
+      // 실행중인 Chrome에 연결 (동적 포트 사용)
+      this.browser = await chromium.connectOverCDP(`http://localhost:${this.debugPort}`);
       
       // 클립보드 권한 허용
       const context = this.browser.contexts()[0];
