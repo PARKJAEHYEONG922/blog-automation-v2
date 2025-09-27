@@ -1,4 +1,5 @@
 import React from 'react';
+import SuccessModal from './SuccessModal';
 
 interface SavedDocument {
   id: string;
@@ -17,6 +18,7 @@ interface DocumentUploadSectionProps {
   onToggleSeoGuide: (doc: SavedDocument) => void;
   onFileUpload: (type: 'writingStyle' | 'seoGuide', file: File) => void;
   onOpenDeleteDialog: (type: 'writingStyle' | 'seoGuide', docId: string, docName: string) => void;
+  onUrlCrawl: (url: string) => Promise<{ title: string; contentLength: number } | null>;
 }
 
 const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
@@ -28,7 +30,42 @@ const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
   onToggleSeoGuide,
   onFileUpload,
   onOpenDeleteDialog,
+  onUrlCrawl,
 }) => {
+  const [urlInput, setUrlInput] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [successModal, setSuccessModal] = React.useState<{
+    isOpen: boolean;
+    title: string;
+    contentLength: number;
+  }>({
+    isOpen: false,
+    title: '',
+    contentLength: 0,
+  });
+
+  const handleUrlSubmit = async () => {
+    if (!urlInput.trim()) return;
+
+    setIsLoading(true);
+    try {
+      const result = await onUrlCrawl(urlInput.trim());
+      setUrlInput('');
+
+      // 성공 모달 표시
+      if (result) {
+        setSuccessModal({
+          isOpen: true,
+          title: result.title,
+          contentLength: result.contentLength,
+        });
+      }
+    } catch (error) {
+      console.error('URL 크롤링 실패:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 mb-5 shadow-sm hover:shadow-md transition-shadow duration-300">
       <div className="text-center mb-6">
@@ -64,6 +101,31 @@ const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
             }}
             className="w-full p-3 border-2 border-dashed border-purple-300 rounded-lg bg-white/70 cursor-pointer text-sm transition-all duration-200 hover:border-purple-400 hover:bg-white focus:outline-none focus:border-purple-500"
           />
+
+          <div className="mt-4 pt-4 border-t border-purple-200">
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="text-sm">🔗</span>
+              <span className="text-sm font-medium text-gray-700">또는 블로그 URL로 가져오기</span>
+            </div>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="네이버 블로그 또는 티스토리 URL을 입력하세요"
+                className="flex-1 p-2 border border-purple-300 rounded-lg text-sm focus:outline-none focus:border-purple-500"
+                onKeyPress={(e) => e.key === 'Enter' && handleUrlSubmit()}
+                disabled={isLoading}
+              />
+              <button
+                onClick={handleUrlSubmit}
+                disabled={!urlInput.trim() || isLoading}
+                className="px-4 py-2 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {isLoading ? '📥' : '가져오기'}
+              </button>
+            </div>
+          </div>
 
           {savedWritingStyles.length > 0 && (
             <div className="mt-3">
@@ -164,6 +226,14 @@ const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
           )}
         </div>
       </div>
+
+      {/* 성공 모달 */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        title={successModal.title}
+        contentLength={successModal.contentLength}
+        onClose={() => setSuccessModal({ isOpen: false, title: '', contentLength: 0 })}
+      />
     </div>
   );
 };

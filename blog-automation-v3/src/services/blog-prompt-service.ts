@@ -103,17 +103,17 @@ export class BlogPromptService {
     // 첨부된 파일에 따른 구체적인 설명
     if (data.writingStyleCount > 0) {
       if (data.writingStyleCount === 1) {
-        prompt += `1번 문서는 블로그 말투 참고 문서입니다. 이 말투를 참고해서 `;
+        prompt += `1번 문서는 현재 내 블로그 글의 말투와 스타일입니다. 이 글을 참고하여 `;
       } else {
-        prompt += `1번, 2번 문서는 블로그 말투 참고 문서입니다. 이 말투들을 참고해서 `;
+        prompt += `1번, 2번 문서는 현재 내 블로그 글의 말투와 스타일입니다. 이 글을 참고하여 `;
       }
     }
-    
+
     if (data.hasSeoGuide) {
       if (data.writingStyleCount > 0) {
-        prompt += `자연스럽게 글을 작성하되, ${data.writingStyleCount + 1}번 문서의 네이버 블로그 SEO 최적화 가이드를 참고하여 글을 작성해주세요.\n\n`;
+        prompt += `제시한 제목의 글을 자연스럽게 작성해주세요. ${data.writingStyleCount + 1}번 문서는 네이버블로그 SEO 최적화 가이드입니다. 블로그 글을 작성할때 참고하여 작성해주세요.\n\n`;
       } else {
-        prompt += `1번 문서의 네이버 블로그 SEO 최적화 가이드를 참고하여 글을 작성해주세요.\n\n`;
+        prompt += `1번 문서는 네이버블로그 SEO 최적화 가이드입니다. 블로그 글을 작성할때 참고하여 작성해주세요.\n\n`;
       }
     }
     
@@ -187,10 +187,10 @@ ${currentDate}일 기준으로 작성, 최신성이 중요한 글이면 최신 �
     if (data.hasSeoGuide) {
       if (data.writingStyleCount > 0) {
         prompt += `
-- ${data.writingStyleCount + 1}번 문서의 **네이버 블로그 SEO 최적화 가이드**를 참고하여 글을 작성해주세요`;
+- ${data.writingStyleCount + 1}번 문서의 **네이버블로그 SEO 최적화 가이드**를 참고하여 글을 작성해주세요`;
       } else {
         prompt += `
-- 1번 문서의 **네이버 블로그 SEO 최적화 가이드**를 참고하여 글을 작성해주세요`;
+- 1번 문서의 **네이버블로그 SEO 최적화 가이드**를 참고하여 글을 작성해주세요`;
       }
     }
 

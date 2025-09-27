@@ -180,11 +180,12 @@ const App: React.FC = () => {
               />
             )}
             {currentStep === 2 && (
-              <Step2Generation 
+              <Step2Generation
                 content={generatedContent}
                 setupData={setupData}
                 onReset={handleReset}
                 onGoBack={handleGoBack}
+                aiModelStatus={aiModelStatus}
               />
             )}
           </div>
@@ -198,6 +199,8 @@ const App: React.FC = () => {
           onClose={() => setShowLLMSettings(false)}
           onSettingsChange={() => {
             refreshModelStatus();
+            // Step2에서도 감지할 수 있도록 전역 이벤트 발생
+            window.dispatchEvent(new CustomEvent('app-llm-settings-changed'));
           }}
         />
       )}

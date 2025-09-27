@@ -192,7 +192,8 @@ ipcMain.handle('image:generate', async (event, prompt: string) => {
     const imageClient = LLMClientFactory.getImageClient();
     const imageUrl = await imageClient.generateImage(prompt, {
       quality: imageConfig.quality || 'medium',
-      size: imageConfig.size || '1024x1024'
+      size: imageConfig.size || '1024x1024',
+      style: imageConfig.style || 'realistic'
     });
     
     return imageUrl;
@@ -200,9 +201,20 @@ ipcMain.handle('image:generate', async (event, prompt: string) => {
   } catch (error) {
     console.error('이미지 생성 실패:', error);
     
-    // 실패한 경우 에러 메시지와 함께 placeholder 반환
+    // 실패한 경우 에러 메시지와 함께 SVG 에러 이미지 반환
     const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
-    return `https://via.placeholder.com/400x300/ff6b6b/ffffff?text=${encodeURIComponent(errorMsg.substring(0, 30))}`;
+    const errorSvg = `data:image/svg+xml;base64,${Buffer.from(`
+      <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+        <rect width="400" height="300" fill="#ff6b6b"/>
+        <text x="200" y="150" text-anchor="middle" fill="white" font-family="Arial" font-size="14">
+          이미지 생성 실패
+        </text>
+        <text x="200" y="180" text-anchor="middle" fill="white" font-family="Arial" font-size="12">
+          ${errorMsg.substring(0, 30)}
+        </text>
+      </svg>
+    `).toString('base64')}`;
+    return errorSvg;
   }
 });
 
@@ -408,11 +420,51 @@ ipcMain.handle('llm:test-config', async (event, config) => {
       }
     } else if (provider === 'gemini') {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      
+
       if (response.ok) {
         return { success: true, message: 'Gemini API 연결 성공' };
       } else {
         return { success: false, message: `Gemini API 오류: ${response.status}` };
+      }
+    } else if (provider === 'runware') {
+      // Runware API 테스트 - 간단한 요청으로 API 키 유효성 확인
+      // UUIDv4 생성 함수
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+
+      const testUUID = generateUUID();
+      const response = await fetch('https://api.runware.ai/v1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify([
+          {
+            taskType: 'imageInference',
+            taskUUID: testUUID,
+            positivePrompt: 'test image',
+            width: 512,
+            height: 512,
+            model: 'civitai:4201@130072', // 기본 모델
+            numberResults: 1,
+            steps: 1, // 최소 steps
+            CFGScale: 7,
+            seed: 12345
+          }
+        ])
+      });
+
+      if (response.ok) {
+        return { success: true, message: 'Runware API 연결 성공' };
+      } else {
+        const errorText = await response.text();
+        return { success: false, message: `Runware API 오류: ${response.status} - ${errorText}` };
       }
     } else {
       return { success: false, message: '지원하지 않는 API 제공자입니다' };

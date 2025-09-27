@@ -24,9 +24,13 @@ interface Step2Props {
   };
   onReset: () => void;
   onGoBack: () => void;
+  aiModelStatus: {
+    writing: string;
+    image: string;
+  };
 }
 
-const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, onGoBack }) => {
+const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, onGoBack, aiModelStatus }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [originalContent, setOriginalContent] = useState<string>('');
   const [editedContent, setEditedContent] = useState<string>('');
@@ -1143,6 +1147,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
         imagePositions={imagePositions}
         imagePrompts={imagePrompts}
         onImagesChange={handleImagesChange}
+        aiModelStatus={aiModelStatus}
       />
 
 

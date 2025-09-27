@@ -23,6 +23,7 @@ interface ProviderApiKeys {
   claude: string;
   openai: string;
   gemini: string;
+  runware: string;
 }
 
 const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) => {
@@ -30,19 +31,20 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
   const [providerApiKeys, setProviderApiKeys] = useState<ProviderApiKeys>({
     claude: '',
     openai: '',
-    gemini: ''
+    gemini: '',
+    runware: ''
   });
 
   // LLM 설정
   const [settings, setSettings] = useState<LLMSettings>({
     writing: { provider: 'claude', model: 'claude-sonnet-4-20250514', apiKey: '' },
-    image: { provider: 'gemini', model: 'gemini-2.5-flash-image-preview', apiKey: '', style: 'realistic' }
+    image: { provider: 'gemini', model: 'gemini-2.5-flash-image-preview', apiKey: '', style: 'photographic', quality: 'high', size: '1024x1024' }
   });
 
   // 실제 적용된 설정
   const [appliedSettings, setAppliedSettings] = useState<LLMSettings>({
     writing: { provider: '', model: '', apiKey: '' },
-    image: { provider: '', model: '', apiKey: '', style: 'realistic' }
+    image: { provider: '', model: '', apiKey: '', style: 'photographic', quality: 'high', size: '1024x1024' }
   });
 
   // API 키 테스트 상태
@@ -93,7 +95,8 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
   const providers = [
     { id: 'claude', name: 'Claude', icon: '🟠', color: 'orange' },
     { id: 'openai', name: 'OpenAI', icon: '🔵', color: 'blue' },
-    { id: 'gemini', name: 'Gemini', icon: '🟢', color: 'green' }
+    { id: 'gemini', name: 'Gemini', icon: '🟢', color: 'green' },
+    { id: 'runware', name: 'Runware', icon: '⚡', color: 'purple' }
   ];
 
   const modelsByProvider = {
@@ -109,6 +112,10 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
         { id: 'gpt-5', name: 'GPT-5', description: '최고 성능 모델', tier: 'enterprise' },
         { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: '균형잡힌 성능', tier: 'premium' },
         { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: '빠르고 경제적', tier: 'basic' }
+      ],
+      image: [
+        { id: 'dall-e-3', name: 'DALL-E 3', description: '고품질 이미지 생성 (권장)', tier: 'basic' },
+        { id: 'gpt-image-1', name: 'GPT Image 1', description: '최신 모델 (Limited Access 필요)', tier: 'premium' }
       ]
     },
     gemini: {
@@ -118,6 +125,12 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
       ],
       image: [
         { id: 'gemini-2.5-flash-image-preview', name: 'Gemini 2.5 Flash Image', description: '이미지 생성 및 편집', tier: 'enterprise' }
+      ]
+    },
+    runware: {
+      image: [
+        { id: 'sdxl-base', name: 'Stable Diffusion XL', description: '다양한 스타일 지원 모델', tier: 'basic' },
+        { id: 'flux-base', name: 'FLUX.1', description: '고품질 세밀한 생성 모델', tier: 'premium' }
       ]
     }
   };
@@ -151,20 +164,20 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
     setSettings(newSettings);
   };
 
-  const handleQualityChange = (tab: keyof LLMSettings, quality: string) => {
-    const newSettings = { ...settings };
-    newSettings[tab] = {
-      ...newSettings[tab],
-      quality
-    };
-    setSettings(newSettings);
-  };
-
   const handleSizeChange = (tab: keyof LLMSettings, size: string) => {
     const newSettings = { ...settings };
     newSettings[tab] = {
       ...newSettings[tab],
       size
+    };
+    setSettings(newSettings);
+  };
+
+  const handleQualityChange = (tab: keyof LLMSettings, quality: string) => {
+    const newSettings = { ...settings };
+    newSettings[tab] = {
+      ...newSettings[tab],
+      quality
     };
     setSettings(newSettings);
   };
@@ -209,11 +222,17 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
         // 성공
         setTestingStatus(prev => ({
           ...prev,
-          [category]: { 
-            testing: false, 
-            success: true, 
-            message: `✅ ${provider.toUpperCase()} API 연결 성공! ${model} 모델이 적용되었습니다.` 
+          [category]: {
+            testing: false,
+            success: true,
+            message: `✅ ${provider.toUpperCase()} API 연결 성공! ${model} 모델이 적용되었습니다.`
           }
+        }));
+
+        // 커스텀 이벤트 발생 (2단계에서 실시간 감지용)
+        console.log('🚀 LLMSettings에서 이벤트 발생:', { category, provider, model });
+        window.dispatchEvent(new CustomEvent('llm-settings-changed', {
+          detail: { category, provider, model }
         }));
         
         // 테스트 성공한 설정을 appliedSettings에 반영
@@ -351,11 +370,11 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
   };
 
   const getWritingProviders = () => {
-    return providers; // 모든 provider 지원
+    return providers.filter(p => p.id !== 'runware'); // Runware는 이미지 전용이므로 글쓰기에서 제외
   };
 
   const getImageProviders = () => {
-    return providers.filter(p => p.id === 'gemini'); // 제미나이만 지원
+    return providers.filter(p => ['gemini', 'openai', 'runware'].includes(p.id)); // 이미지 모델 지원하는 provider들
   };
 
   return (
@@ -655,7 +674,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
           <div>
             <div className="mb-6">
               <label className="block mb-3 text-sm font-semibold text-gray-700">
-                제공업체 (Gemini만 지원)
+                제공업체
               </label>
               <div className="flex gap-3 flex-wrap">
                 {getImageProviders().map(provider => (
@@ -696,22 +715,196 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                 </div>
 
                 {/* 이미지 생성 옵션 */}
-                {settings.image.provider === 'gemini' && (
-                  <div className="mb-6">
-                    <label className="block mb-3 text-sm font-semibold text-gray-700">
-                      이미지 스타일
-                    </label>
-                    <select
-                      value={settings.image.style || 'realistic'}
-                      onChange={(e) => handleStyleChange('image', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
-                    >
-                      <option value="realistic">사실적</option>
-                      <option value="photographic">사진 같은</option>
-                      <option value="anime">애니메이션</option>
-                      <option value="illustration">일러스트</option>
-                      <option value="dreamy">몽환적</option>
-                    </select>
+                {settings.image.provider && (
+                  <div className="space-y-6 mb-6">
+                    {/* OpenAI GPT/DALL-E 옵션 */}
+                    {settings.image.provider === 'openai' && (
+                      <div className="space-y-4">
+                        {/* 품질 선택 */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 품질
+                          </label>
+                          <select
+                            value={settings.image.quality || 'medium'}
+                            onChange={(e) => handleQualityChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="low">저품질 - $0.01/이미지 (빠른 생성)</option>
+                            <option value="medium">중품질 - $0.04/이미지 (균형)</option>
+                            <option value="high">고품질 - $0.17/이미지 (최고 품질, 권장)</option>
+                          </select>
+                        </div>
+
+                        {/* 해상도 선택 */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 크기
+                          </label>
+                          <select
+                            value={settings.image.size || '1024x1024'}
+                            onChange={(e) => handleSizeChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="1024x1024">1024x1024 (정사각형)</option>
+                            <option value="1024x1536">1024x1536 (세로형)</option>
+                            <option value="1536x1024">1536x1024 (가로형)</option>
+                          </select>
+                        </div>
+
+                        {/* 비용 정보 */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                          <div className="text-sm text-blue-700 space-y-1">
+                            <div><strong>💰 비용:</strong> {
+                              settings.image.quality === 'low' ? '$0.01/이미지' :
+                              settings.image.quality === 'high' ? '$0.17/이미지' :
+                              '$0.04/이미지'
+                            }</div>
+                            <div><strong>📐 해상도:</strong> {settings.image.size || '1024x1024'}</div>
+                            <div><strong>⚙️ 품질:</strong> {
+                              settings.image.quality === 'low' ? '저품질 (빠름)' :
+                              settings.image.quality === 'high' ? '고품질 (최고)' :
+                              '중품질 (권장)'
+                            }</div>
+                            <div><strong>✨ 특징:</strong> GPT 기반, 정확한 텍스트 렌더링, 이미지 편집 지원</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Runware 옵션 */}
+                    {settings.image.provider === 'runware' && (
+                      <div className="space-y-4">
+                        {/* 품질 선택 */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 품질 (Steps)
+                          </label>
+                          <select
+                            value={settings.image.quality || 'medium'}
+                            onChange={(e) => handleQualityChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="low">저품질 - 10 steps (빠른 생성)</option>
+                            <option value="medium">중품질 - 15 steps (권장)</option>
+                            <option value="high">고품질 - 25 steps (최고 품질)</option>
+                          </select>
+                        </div>
+
+                        {/* 해상도 선택 */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 크기
+                          </label>
+                          <select
+                            value={settings.image.size || '1024x1024'}
+                            onChange={(e) => handleSizeChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="1024x1024">1024x1024 (정사각형)</option>
+                            <option value="1024x1536">1024x1536 (세로형)</option>
+                            <option value="1536x1024">1536x1024 (가로형)</option>
+                            <option value="512x768">512x768 (초저가 세로형)</option>
+                            <option value="768x512">768x512 (초저가 가로형)</option>
+                          </select>
+                        </div>
+
+                        {/* 스타일 선택 */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 스타일
+                          </label>
+                          <select
+                            value={settings.image.style || 'realistic'}
+                            onChange={(e) => handleStyleChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="realistic">사실적 (Realistic)</option>
+                            <option value="photographic">사진 (Photographic)</option>
+                            <option value="illustration">일러스트 (Illustration)</option>
+                            <option value="anime">애니메이션 (Anime)</option>
+                            <option value="dreamy">몽환적 (Dreamy)</option>
+                          </select>
+                        </div>
+
+                        {/* 비용 정보 */}
+                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                          <div className="text-sm text-purple-700 space-y-1">
+                            <div><strong>💰 비용:</strong> $0.0006~$0.003/이미지 (초저가!)</div>
+                            <div><strong>📐 해상도:</strong> {settings.image.size || '1024x1024'}</div>
+                            <div><strong>🎛️ 품질:</strong> {
+                              settings.image.quality === 'low' ? '10 steps (빠름)' :
+                              settings.image.quality === 'high' ? '25 steps (최고)' :
+                              '15 steps (권장)'
+                            }</div>
+                            <div><strong>🎨 스타일:</strong> {settings.image.style || 'realistic'}</div>
+                            <div><strong>⚡ 특징:</strong> 업계 최저가, 초고속 생성, 다양한 모델 지원</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Gemini 옵션 */}
+                    {settings.image.provider === 'gemini' && (
+                      <div className="space-y-4">
+                        {/* 스타일 선택 */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 스타일
+                          </label>
+                          <select
+                            value={settings.image.style || 'photographic'}
+                            onChange={(e) => handleStyleChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="photographic">사진 (Studio Photography)</option>
+                            <option value="minimalist">미니멀 (Clean Design)</option>
+                            <option value="kawaii">카와이 (Cute & Colorful)</option>
+                            <option value="artistic">아트 (Artistic Illustration)</option>
+                            <option value="impressionist">인상파 (Van Gogh Style)</option>
+                          </select>
+                        </div>
+
+                        {/* 품질 선택 (Gemini는 고정) */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 품질
+                          </label>
+                          <select
+                            value={settings.image.quality || 'high'}
+                            onChange={(e) => handleQualityChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="high">고품질 (고정)</option>
+                          </select>
+                        </div>
+
+                        {/* 크기 선택 (Gemini는 정사각형만) */}
+                        <div>
+                          <label className="block mb-3 text-sm font-semibold text-gray-700">
+                            이미지 크기
+                          </label>
+                          <select
+                            value={settings.image.size || '1024x1024'}
+                            onChange={(e) => handleSizeChange('image', e.target.value)}
+                            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
+                          >
+                            <option value="1024x1024">1024x1024 (정사각형만 지원)</option>
+                          </select>
+                        </div>
+
+                        {/* 비용 정보 */}
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                          <div className="text-sm text-green-700 space-y-1">
+                            <div><strong>💰 비용:</strong> $0.039/이미지 (고정)</div>
+                            <div><strong>📐 해상도:</strong> {settings.image.size || '1024x1024'} (정사각형만 지원)</div>
+                            <div><strong>⚙️ 품질:</strong> {settings.image.quality || 'high'}</div>
+                            <div><strong>🎨 스타일:</strong> {settings.image.style || 'photographic'}</div>
+                            <div><strong>⚠️ 참고:</strong> Gemini는 정사각형(1:1) 비율만 지원</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

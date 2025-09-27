@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface ImagePrompt {
   index: number;
@@ -11,6 +11,10 @@ interface ImageGeneratorProps {
   imagePositions: string[];
   imagePrompts?: ImagePrompt[];
   onImagesChange?: (images: { [key: string]: string }) => void;
+  aiModelStatus: {
+    writing: string;
+    image: string;
+  };
 }
 
 // 이미지 상태 타입
@@ -19,7 +23,8 @@ type ImageStatus = 'empty' | 'uploading' | 'completed' | 'generating';
 const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   imagePositions,
   imagePrompts = [],
-  onImagesChange
+  onImagesChange,
+  aiModelStatus
 }) => {
   const [editingPrompts, setEditingPrompts] = useState<{ [key: number]: string }>({});
   const [previewModal, setPreviewModal] = useState<{ 
@@ -59,44 +64,37 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     newUrl: ''
   });
   
-  // AI 설정 상태 (Gemini 전용)
+  // AI 설정 상태 (모든 provider 지원)
   const [hasImageClient, setHasImageClient] = useState(false);
   const [imageClientInfo, setImageClientInfo] = useState('미설정');
+  const [currentProvider, setCurrentProvider] = useState<'gemini' | 'openai' | 'runware' | ''>('');
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [shouldStopGeneration, setShouldStopGeneration] = useState(false);
   const shouldStopRef = useRef(false);
-  const [imageQuality, setImageQuality] = useState<'high'>('high');
-  const [imageSize, setImageSize] = useState<'1024x1024'>('1024x1024');
-  const [imageStyle, setImageStyle] = useState<'realistic' | 'photographic' | 'anime' | 'illustration' | 'dreamy'>('realistic');
+  const [imageQuality, setImageQuality] = useState<'low' | 'medium' | 'high'>('high');
+  const [imageSize, setImageSize] = useState<'512x768' | '768x512' | '1024x1024' | '1024x1536' | '1536x1024'>('1024x1024');
+  const [imageStyle, setImageStyle] = useState<'realistic' | 'photographic' | 'minimalist' | 'kawaii' | 'artistic' | 'impressionist' | 'illustration' | 'anime' | 'dreamy'>('photographic');
   
-  // API 설정에서 이미지 설정 로드
+  // Use aiModelStatus prop to determine current image provider and model
   useEffect(() => {
-    const loadImageSettings = async () => {
-      try {
-        const settings = await window.electronAPI?.getLLMSettings?.();
-        if (settings?.appliedSettings?.image) {
-          const imageConfig = settings.appliedSettings.image;
-          if (imageConfig.provider && imageConfig.apiKey) {
-            setHasImageClient(true);
-            setImageClientInfo(`${imageConfig.provider} ${imageConfig.model || ''}`);
-            if (imageConfig.style) {
-              setImageStyle(imageConfig.style as 'realistic' | 'photographic' | 'anime' | 'illustration' | 'dreamy');
-            }
-            if (imageConfig.quality) {
-              setImageQuality(imageConfig.quality as 'high');
-            }
-            if (imageConfig.size) {
-              setImageSize(imageConfig.size as '1024x1024');
-            }
-          }
-        }
-      } catch (error) {
-        console.error('이미지 설정 로드 실패:', error);
-      }
-    };
-    
-    loadImageSettings();
-  }, []);
+    console.log('🔄 ImageGenerator - aiModelStatus changed:', aiModelStatus);
+
+    if (aiModelStatus.image && aiModelStatus.image !== '미설정') {
+      setHasImageClient(true);
+      setImageClientInfo(aiModelStatus.image);
+
+      // Extract provider from aiModelStatus (e.g., "openai GPT-Image-1" -> "openai")
+      const provider = aiModelStatus.image.toLowerCase().split(' ')[0] as 'gemini' | 'openai' | 'runware';
+      setCurrentProvider(provider);
+
+      console.log('✅ ImageGenerator - provider set to:', provider);
+    } else {
+      setHasImageClient(false);
+      setImageClientInfo('미설정');
+      setCurrentProvider('');
+    }
+  }, [aiModelStatus]);
+
 
   // v2와 동일한 이미지 히스토리 세션스토리지 저장
   useEffect(() => {
@@ -283,13 +281,25 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     setImageStatus(prev => ({ ...prev, [imageIndex]: 'generating' }));
     
     try {
-      // 스타일을 포함한 프롬프트 생성
-      const styledPrompt = `${prompt}, style: ${imageStyle}`;
-      
-      console.log(`이미지 ${imageIndex} 생성 시작:`, { prompt: styledPrompt, style: imageStyle });
-      
-      // 실제 API 호출
-      const imageUrl = await window.electronAPI?.generateImage?.(styledPrompt);
+      // 프롬프트 (스타일은 options으로 전달)
+      const enhancedPrompt = prompt;
+
+      console.log(`이미지 ${imageIndex} 생성 시작:`, {
+        prompt: enhancedPrompt,
+        style: imageStyle,
+        quality: imageQuality,
+        size: imageSize
+      });
+
+      console.log('실제 전달되는 imageSize 값:', imageSize);
+
+      // 이미지 옵션은 메인 프로세스에서 LLM 설정에서 가져오므로 여기서는 처리하지 않음
+
+      // 이미지 옵션은 메인 프로세스에서 LLM 설정을 사용하므로 별도로 전달하지 않음
+      console.log('프롬프트로 이미지 생성 요청:', enhancedPrompt);
+
+      // 실제 API 호출 (옵션은 저장된 LLM 설정 사용)
+      const imageUrl = await window.electronAPI?.generateImage?.(enhancedPrompt);
       
       // 정지 요청 확인 (배치 모드일 때만)
       if (shouldStopRef.current && isPartOfBatch) {
@@ -411,7 +421,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     shouldStopRef.current = true;
     console.log('배치 생성 정지 요청');
   };
-  
+
   // 이미지 설정을 API 설정에 저장
   const saveImageSettingToAPI = async (settingType: 'style' | 'quality' | 'size', value: string) => {
     try {
@@ -427,7 +437,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
             }
           }
         };
-        
+
         await window.electronAPI?.saveLLMSettings?.(updatedSettings);
         console.log(`이미지 ${settingType} 설정 저장됨:`, value);
       }
@@ -435,13 +445,26 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       console.error('이미지 설정 저장 실패:', error);
     }
   };
-  
+
   // 스타일 변경 핸들러 (API 설정과 동기화)
-  const handleStyleChange = async (newStyle: 'realistic' | 'photographic' | 'anime' | 'illustration' | 'dreamy') => {
+  const handleStyleChange = async (newStyle: typeof imageStyle) => {
     setImageStyle(newStyle);
     await saveImageSettingToAPI('style', newStyle);
   };
-  
+
+  // 품질 변경 핸들러 (API 설정과 동기화)
+  const handleQualityChange = async (newQuality: typeof imageQuality) => {
+    setImageQuality(newQuality);
+    await saveImageSettingToAPI('quality', newQuality);
+  };
+
+  // 크기 변경 핸들러 (API 설정과 동기화)
+  const handleSizeChange = async (newSize: typeof imageSize) => {
+    setImageSize(newSize);
+    await saveImageSettingToAPI('size', newSize);
+  };
+
+
   // 공통 스타일
   const buttonStyle = (bgColor: string, disabled = false) => ({
     padding: '6px 12px',
@@ -522,53 +545,153 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                 <span>🎛️</span>
                 <span>이미지 생성 옵션</span>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* 품질 설정 */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">
-                    품질
-                  </label>
-                  <select
-                    value={imageQuality}
-                    onChange={(e) => setImageQuality(e.target.value as 'high')}
-                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
-                  >
-                    <option value="high">고품질 (권장)</option>
-                  </select>
-                </div>
-                
-                {/* 해상도 설정 */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">
-                    해상도
-                  </label>
-                  <select
-                    value={imageSize}
-                    onChange={(e) => setImageSize(e.target.value as '1024x1024')}
-                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
-                  >
-                    <option value="1024x1024">정사각형 (1024×1024)</option>
-                  </select>
-                </div>
-                
-                {/* 스타일 설정 */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">
-                    스타일
-                  </label>
-                  <select
-                    value={imageStyle}
-                    onChange={(e) => handleStyleChange(e.target.value as 'realistic' | 'photographic' | 'anime' | 'illustration' | 'dreamy')}
-                    className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
-                  >
-                    <option value="realistic">사실적</option>
-                    <option value="photographic">사진 같은</option>
-                    <option value="anime">애니메이션</option>
-                    <option value="illustration">일러스트</option>
-                    <option value="dreamy">몽환적</option>
-                  </select>
-                </div>
+                {/* OpenAI 옵션 */}
+                {currentProvider === 'openai' && (
+                  <>
+                    {/* 품질 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        품질
+                      </label>
+                      <select
+                        value={imageQuality}
+                        onChange={(e) => handleQualityChange(e.target.value as typeof imageQuality)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="low">저품질 - $0.01/이미지</option>
+                        <option value="medium">중품질 - $0.04/이미지</option>
+                        <option value="high">고품질 - $0.17/이미지</option>
+                      </select>
+                    </div>
+
+                    {/* 해상도 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        해상도
+                      </label>
+                      <select
+                        value={imageSize}
+                        onChange={(e) => handleSizeChange(e.target.value as typeof imageSize)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="1024x1024">1024x1024 (정사각형)</option>
+                        <option value="1024x1536">1024x1536 (세로형)</option>
+                        <option value="1536x1024">1536x1024 (가로형)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {/* Runware 옵션 */}
+                {currentProvider === 'runware' && (
+                  <>
+                    {/* 품질 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        품질 (Steps)
+                      </label>
+                      <select
+                        value={imageQuality}
+                        onChange={(e) => handleQualityChange(e.target.value as typeof imageQuality)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="low">저품질 - 10 steps</option>
+                        <option value="medium">중품질 - 15 steps</option>
+                        <option value="high">고품질 - 25 steps</option>
+                      </select>
+                    </div>
+
+                    {/* 해상도 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        해상도
+                      </label>
+                      <select
+                        value={imageSize}
+                        onChange={(e) => handleSizeChange(e.target.value as typeof imageSize)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="512x768">512x768 (초저가 세로)</option>
+                        <option value="768x512">768x512 (초저가 가로)</option>
+                        <option value="1024x1024">1024x1024 (정사각형)</option>
+                        <option value="1024x1536">1024x1536 (세로형)</option>
+                        <option value="1536x1024">1536x1024 (가로형)</option>
+                      </select>
+                    </div>
+
+                    {/* 스타일 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        스타일
+                      </label>
+                      <select
+                        value={imageStyle}
+                        onChange={(e) => handleStyleChange(e.target.value as typeof imageStyle)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="realistic">사실적</option>
+                        <option value="photographic">사진</option>
+                        <option value="illustration">일러스트</option>
+                        <option value="anime">애니메이션</option>
+                        <option value="dreamy">몽환적</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {/* Gemini 옵션 */}
+                {currentProvider === 'gemini' && (
+                  <>
+                    {/* 스타일 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        스타일
+                      </label>
+                      <select
+                        value={imageStyle}
+                        onChange={(e) => handleStyleChange(e.target.value as typeof imageStyle)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="photographic">사진 (Studio Photography)</option>
+                        <option value="minimalist">미니멀 (Clean Design)</option>
+                        <option value="kawaii">카와이 (Cute & Colorful)</option>
+                        <option value="artistic">아트 (Artistic Illustration)</option>
+                        <option value="impressionist">인상파 (Van Gogh Style)</option>
+                      </select>
+                    </div>
+
+                    {/* 품질 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        품질
+                      </label>
+                      <select
+                        value={imageQuality}
+                        onChange={(e) => handleQualityChange(e.target.value as typeof imageQuality)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                      >
+                        <option value="high">고품질 (고정)</option>
+                      </select>
+                    </div>
+
+                    {/* 해상도 설정 */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        해상도
+                      </label>
+                      <select
+                        value={imageSize}
+                        onChange={(e) => handleSizeChange(e.target.value as typeof imageSize)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 cursor-pointer focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200"
+                        disabled
+                      >
+                        <option value="1024x1024">1024x1024 (정사방형만)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

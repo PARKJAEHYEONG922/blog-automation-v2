@@ -276,6 +276,44 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     return newDocument;
   };
 
+  // URL 크롤링 핸들러
+  const handleUrlCrawl = async (url: string): Promise<{ title: string; contentLength: number } | null> => {
+    try {
+      const { BlogCrawler } = await import('../../services/blog-crawler');
+      const crawler = new BlogCrawler();
+
+      // 임시 제목으로 시작 (크롤링에서 실제 제목을 추출할 것임)
+      const tempTitle = '크롤링중';
+
+      // 블로그 콘텐츠 크롤링 (실제 제목은 크롤링 과정에서 추출됨)
+      const blogContent = await (crawler as any).crawlBlogContent(url, tempTitle);
+
+      if (blogContent.success) {
+        // 크롤링에서 추출한 실제 제목을 파일명으로 사용
+        const actualTitle = blogContent.title || '제목없음';
+        const fileName = actualTitle.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50);
+        const savedDoc = await saveDocumentAuto('writingStyle', fileName, blogContent.textContent);
+
+        // 자동으로 선택 목록에 추가
+        if (selectedWritingStyles.length < 2) {
+          setSelectedWritingStyles([...selectedWritingStyles, savedDoc]);
+        }
+
+        // 성공 정보 반환 (alert 대신 모달에서 표시)
+        return {
+          title: actualTitle,
+          contentLength: blogContent.contentLength
+        };
+      } else {
+        throw new Error(blogContent.error || '크롤링 실패');
+      }
+    } catch (error) {
+      console.error('URL 크롤링 실패:', error);
+      alert(`블로그 글 가져오기에 실패했습니다.\n오류: ${(error as Error).message}`);
+      return null;
+    }
+  };
+
   const handleFileUpload = (type: 'writingStyle' | 'seoGuide', file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -590,6 +628,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         onToggleSeoGuide={toggleSeoGuide}
         onFileUpload={handleFileUpload}
         onOpenDeleteDialog={openDeleteDialog}
+        onUrlCrawl={handleUrlCrawl}
       />
 
       {/* 키워드 입력 섹션 */}
