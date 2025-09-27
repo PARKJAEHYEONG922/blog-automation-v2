@@ -92,9 +92,16 @@ const App: React.FC = () => {
         await window.electronAPI.playwrightCleanup();
         console.log('✅ Playwright 브라우저 정리 완료');
       }
-      
-      // Claude Web 서비스 정리 (추가 필요시)
-      // 기타 브라우저 관련 정리 작업
+
+      // Claude Web 서비스 정리
+      if (window.electronAPI?.cleanupClaudeWeb) {
+        const result = await window.electronAPI.cleanupClaudeWeb();
+        if (result.success) {
+          console.log('✅ Claude Web 서비스 정리 완료');
+        } else {
+          console.warn('⚠️ Claude Web 서비스 정리 실패:', result.error);
+        }
+      }
       
     } catch (error) {
       console.warn('⚠️ 브라우저 정리 중 오류:', error);

@@ -5,10 +5,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('electronAPI', {
   // Claude Web automation
   openClaudeWeb: () => ipcRenderer.invoke('claude-web:open'),
-  sendToClaudeWeb: (writingStylePaths: string[], seoGuidePath: string, topic: string) => 
+  sendToClaudeWeb: (writingStylePaths: string[], seoGuidePath: string, topic: string) =>
     ipcRenderer.invoke('claude-web:send-prompt', writingStylePaths, seoGuidePath, topic),
   waitForClaudeResponse: () => ipcRenderer.invoke('claude-web:wait-response'),
   downloadFromClaude: () => ipcRenderer.invoke('claude-web:download'),
+  cleanupClaudeWeb: () => ipcRenderer.invoke('claude-web:cleanup'),
   
   // File management
   saveDocument: (type: 'writingStyle' | 'seoGuide', name: string, content: string) =>
@@ -93,6 +94,7 @@ declare global {
       sendToClaudeWeb: (writingStylePaths: string[], seoGuidePath: string, topic: string) => Promise<void>;
       waitForClaudeResponse: () => Promise<void>;
       downloadFromClaude: () => Promise<string>;
+      cleanupClaudeWeb: () => Promise<{ success: boolean; error?: string }>;
       saveDocument: (type: 'writingStyle' | 'seoGuide', name: string, content: string) => Promise<string>;
       deleteDocument: (filePath: string) => Promise<boolean>;
       loadDocuments: (type: 'writingStyle' | 'seoGuide') => Promise<any[]>;

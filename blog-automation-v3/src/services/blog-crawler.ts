@@ -1,4 +1,8 @@
-import { SelectedBlogTitle } from './blog-title-selector';
+export interface SelectedBlogTitle {
+  title: string;
+  url: string;
+  relevanceReason: string;
+}
 
 export interface BlogContent {
   url: string;

@@ -137,7 +137,20 @@ function createWindow(): void {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-  // mainWindow.webContents.openDevTools(); // 운영 버전에서는 개발자 도구 비활성화
+
+  // 개발자 도구 단축키 등록 (Ctrl+Shift+I, F12)
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown') {
+      // Ctrl+Shift+I
+      if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+        mainWindow.webContents.toggleDevTools();
+      }
+      // F12
+      if (input.key === 'F12') {
+        mainWindow.webContents.toggleDevTools();
+      }
+    }
+  });
 }
 
 app.whenReady().then(() => {
@@ -325,6 +338,18 @@ ipcMain.handle('claude-web:wait-response', async () => {
 
 ipcMain.handle('claude-web:download', async () => {
   return await claudeWebService.copyContent();
+});
+
+ipcMain.handle('claude-web:cleanup', async () => {
+  try {
+    console.log('🧹 Claude Web 서비스 정리 시작...');
+    await claudeWebService.close();
+    console.log('✅ Claude Web 서비스 정리 완료');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Claude Web 서비스 정리 실패:', error);
+    return { success: false, error: (error as Error).message };
+  }
 });
 
 // IPC handlers for image generation
