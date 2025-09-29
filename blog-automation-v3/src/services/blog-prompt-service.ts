@@ -101,20 +101,16 @@ export class BlogPromptService {
     let prompt = '';
     
     // 첨부된 파일에 따른 구체적인 설명
-    if (data.writingStyleCount > 0) {
+    if (data.writingStyleCount > 0 && data.hasSeoGuide) {
       if (data.writingStyleCount === 1) {
-        prompt += `1번 문서는 현재 내 블로그 글의 말투와 스타일입니다. 이 글을 참고하여 `;
+        prompt += `첨부한 말투 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요. SEO 문서는 네이버 상위 노출을 위한 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
       } else {
-        prompt += `1번, 2번 문서는 현재 내 블로그 글의 말투와 스타일입니다. 이 글을 참고하여 `;
+        prompt += `첨부한 말투 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요. SEO 문서는 네이버 상위 노출을 위한 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
       }
-    }
-
-    if (data.hasSeoGuide) {
-      if (data.writingStyleCount > 0) {
-        prompt += `제시한 제목의 글을 자연스럽게 작성해주세요. ${data.writingStyleCount + 1}번 문서는 네이버블로그 SEO 최적화 가이드입니다. 블로그 글을 작성할때 참고하여 작성해주세요.\n\n`;
-      } else {
-        prompt += `1번 문서는 네이버블로그 SEO 최적화 가이드입니다. 블로그 글을 작성할때 참고하여 작성해주세요.\n\n`;
-      }
+    } else if (data.writingStyleCount > 0) {
+      prompt += `첨부한 말투 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요.\n\n`;
+    } else if (data.hasSeoGuide) {
+      prompt += `첨부한 SEO 문서는 네이버 상위 노출을 위한 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
     }
     
     // 현재 날짜 추가

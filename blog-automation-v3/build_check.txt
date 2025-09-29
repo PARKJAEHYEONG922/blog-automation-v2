@@ -1,0 +1,34 @@
+src/components/LLMSettings.tsx(333,7): error TS2741: Property 'message' is missing in type '{ success: boolean; error?: string | undefined; }' but required in type '{ success: boolean; message: string; }'.
+src/components/LLMSettings.tsx(367,29): error TS2339: Property 'image' does not exist on type '{ text: { id: string; name: string; description: string; tier: string; }[]; } | { text: { id: string; name: string; description: string; tier: string; }[]; image: { id: string; name: string; description: string; tier: string; }[]; } | { ...; } | { ...; }'.
+  Property 'image' does not exist on type '{ text: { id: string; name: string; description: string; tier: string; }[]; }'.
+src/components/LLMSettings.tsx(369,27): error TS2339: Property 'text' does not exist on type '{ text: { id: string; name: string; description: string; tier: string; }[]; } | { text: { id: string; name: string; description: string; tier: string; }[]; image: { id: string; name: string; description: string; tier: string; }[]; } | { ...; } | { ...; }'.
+  Property 'text' does not exist on type '{ image: { id: string; name: string; description: string; tier: string; }[]; }'.
+src/components/LLMSettings.tsx(465,83): error TS7006: Parameter 'model' implicitly has an 'any' type.
+src/components/LLMSettings.tsx(709,79): error TS7006: Parameter 'model' implicitly has an 'any' type.
+src/components/publishers/NaverPublish_BACKUP.tsx(106,5): error TS2552: Cannot find name 'loadSavedAccounts'. Did you mean 'savedAccounts'?
+src/components/publishers/NaverPublish_BACKUP.tsx(114,7): error TS2304: Cannot find name 'saveBoardForAccount'.
+src/components/publishers/NaverPublish_BACKUP.tsx(766,40): error TS2304: Cannot find name 'selectCategoryIfSpecified'.
+src/components/publishers/NaverPublish_BACKUP.tsx(981,33): error TS2304: Cannot find name 'performNaverLogin'.
+src/components/publishers/NaverPublish_BACKUP.tsx(986,11): error TS2552: Cannot find name 'saveAccount'. Did you mean 'savedAccounts'?
+src/components/publishers/NaverPublish_BACKUP.tsx(998,35): error TS2304: Cannot find name 'navigateToNaverBlogWrite'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1203,31): error TS2304: Cannot find name 'selectAccount'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1218,33): error TS2304: Cannot find name 'deleteAccount'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1302,31): error TS2304: Cannot find name 'selectBoard'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1317,33): error TS2304: Cannot find name 'moveBoardUp'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1332,33): error TS2304: Cannot find name 'moveBoardDown'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1348,35): error TS2304: Cannot find name 'deleteBoardFromAccount'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1531,60): error TS2304: Cannot find name 'getCalendarDays'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1540,83): error TS2304: Cannot find name 'goToPrevMonth'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1551,84): error TS2304: Cannot find name 'goToNextMonth'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1568,69): error TS7006: Parameter 'dayInfo' implicitly has an 'any' type.
+src/components/publishers/NaverPublish_BACKUP.tsx(1568,78): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/publishers/NaverPublish_BACKUP.tsx(1573,68): error TS2304: Cannot find name 'handleDateSelect'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1745,28): error TS2304: Cannot find name 'handlePublishWithImageCheck'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1767,63): error TS2304: Cannot find name 'checkImageStatus'.
+src/components/publishers/NaverPublish_BACKUP.tsx(1823,24): error TS2304: Cannot find name 'logoutFromNaver'.
+src/components/publishers/NaverPublishUI.tsx(486,11): error TS2353: Object literal may only specify known properties, and 'publishedUrl' does not exist in type 'Partial<WorkflowData>'.
+src/services/publishers/naver-publisher.ts(88,9): error TS2345: Argument of type 'PublishOption' is not assignable to parameter of type '"immediate" | "scheduled" | "draft"'.
+  Type '"temp"' is not assignable to type '"immediate" | "scheduled" | "draft"'.
+src/services/publishers/naver-publisher.ts(190,52): error TS2445: Property 'click' is protected and only accessible within class 'BaseBrowserAutomation' and its subclasses.
+src/services/publishers/naver-publisher.ts(226,48): error TS2445: Property 'getCurrentUrl' is protected and only accessible within class 'BaseBrowserAutomation' and its subclasses.
+src/types/index.ts(5,1): error TS2308: Module './publish' has already exported a member named 'PublishResult'. Consider explicitly re-exporting to resolve the ambiguity.

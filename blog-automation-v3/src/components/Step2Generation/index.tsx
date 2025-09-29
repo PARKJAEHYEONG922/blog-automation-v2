@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
-import NaverPublish from '../publishers/NaverPublish';
+import NaverPublishUI from '../publishers/NaverPublishUI';
 import { ContentProcessor } from './ContentProcessor';
 import { BlogWritingService } from '../../services/blog-writing-service';
 
@@ -1185,7 +1185,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
 
       {/* 선택된 플랫폼별 발행 컴포넌트 */}
       {selectedPlatform === 'naver' && (
-        <NaverPublish
+        <NaverPublishUI
           data={setupData}
           editedContent={editedContent}
           imageUrls={images}
