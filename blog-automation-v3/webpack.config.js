@@ -3,7 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const mainConfig = {
   mode: 'development',
-  entry: './src/index.ts',
+  entry: './src/main/index.ts',
   target: 'electron-main',
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -75,7 +75,7 @@ const rendererConfig = {
 
 const preloadConfig = {
   mode: 'development',
-  entry: './src/preload.ts',
+  entry: './src/main/preload.ts',
   target: 'electron-preload',
   output: {
     path: path.resolve(__dirname, 'dist'),

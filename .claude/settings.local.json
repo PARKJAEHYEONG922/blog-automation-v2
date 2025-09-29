@@ -58,7 +58,8 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(code --version)",
-      "Bash(npm:*)"
+      "Bash(npm:*)",
+      "Bash(move:*)"
     ],
     "deny": []
   }
