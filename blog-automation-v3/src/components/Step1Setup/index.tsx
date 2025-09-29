@@ -17,11 +17,11 @@ interface Step1Props {
     mainKeyword: string;
     subKeywords: string;
     blogContent: string;
-    generatedContent?: string;
+    generatedContent: string | undefined;
     isAIGenerated: boolean;
     generatedTitles: string[];
-    imagePrompts?: any[];
-    imagePromptGenerationFailed?: boolean;
+    imagePrompts: any[];
+    imagePromptGenerationFailed: boolean;
   }) => void;
   initialData?: {
     writingStylePaths: string[];

@@ -535,7 +535,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 페이지 이동
-  ipcMain.handle('playwright-navigate', async (event, url: string) => {
+  ipcMain.handle('playwright-navigate', async (event: any, url: string) => {
     try {
       const result = await playwrightService.navigateToUrl(url);
       return { success: result };
@@ -555,7 +555,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 요소 클릭
-  ipcMain.handle('playwright-click', async (event, selector: string) => {
+  ipcMain.handle('playwright-click', async (event: any, selector: string) => {
     try {
       const result = await playwrightService.clickElement(selector);
       return { success: result };
@@ -565,7 +565,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 입력 필드 채우기
-  ipcMain.handle('playwright-fill', async (event, selector: string, value: string) => {
+  ipcMain.handle('playwright-fill', async (event: any, selector: string, value: string) => {
     try {
       const result = await playwrightService.fillInput(selector, value);
       return { success: result };
@@ -575,7 +575,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 요소 대기
-  ipcMain.handle('playwright-wait-selector', async (event, selector: string, timeout?: number) => {
+  ipcMain.handle('playwright-wait-selector', async (event: any, selector: string, timeout?: number) => {
     try {
       const result = await playwrightService.waitForSelector(selector, timeout);
       return { success: result };
@@ -585,7 +585,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 시간 대기
-  ipcMain.handle('playwright-wait-timeout', async (event, milliseconds: number) => {
+  ipcMain.handle('playwright-wait-timeout', async (event: any, milliseconds: number) => {
     try {
       await playwrightService.waitForTimeout(milliseconds);
       return { success: true };
@@ -595,7 +595,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // JavaScript 실행
-  ipcMain.handle('playwright-evaluate', async (event, script: string) => {
+  ipcMain.handle('playwright-evaluate', async (event: any, script: string) => {
     try {
       const result = await playwrightService.evaluateScript(script);
       return { success: true, result };
@@ -605,7 +605,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // iframe 내부 요소 클릭
-  ipcMain.handle('playwright-click-in-frames', async (event, selector: string, frameUrlPattern?: string) => {
+  ipcMain.handle('playwright-click-in-frames', async (event: any, selector: string, frameUrlPattern?: string) => {
     try {
       const result = await playwrightService.clickElementInFrames(selector, frameUrlPattern);
       return { success: result };
@@ -615,7 +615,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // iframe 내부에서 스크립트 실행
-  ipcMain.handle('playwright-evaluate-in-frames', async (event, script: string, frameUrlPattern?: string) => {
+  ipcMain.handle('playwright-evaluate-in-frames', async (event: any, script: string, frameUrlPattern?: string) => {
     try {
       const result = await playwrightService.evaluateScriptInFrames(script, frameUrlPattern);
       return { success: true, result };
@@ -625,7 +625,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 실제 키보드 타이핑
-  ipcMain.handle('playwright-type', async (event, text: string, delay?: number) => {
+  ipcMain.handle('playwright-type', async (event: any, text: string, delay?: number) => {
     try {
       const result = await playwrightService.typeText(text, delay);
       return { success: result };
@@ -635,7 +635,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 실제 키 누르기
-  ipcMain.handle('playwright-press', async (event, key: string) => {
+  ipcMain.handle('playwright-press', async (event: any, key: string) => {
     try {
       const result = await playwrightService.pressKey(key);
       return { success: result };
@@ -645,7 +645,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 실제 마우스 클릭
-  ipcMain.handle('playwright-click-at', async (event, x: number, y: number) => {
+  ipcMain.handle('playwright-click-at', async (event: any, x: number, y: number) => {
     try {
       const result = await playwrightService.clickAt(x, y);
       return { success: result };
@@ -655,7 +655,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 클립보드에 텍스트 설정
-  ipcMain.handle('playwright-set-clipboard', async (event, text: string) => {
+  ipcMain.handle('playwright-set-clipboard', async (event: any, text: string) => {
     try {
       const result = await playwrightService.setClipboard(text);
       return { success: result };
@@ -665,7 +665,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 클립보드에 HTML 설정
-  ipcMain.handle('playwright-set-clipboard-html', async (event, html: string) => {
+  ipcMain.handle('playwright-set-clipboard-html', async (event: any, html: string) => {
     try {
       const result = await playwrightService.setClipboardHTML(html);
       return { success: result };
@@ -675,7 +675,7 @@ export function registerPlaywrightHandlers() {
   });
 
   // 파일 드래그 앤 드롭
-  ipcMain.handle('playwright-drag-drop-file', async (event, filePath: string, targetSelector: string) => {
+  ipcMain.handle('playwright-drag-drop-file', async (event: any, filePath: string, targetSelector: string) => {
     try {
       const result = await playwrightService.dragAndDropFile(filePath, targetSelector);
       return { success: result };

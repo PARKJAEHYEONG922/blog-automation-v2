@@ -55,7 +55,10 @@
       "Bash(\"https://uploads.github.com/repos/PARKJAEHYEONG922/blog-automation-v2/releases/250493914/assets?name=블로그 자동화 v3 Setup 3.0.0.exe\")",
       "Bash(\"https://uploads.github.com/repos/PARKJAEHYEONG922/blog-automation-v2/releases/250493914/assets?name=blog-automation-v3-setup-3.0.0.exe\")",
       "Bash(git checkout:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(code --version)",
+      "Bash(npm:*)"
     ],
     "deny": []
   }

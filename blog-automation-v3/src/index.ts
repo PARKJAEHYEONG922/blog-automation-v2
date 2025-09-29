@@ -139,7 +139,7 @@ function createWindow(): void {
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // 개발자 도구 단축키 등록 (Ctrl+Shift+I, F12)
-  mainWindow.webContents.on('before-input-event', (event, input) => {
+  mainWindow.webContents.on('before-input-event', (event: any, input: any) => {
     if (input.type === 'keyDown') {
       // Ctrl+Shift+I
       if (input.control && input.shift && input.key.toLowerCase() === 'i') {
@@ -162,7 +162,7 @@ app.whenReady().then(() => {
 
 // 메뉴 생성
 function createMenu() {
-  const template: Electron.MenuItemConstructorOptions[] = [
+  const template: any[] = [
     {
       label: 'File',
       submenu: [
@@ -328,7 +328,7 @@ ipcMain.handle('claude-web:open', async () => {
   return await claudeWebService.openBrowser();
 });
 
-ipcMain.handle('claude-web:send-prompt', async (event, writingStylePaths: string[], seoGuidePath: string, prompt: string) => {
+ipcMain.handle('claude-web:send-prompt', async (event: any, writingStylePaths: string[], seoGuidePath: string, prompt: string) => {
   return await claudeWebService.sendPrompt(writingStylePaths, seoGuidePath, prompt);
 });
 
@@ -353,11 +353,11 @@ ipcMain.handle('claude-web:cleanup', async () => {
 });
 
 // IPC handlers for image generation
-ipcMain.handle('image:generate-prompts', async (event, data: { content: string; imageCount: number }) => {
+ipcMain.handle('image:generate-prompts', async (event: any, data: { content: string; imageCount: number }) => {
   return await imageService.generateImagePrompts(data.content, data.imageCount);
 });
 
-ipcMain.handle('image:generate', async (event, prompt: string) => {
+ipcMain.handle('image:generate', async (event: any, prompt: string) => {
   try {
     console.log('이미지 생성 시작 - LLMClientFactory 사용');
     
@@ -421,14 +421,14 @@ ipcMain.handle('image:generate', async (event, prompt: string) => {
 });
 
 // IPC handler for publishing to blog (reuse v2 logic)
-ipcMain.handle('blog:publish', async (event, content: string) => {
+ipcMain.handle('blog:publish', async (event: any, content: string) => {
   // TODO: Integrate with existing v2 publishing logic
   console.log('Publishing content:', content.slice(0, 100) + '...');
   return { success: true };
 });
 
 // IPC handlers for file management
-ipcMain.handle('file:save-document', async (event, type: 'writingStyle' | 'seoGuide', name: string, content: string) => {
+ipcMain.handle('file:save-document', async (event: any, type: 'writingStyle' | 'seoGuide', name: string, content: string) => {
   const fs = require('fs');
   const path = require('path');
   const { app } = require('electron');
@@ -466,7 +466,7 @@ ipcMain.handle('file:create-default-seo', async () => {
   return true;
 });
 
-ipcMain.handle('file:delete-document', async (event, filePath: string) => {
+ipcMain.handle('file:delete-document', async (event: any, filePath: string) => {
   const fs = require('fs');
   
   try {
@@ -484,7 +484,7 @@ ipcMain.handle('file:delete-document', async (event, filePath: string) => {
   }
 });
 
-ipcMain.handle('file:load-documents', async (event, type: 'writingStyle' | 'seoGuide') => {
+ipcMain.handle('file:load-documents', async (event: any, type: 'writingStyle' | 'seoGuide') => {
   const fs = require('fs');
   const path = require('path');
   const { app } = require('electron');
@@ -558,7 +558,7 @@ ipcMain.handle('llm:get-settings', async () => {
   }
 });
 
-ipcMain.handle('llm:save-settings', async (event, settings) => {
+ipcMain.handle('llm:save-settings', async (event: any, settings: any) => {
   const fs = require('fs');
   const path = require('path');
   
@@ -576,7 +576,7 @@ ipcMain.handle('llm:save-settings', async (event, settings) => {
   }
 });
 
-ipcMain.handle('llm:test-config', async (event, config) => {
+ipcMain.handle('llm:test-config', async (event: any, config: any) => {
   try {
     console.log(`API 테스트 시작: ${config.provider}`);
     
@@ -678,7 +678,7 @@ ipcMain.handle('llm:test-config', async (event, config) => {
 });
 
 // 로그 IPC 핸들러
-ipcMain.on('log:add', (event, level: string, message: string) => {
+ipcMain.on('log:add', (event: any, level: string, message: string) => {
   // 렌더러 프로세스로 로그 메시지 전송
   if (mainWindow && mainWindow.webContents) {
     mainWindow.webContents.send('log:message', {
@@ -693,7 +693,7 @@ ipcMain.on('log:add', (event, level: string, message: string) => {
 });
 
 // IPC handler for title generation via API
-ipcMain.handle('llm:generate-titles', async (event, data: { systemPrompt: string; userPrompt: string }) => {
+ipcMain.handle('llm:generate-titles', async (event: any, data: { systemPrompt: string; userPrompt: string }) => {
   try {
     console.log('제목 생성 시작 - LLMClientFactory 사용');
     
@@ -758,12 +758,12 @@ ipcMain.handle('llm:generate-titles', async (event, data: { systemPrompt: string
 });
 
 // IPC handler for opening external URLs
-ipcMain.handle('open-external', async (event, url: string) => {
+ipcMain.handle('open-external', async (event: any, url: string) => {
   await shell.openExternal(url);
 });
 
 // IPC handlers for temporary file operations
-ipcMain.handle('file:saveTempFile', async (event, { fileName, data }: { fileName: string; data: number[] }) => {
+ipcMain.handle('file:saveTempFile', async (event: any, { fileName, data }: { fileName: string; data: number[] }) => {
   const fs = require('fs');
   const path = require('path');
   const os = require('os');
@@ -786,7 +786,7 @@ ipcMain.handle('file:saveTempFile', async (event, { fileName, data }: { fileName
   }
 });
 
-ipcMain.handle('clipboard:copyImage', async (event, filePath: string) => {
+ipcMain.handle('clipboard:copyImage', async (event: any, filePath: string) => {
   const { clipboard, nativeImage } = require('electron');
   const fs = require('fs');
   
@@ -817,7 +817,7 @@ ipcMain.handle('clipboard:copyImage', async (event, filePath: string) => {
   }
 });
 
-ipcMain.handle('file:deleteTempFile', async (event, filePath: string) => {
+ipcMain.handle('file:deleteTempFile', async (event: any, filePath: string) => {
   const fs = require('fs');
 
   try {
@@ -842,7 +842,7 @@ ipcMain.handle('app:check-for-updates', async () => {
 });
 
 // Update download handler
-ipcMain.handle('app:download-update', async (event, downloadUrl: string) => {
+ipcMain.handle('app:download-update', async (event: any, downloadUrl: string) => {
   try {
     await shell.openExternal(downloadUrl);
     return { success: true };
