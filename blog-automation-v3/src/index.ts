@@ -162,7 +162,7 @@ app.whenReady().then(() => {
 
 // 메뉴 생성
 function createMenu() {
-  const template = [
+  const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'File',
       submenu: [
@@ -192,7 +192,7 @@ function createMenu() {
         { role: 'cut', label: '잘라내기' },
         { role: 'copy', label: '복사' },
         { role: 'paste', label: '붙여넣기' },
-        { role: 'selectall', label: '모두 선택' }
+        { role: 'selectAll', label: '모두 선택' }
       ]
     },
     {
