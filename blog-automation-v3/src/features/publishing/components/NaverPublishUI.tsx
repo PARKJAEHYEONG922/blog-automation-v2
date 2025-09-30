@@ -275,7 +275,7 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
    */
   const saveAccount = (username: string, password: string) => {
     try {
-      const accountId = btoa(username); // username을 base64로 인코딩하여 ID로 사용
+      const accountId = btoa(unescape(encodeURIComponent(username))); // UTF-8 안전한 base64 인코딩
       const accounts = [...savedAccounts];
       const existingIndex = accounts.findIndex(acc => acc.id === accountId);
       
@@ -766,7 +766,7 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
   // 게시판 선택 완료 시 자동 저장 (원본 로직)
   useEffect(() => {
     if (selectedBoardCategory && selectedBoardCategory !== '알 수 없음' && naverCredentials.username && publishStatus.success) {
-      const accountId = btoa(naverCredentials.username);
+      const accountId = btoa(unescape(encodeURIComponent(naverCredentials.username)));
       console.log('📋 게시판 자동 저장:', selectedBoardCategory, 'for 계정:', naverCredentials.username);
       saveBoardForAccount(accountId, selectedBoardCategory);
     }
@@ -888,12 +888,12 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
                     className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-10"
                     disabled={publishStatus.isPublishing}
                   />
-                  {naverCredentials.username && accountBoards[btoa(naverCredentials.username)]?.length > 0 && (
+                  {naverCredentials.username && accountBoards[btoa(unescape(encodeURIComponent(naverCredentials.username)))]?.length > 0 && (
                     <button
                       type="button"
                       onClick={() => {
                         console.log('📋 게시판 선택 버튼 클릭됨, 현재 상태:', showBoardSelector);
-                        console.log('📋 현재 계정의 게시판 목록:', accountBoards[btoa(naverCredentials.username)]);
+                        console.log('📋 현재 계정의 게시판 목록:', accountBoards[btoa(unescape(encodeURIComponent(naverCredentials.username)))]);
                         const newState = !showBoardSelector;
                         console.log('📋 새로운 상태로 변경:', newState);
                         setShowBoardSelector(newState);
@@ -908,13 +908,13 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
                 </div>
                 
                 {/* 게시판 선택 드롭다운 */}
-                {showBoardSelector && naverCredentials.username && accountBoards[btoa(naverCredentials.username)]?.length > 0 && (
+                {showBoardSelector && naverCredentials.username && accountBoards[btoa(unescape(encodeURIComponent(naverCredentials.username)))]?.length > 0 && (
                   <div className="board-selector-container absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 overflow-y-auto">
                     <div className="p-2 text-xs text-gray-500 bg-gray-50 border-b">
-                      이전에 사용한 게시판 ({accountBoards[btoa(naverCredentials.username)].length}개)
+                      이전에 사용한 게시판 ({accountBoards[btoa(unescape(encodeURIComponent(naverCredentials.username)))].length}개)
                     </div>
-                    {accountBoards[btoa(naverCredentials.username)].map((board, index) => {
-                      const accountId = btoa(naverCredentials.username);
+                    {accountBoards[btoa(unescape(encodeURIComponent(naverCredentials.username)))].map((board, index) => {
+                      const accountId = btoa(unescape(encodeURIComponent(naverCredentials.username)));
                       const isFirst = index === 0;
                       const isLast = index === accountBoards[accountId].length - 1;
                       
@@ -989,7 +989,7 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
                 
                 <p className="text-xs text-gray-500 mt-1">
                   💡 입력하신 게시판명과 일치하는 카테고리를 찾아서 자동으로 선택합니다.
-                  {naverCredentials.username && accountBoards[btoa(naverCredentials.username)]?.length > 0 && (
+                  {naverCredentials.username && accountBoards[btoa(unescape(encodeURIComponent(naverCredentials.username)))]?.length > 0 && (
                     <><br/>📋 이전에 사용한 게시판은 📋 버튼으로 선택할 수 있습니다.</>
                   )}
                 </p>
