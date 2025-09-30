@@ -15,6 +15,8 @@ export interface WorkflowData {
   imagePrompts: any[];
   imagePromptGenerationFailed: boolean;
   publishedUrl?: string; // 발행된 글의 URL
+  publishPlatform?: string; // 발행된 플랫폼
+  selectedBoard?: string; // 선택된 게시판
 }
 
 // 이미지 URL 타입

@@ -330,7 +330,20 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
       const result = await window.electronAPI?.testLLMConfig?.({ provider, apiKey });
       
       console.log(`📡 ${provider} API 테스트 결과:`, result);
-      return result || { success: false, message: '테스트 응답을 받지 못했습니다.' };
+      
+      if (!result) {
+        return { success: false, message: '테스트 응답을 받지 못했습니다.' };
+      }
+      
+      // result에 message가 없고 error가 있으면 error를 message로 변환
+      if ('error' in result && !('message' in result)) {
+        return { 
+          success: result.success, 
+          message: result.error || (result.success ? '연결 성공' : '연결 실패') 
+        };
+      }
+      
+      return result as { success: boolean, message: string };
       
     } catch (error: any) {
       console.error(`❌ ${provider} API 테스트 실패:`, error);
@@ -364,9 +377,9 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
     if (!providerModels) return [];
     
     if (tab === 'image') {
-      return providerModels.image || [];
+      return ('image' in providerModels) ? providerModels.image || [] : [];
     }
-    return providerModels.text || [];
+    return ('text' in providerModels) ? providerModels.text || [] : [];
   };
 
   const getWritingProviders = () => {
@@ -433,7 +446,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                 제공업체
               </label>
               <div className="flex gap-3 flex-wrap">
-                {getWritingProviders().map(provider => (
+                {getWritingProviders().map((provider: any) => (
                   <button
                     key={provider.id}
                     onClick={() => handleProviderChange('writing', provider.id)}
@@ -462,7 +475,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                     className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 cursor-pointer"
                   >
                     <option value="">모델을 선택하세요</option>
-                    {getAvailableModels('writing', settings.writing.provider).map(model => (
+                    {getAvailableModels('writing', settings.writing.provider).map((model: any) => (
                       <option key={model.id} value={model.id}>
                         {model.name} - {model.description}
                       </option>
@@ -677,7 +690,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                 제공업체
               </label>
               <div className="flex gap-3 flex-wrap">
-                {getImageProviders().map(provider => (
+                {getImageProviders().map((provider: any) => (
                   <button
                     key={provider.id}
                     onClick={() => handleProviderChange('image', provider.id)}
@@ -706,7 +719,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                     className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
                   >
                     <option value="">모델을 선택하세요</option>
-                    {getAvailableModels('image', settings.image.provider).map(model => (
+                    {getAvailableModels('image', settings.image.provider).map((model: any) => (
                       <option key={model.id} value={model.id}>
                         {model.name} - {model.description}
                       </option>

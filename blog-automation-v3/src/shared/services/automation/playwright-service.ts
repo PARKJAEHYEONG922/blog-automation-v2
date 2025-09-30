@@ -17,16 +17,21 @@ class PlaywrightService {
     const path = require('path');
 
     if (os.platform() === 'win32') {
-      // Windows에서 Chrome, Edge 경로 순서대로 시도
+      // Windows에서 Chrome → Edge → Whale 순서대로 시도
       const browserPaths = [
-        // Chrome 경로들
+        // Chrome 경로들 (1순위)
         path.join('C:', 'Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe'),
         path.join('C:', 'Program Files (x86)', 'Google', 'Chrome', 'Application', 'chrome.exe'),
         path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'Application', 'chrome.exe'),
         
-        // Edge 경로들
+        // Edge 경로들 (2순위)
         path.join('C:', 'Program Files (x86)', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
         path.join('C:', 'Program Files', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+        
+        // Whale 경로들 (3순위)
+        path.join('C:', 'Program Files', 'Naver', 'Whale', 'Application', 'whale.exe'),
+        path.join('C:', 'Program Files (x86)', 'Naver', 'Whale', 'Application', 'whale.exe'),
+        path.join(os.homedir(), 'AppData', 'Local', 'Naver', 'Whale', 'Application', 'whale.exe'),
       ];
 
       for (const browserPath of browserPaths) {
@@ -66,11 +71,11 @@ class PlaywrightService {
 
   async initialize(): Promise<boolean> {
     try {
-      console.log('Playwright 브라우저 초기화 시작...');
+      console.log('🔄 Playwright 브라우저 초기화 시작...');
       
       // 시스템 브라우저 경로 감지
       const systemBrowserPath = this.getSystemBrowserPath();
-      console.log('시스템 브라우저 경로:', systemBrowserPath || '감지되지 않음, 기본 브라우저 사용');
+      console.log('🌐 시스템 브라우저 경로:', systemBrowserPath || '감지되지 않음, 기본 브라우저 사용');
       
       // 브라우저 실행 (헤드리스 모드 비활성화)
       this.browser = await chromium.launch({
@@ -81,7 +86,9 @@ class PlaywrightService {
           '--disable-dev-shm-usage',
           '--no-sandbox',
           '--disable-notifications',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-extensions'
         ]
       });
 
@@ -104,11 +111,61 @@ class PlaywrightService {
         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       });
 
-      console.log('Playwright 브라우저 초기화 완료');
+      console.log('✅ Playwright 브라우저 초기화 완료');
       return true;
 
     } catch (error) {
-      console.error('Playwright 초기화 실패:', error);
+      console.error('❌ Playwright 초기화 실패:', error);
+      
+      // 오류 유형별 상세 메시지
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('Executable doesn\'t exist')) {
+        console.error('🚫 브라우저 실행 파일을 찾을 수 없습니다. Chrome, Edge, Whale 중 하나를 설치해주세요.');
+        console.log('📋 지원하는 브라우저: Chrome (우선), Edge, Whale');
+      } else if (errorMessage.includes('browserType.launch')) {
+        console.error('🔧 Playwright 브라우저 엔진 초기화 실패. 시스템 브라우저로 재시도합니다.');
+        
+        // 시스템 브라우저로 재시도
+        return await this.initializeWithFallback();
+      }
+      
+      await this.cleanup();
+      return false;
+    }
+  }
+
+  // 시스템 브라우저를 강제로 사용하는 폴백 메서드
+  private async initializeWithFallback(): Promise<boolean> {
+    try {
+      console.log('🔄 시스템 브라우저로 재시도...');
+      
+      const systemBrowserPath = this.getSystemBrowserPath();
+      if (!systemBrowserPath) {
+        throw new Error('사용 가능한 브라우저를 찾을 수 없습니다');
+      }
+
+      this.browser = await chromium.launch({
+        headless: false,
+        executablePath: systemBrowserPath,
+        args: [
+          '--disable-blink-features=AutomationControlled',
+          '--no-sandbox',
+          '--disable-notifications'
+        ]
+      });
+
+      this.context = await this.browser.newContext({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        viewport: { width: 1280, height: 720 }
+      });
+
+      this.page = await this.context.newPage();
+      
+      console.log('✅ 폴백 방법으로 브라우저 초기화 성공');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ 폴백 초기화도 실패:', error);
       await this.cleanup();
       return false;
     }

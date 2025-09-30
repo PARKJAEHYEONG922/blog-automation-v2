@@ -20,7 +20,7 @@ export const useImageGeneration = () => {
         setImagePrompts(prompts);
         return { success: true, prompts };
       } else {
-        throw new Error(response.error || '이미지 프롬프트 생성 실패');
+        throw new Error((response as any).error || '이미지 프롬프트 생성 실패');
       }
     } catch (error) {
       console.error('이미지 프롬프트 생성 실패:', error);

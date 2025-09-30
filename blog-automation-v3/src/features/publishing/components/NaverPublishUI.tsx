@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PublishComponentProps, PublishStatus, NaverCredentials, PublishOption, SavedAccount } from '../../../types';
+import { PublishComponentProps, PublishStatus, NaverCredentials, PublishOption, SavedAccount } from '../types/publishing.types';
 import { PublishManager } from '../services/publish-manager';
 
 const NaverPublishUI: React.FC<PublishComponentProps> = ({ 

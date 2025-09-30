@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
-import { NaverPublishUI } from '../../publishing';
+import NaverPublishUI from '../../publishing/components/NaverPublishUI';
 import { ContentProcessor } from '../services/content-processor';
 import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
 import '../../../shared/types/electron.types';
