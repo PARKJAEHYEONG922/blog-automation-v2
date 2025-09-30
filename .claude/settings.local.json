@@ -61,7 +61,9 @@
       "Bash(npm:*)",
       "Bash(move:*)",
       "Bash(rg:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(set GH_TOKEN=)",
+      "Bash(unset GH_TOKEN)"
     ],
     "deny": []
   }

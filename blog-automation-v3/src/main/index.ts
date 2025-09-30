@@ -91,9 +91,9 @@ async function checkForUpdates(): Promise<{ hasUpdate: boolean; latestVersion?: 
           const latestVersion = latestRelease.tag_name?.replace('v', '') || latestRelease.name;
           const currentVersion = app.getVersion();
 
-          // 다운로드 URL 찾기 (V3 Setup.exe 파일)
+          // 다운로드 URL 찾기 (V3 setup.exe 파일)
           const setupAsset = latestRelease.assets?.find((asset: any) =>
-            asset.name.includes('v3') && asset.name.includes('Setup') && asset.name.endsWith('.exe')
+            asset.name.includes('v3') && (asset.name.includes('Setup') || asset.name.includes('setup')) && asset.name.endsWith('.exe')
           );
 
           const hasUpdate = latestVersion !== currentVersion;
