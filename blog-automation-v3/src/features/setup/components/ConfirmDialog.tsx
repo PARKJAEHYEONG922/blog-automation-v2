@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from '../../../shared/components/ui/Button';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -32,18 +33,20 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </p>
         
         <div className="flex space-x-3 justify-end">
-          <button
+          <Button
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 text-sm font-medium"
+            variant="secondary"
+            size="sm"
           >
             취소
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200 text-sm font-semibold hover:-translate-y-0.5 shadow-lg shadow-red-500/25"
+            variant="danger"
+            size="sm"
           >
             삭제
-          </button>
+          </Button>
         </div>
       </div>
     </div>

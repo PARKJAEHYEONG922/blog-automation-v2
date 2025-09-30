@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Button from '../../../shared/components/ui/Button';
 
 interface ImagePrompt {
   index: number;
@@ -779,33 +780,29 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
         {/* 배치 생성 버튼 및 정지 버튼 */}
         {hasImageClient && imageCount > 0 && (
           <div className="flex justify-center space-x-3 mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
-            <button
+            <Button
               onClick={handleGenerateAllEmpty}
               disabled={isGeneratingAll}
-              className={`
-                inline-flex items-center space-x-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200
-                ${isGeneratingAll 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-purple-500 hover:bg-purple-600 hover:-translate-y-0.5 shadow-lg shadow-purple-500/25'
-                } text-white
-              `}
+              loading={isGeneratingAll}
+              variant="primary"
+              size="lg"
+              className="inline-flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 shadow-lg shadow-purple-500/25"
             >
               <span>🎨</span>
               <span>빈 이미지 모두 AI로 생성 ({emptyWithPromptCount > 0 ? emptyWithPromptCount : imageCount}개)</span>
-              {isGeneratingAll && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              )}
-            </button>
+            </Button>
             
             {/* 정지 버튼 */}
             {isGeneratingAll && (
-              <button
+              <Button
                 onClick={handleStopGeneration}
-                className="inline-flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-red-500/25"
+                variant="danger"
+                size="lg"
+                className="inline-flex items-center space-x-2"
               >
                 <span>⏹️</span>
                 <span>정지</span>
-              </button>
+              </Button>
             )}
           </div>
         )}

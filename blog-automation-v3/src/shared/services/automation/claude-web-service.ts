@@ -48,8 +48,8 @@ export class ClaudeWebService {
       // 자동화 전용 프로필 디렉토리
       const automationProfileDir = path.join(os.homedir(), 'AppData', 'Local', 'BlogAutomation', 'Chrome_Profile');
 
-      // 자동화용 Chrome을 별도 프로필로 실행 (동적 포트 사용)
-      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=${this.debugPort} --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check --disable-background-timer-throttling`);
+      // 자동화용 Chrome을 별도 프로필로 실행 (동적 포트 사용 + 큰 창 크기)
+      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=${this.debugPort} --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check --disable-background-timer-throttling --window-size=1600,1000 --window-position=100,100`);
 
       // Chrome 시작 대기
       await new Promise(resolve => setTimeout(resolve, 5000));
@@ -73,6 +73,9 @@ export class ClaudeWebService {
         this.page = await this.browser.newPage();
         await this.page.goto('https://claude.ai/');
       }
+      
+      // Chrome 실행시 이미 큰 창으로 설정됨 (1600x1000)
+      console.log('Chrome이 1600x1000 창 크기로 실행됨');
       
       // 로그인 상태 확인 및 대기
       let currentUrl = this.page.url();
@@ -277,7 +280,8 @@ export class ClaudeWebService {
         const hasArtifact = await this.page.$('#markdown-artifact');
         
         if (hasArtifact) {
-          console.log(`✅ 자료 조사 완료! 아티팩트 생성 시작 (${researchCheckCount * 5}초 경과)`);
+          console.log(`✅ 자료 조사 완료! 아티팩트 생성 감지 (${researchCheckCount * 5}초 경과)`);
+          console.log('아티팩트 글 생성 완료 모니터링을 시작합니다...');
           researchPhase = false;
           break;
         } else if (hasWebResults) {
@@ -288,17 +292,141 @@ export class ClaudeWebService {
         
         await this.page.waitForTimeout(5000); // 5초마다 체크
         
-        // 5분 이상 걸리면 아티팩트 생성 대기로 전환
+        // AI 사고 중이었고 아직 아티팩트가 없다면 일반 채팅 완료 여부 확인
+        if (!hasArtifact) {
+          // AI 생성이 완료되었는지 확인 (개선된 감지 로직)
+          const aiCompleted = await this.page.evaluate(() => {
+            // 1. data-is-streaming="false" 속성 확인 (가장 정확한 방법)
+            const streamingElements = document.querySelectorAll('[data-is-streaming="false"]');
+            if (streamingElements.length > 0) {
+              console.log('✅ data-is-streaming="false" 감지됨 - AI 생성 완료');
+              return true;
+            }
+            
+            // 2. 복사 버튼 활성화 상태 확인
+            const copyButtons = document.querySelectorAll('button[data-testid="action-bar-copy"]');
+            let hasCopyButton = false;
+            for (const button of copyButtons) {
+              const htmlButton = button as HTMLButtonElement;
+              if (!htmlButton.disabled && htmlButton.offsetWidth > 0 && htmlButton.offsetHeight > 0) {
+                hasCopyButton = true;
+                console.log('✅ 활성화된 복사 버튼 발견 - AI 생성 완료');
+                break;
+              }
+            }
+            
+            if (hasCopyButton) {
+              return true;
+            }
+            
+            // 3. 기존 로직: 사용자 메시지 기반 감지 (백업용)
+            const userMessages = document.querySelectorAll('[data-testid="user-message"]');
+            const lastUserMessage = userMessages[userMessages.length - 1];
+            
+            if (!lastUserMessage) {
+              console.log('사용자 메시지를 찾을 수 없음');
+              return false;
+            }
+            
+            // 마지막 사용자 메시지 다음에 AI 응답이 있는지 확인
+            let currentElement = lastUserMessage.closest('.mb-1, .group')?.nextElementSibling;
+            let hasAiResponse = false;
+            
+            // 다음 형제 요소들 중에서 AI 응답 찾기
+            while (currentElement && !hasAiResponse) {
+              // AI 응답 메시지인지 확인 (사용자 메시지가 아니고 내용이 있는 경우)
+              const hasUserTestId = currentElement.querySelector('[data-testid="user-message"]');
+              const hasContent = currentElement.textContent && currentElement.textContent.trim().length > 10;
+              
+              if (!hasUserTestId && hasContent) {
+                hasAiResponse = true;
+                console.log('AI 응답 발견:', currentElement.textContent.substring(0, 100) + '...');
+                
+                // AI 응답에 생성 중 표시가 있는지 확인
+                const responseText = currentElement.textContent || '';
+                const isGenerating = responseText.includes('생각') || 
+                                   responseText.includes('Thinking') || 
+                                   responseText.includes('...') ||
+                                   responseText.includes('타이핑');
+                
+                if (isGenerating) {
+                  console.log('AI 응답에서 생성 중 텍스트 발견:', responseText.substring(0, 50));
+                  return false;
+                }
+              }
+              
+              currentElement = currentElement.nextElementSibling;
+            }
+            
+            if (!hasAiResponse) {
+              console.log('사용자 메시지 후 AI 응답이 아직 없음');
+              return false;
+            }
+            
+            // 4. 전역 스피너 확인 (페이지 전체)
+            const globalSpinners = document.querySelectorAll('[class*="animate-spin"], .animate-spin');
+            if (globalSpinners.length > 0) {
+              console.log('전역 스피너 감지됨:', globalSpinners.length + '개');
+              return false;
+            }
+            
+            console.log('=== AI 생성 완료로 판단됨 (기존 로직) ===');
+            return true;
+          });
+          
+          const nowHasArtifact = await this.page.$('#markdown-artifact');
+          
+          if (aiCompleted && !nowHasArtifact) {
+            console.log('🔄 AI 사고 완료 감지! 아티팩트 생성 여유시간 10초 대기 중...');
+            
+            // 10초 여유시간 후 아티팩트 재확인
+            await this.page.waitForTimeout(10000);
+            const finalArtifactCheck = await this.page.$('#markdown-artifact');
+            
+            if (!finalArtifactCheck) {
+              console.log('✅ 10초 후에도 아티팩트 없음 → 일반 채팅으로 글 생성 완료!');
+              console.log('복사는 copyContent()에서 처리됩니다.');
+              
+              // 일반 채팅 완료 - 함수 종료
+              return;
+            } else {
+              console.log('🎉 10초 여유시간 중 아티팩트가 생성되었습니다!');
+              researchPhase = false; // 아티팩트 감지로 기존 로직 진행
+              break;
+            }
+          }
+        }
+        
+        // 5분 이상 걸리면 강제 종료
         if (researchCheckCount >= 60) { // 5초 * 60 = 5분
-          console.log('자료 조사가 길어지고 있습니다. 아티팩트 생성 대기로 전환...');
+          console.log('5분 이상 경과, 강제로 다음 단계로 이동...');
           researchPhase = false;
         }
       }
       
-      console.log('1단계: 아티팩트 생성 대기 중...');
-      // 1단계: 아티팩트 생성 대기
-      await this.page.waitForSelector('#markdown-artifact', { timeout: 300000 });
-      console.log('✨ 아티팩트 생성 감지됨!');
+      // AI 사고 완료 후 아티팩트 체크는 이미 위에서 완료됨
+      // 여기까지 왔다면 아티팩트가 있다는 의미이므로 바로 아티팩트 처리 진행
+      console.log('아티팩트 감지됨, 아티팩트 처리 로직 시작...');
+      
+      // 오른쪽 아티팩트 영역이 실제로 보이는지 확인
+      const artifactInfo = await this.page.$eval('#markdown-artifact', (el: Element) => {
+        const rect = el.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          visible: rect.width > 0 && rect.height > 0
+        };
+      });
+      
+      console.log(`오른쪽 아티팩트 영역 확인: 너비=${artifactInfo.width}, 높이=${artifactInfo.height}, 좌측=${artifactInfo.left}, 우측=${artifactInfo.right}`);
+      
+      if (!artifactInfo.visible || artifactInfo.width < 200) {
+        console.warn('⚠️ 아티팩트 영역이 제대로 보이지 않습니다. 화면이 너무 작을 수 있습니다.');
+      } else {
+        console.log('✅ 오른쪽 아티팩트 영역이 정상적으로 보입니다.');
+      }
       
       console.log('2단계: 내용 변화 모니터링 시작 (3초 간격)');
       // 2단계: 내용 변화 모니터링 (3초 간격)
@@ -333,17 +461,145 @@ export class ClaudeWebService {
     }
   }
 
+
+
   async copyContent() {
     if (!this.page) {
       throw new Error('브라우저가 열려있지 않습니다.');
     }
 
-    try {
-      console.log('복사 버튼 클릭 중...');
+    // 먼저 아티팩트가 있는지 확인
+    const hasArtifact = await this.page.$('#markdown-artifact');
+    
+    if (!hasArtifact) {
+      console.log('아티팩트 없음 → 일반 채팅에서 복사 시도');
+      
+      // 일반 채팅에서 복사 (copyContentFromChat 로직을 여기에 통합)
+      console.log('페이지를 맨 아래로 스크롤 중...');
+      
+      // 페이지를 맨 아래로 스크롤하여 복사 버튼이 보이도록 함
+      await this.page.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+      
+      // 스크롤 완료 대기
+      await this.page.waitForTimeout(1000);
+      
+      console.log('채팅 영역 복사 버튼 클릭 중...');
+      
+      // 채팅 영역의 복사 버튼 찾기
+      const chatCopySelectors = [
+        'button[data-testid="action-bar-copy"]',
+        'button:has(svg[viewBox="0 0 20 20"]):has(path[d*="M10 1.5C11.1097"])',
+        'button[aria-label*="복사"]',
+        'button[aria-label*="Copy"]',
+        'button:has-text("복사")',
+        'button:has-text("Copy")',
+        '[data-testid="conversation"] > div:last-child button[data-testid="action-bar-copy"]'
+      ];
+      
+      let copyButton = null;
+      for (const selector of chatCopySelectors) {
+        try {
+          copyButton = await this.page.waitForSelector(selector, { timeout: 2000 });
+          console.log(`✅ 채팅 복사 버튼 찾음: ${selector}`);
+          break;
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      if (!copyButton) {
+        throw new Error('채팅 영역에서 복사 버튼을 찾을 수 없습니다');
+      }
       
       // 복사 버튼 클릭
-      const copyButton = await this.page.waitForSelector('button:has-text("복사")', { timeout: 10000 });
       await copyButton.click();
+      console.log('채팅 복사 버튼 클릭됨');
+      
+      // 클립보드에서 내용 가져오기
+      await this.page.waitForTimeout(1000);
+      const content = await this.page.evaluate(() => {
+        return navigator.clipboard.readText();
+      });
+      
+      console.log('채팅 복사 완료, 내용 길이:', content.length);
+      return content;
+    }
+
+    try {
+      console.log('아티팩트에서 복사 버튼 클릭 중...');
+      
+      // 방법 1: 직접 복사 버튼 찾기 (화면이 넓을 때)
+      try {
+        console.log('직접 복사 버튼 찾는 중...');
+        const directCopyButton = await this.page.waitForSelector('button:has-text("복사")', { timeout: 3000 });
+        await directCopyButton.click();
+        console.log('✅ 직접 복사 버튼 클릭 성공');
+      } catch (directError) {
+        console.log('직접 복사 버튼 없음, ... 메뉴 방식 시도...');
+        
+        // 방법 2: ... 버튼 클릭 후 메뉴에서 복사 선택 (화면이 좁을 때)
+        // ... 버튼 (3개 점) 찾기
+        const moreButtonSelectors = [
+          'button:has(svg[viewBox="0 0 20 20"]):has(path[d*="10 14C10.8284 14"])', // 3개 점 SVG
+          'button:has(div:has(svg[viewBox="0 0 20 20"]))',
+          'button[aria-label*="더보기"]',
+          'button[aria-label*="More"]',
+          'button:has(svg):has(path[d*="10 14"])',
+          'div[style*="width: 16px; height: 16px"]:has(svg) button',
+          'button:has(div[style*="width: 16px"]):has(svg)'
+        ];
+        
+        let moreButton = null;
+        for (const selector of moreButtonSelectors) {
+          try {
+            moreButton = await this.page.waitForSelector(selector, { timeout: 2000 });
+            console.log(`✅ ... 버튼 찾음: ${selector}`);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+        
+        if (!moreButton) {
+          throw new Error('복사 버튼과 ... 메뉴 버튼을 모두 찾을 수 없습니다');
+        }
+        
+        // ... 버튼 클릭
+        await moreButton.click();
+        console.log('... 버튼 클릭됨');
+        
+        // 드롭다운 메뉴가 나타날 때까지 대기
+        await this.page.waitForTimeout(500);
+        
+        // 메뉴에서 복사 항목 클릭
+        const menuCopySelectors = [
+          'div[role="menuitem"]:has-text("복사")',
+          '[role="menuitem"]:has-text("복사")',
+          '[role="menuitem"]:has-text("Copy")',
+          'div[data-radix-collection-item]:has-text("복사")',
+          '[tabindex="-1"]:has-text("복사")'
+        ];
+        
+        let menuCopyButton = null;
+        for (const selector of menuCopySelectors) {
+          try {
+            menuCopyButton = await this.page.waitForSelector(selector, { timeout: 2000 });
+            console.log(`✅ 메뉴 복사 버튼 찾음: ${selector}`);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+        
+        if (!menuCopyButton) {
+          throw new Error('드롭다운 메뉴에서 복사 버튼을 찾을 수 없습니다');
+        }
+        
+        await menuCopyButton.click();
+        console.log('✅ 메뉴에서 복사 버튼 클릭 성공');
+      }
       
       // 잠시 대기 후 클립보드에서 내용 가져오기
       await this.page.waitForTimeout(1000);
@@ -361,42 +617,6 @@ export class ClaudeWebService {
     }
   }
 
-  // 기존 다운로드 방식도 유지 (백업용)
-  async downloadContent() {
-    if (!this.page) {
-      throw new Error('브라우저가 열려있지 않습니다.');
-    }
-
-    try {
-      // 다운로드 버튼 찾기 및 클릭
-      const downloadButton = await this.page.waitForSelector('button[aria-label*="다운로드"], button[aria-label*="Download"]');
-      
-      // 다운로드 시작
-      const [download] = await Promise.all([
-        this.page.waitForEvent('download'),
-        downloadButton.click()
-      ]);
-
-      // 다운로드 완료 대기 및 경로 얻기
-      const path = await download.path();
-      
-      if (!path) {
-        throw new Error('다운로드 파일 경로를 찾을 수 없습니다.');
-      }
-
-      // 파일 내용 읽기
-      const content = fs.readFileSync(path, 'utf-8');
-      
-      // 임시 파일 삭제
-      fs.unlinkSync(path);
-      
-      return content;
-      
-    } catch (error) {
-      console.error('콘텐츠 다운로드 실패:', error);
-      throw error;
-    }
-  }
 
   async close() {
     if (this.browser) {

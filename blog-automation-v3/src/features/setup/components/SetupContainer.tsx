@@ -7,6 +7,7 @@ import GenerationProgressSection from './GenerationProgressSection';
 import ManualUploadSection from './ManualUploadSection';
 import { BlogPromptService } from '../../../shared/services/content/blog-prompt-service';
 import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
+import Button from '../../../shared/components/ui/Button';
 
 interface Step1Props {
   onComplete: (data: {
@@ -555,17 +556,39 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     
     // 필수 요구사항 검증
     if (!finalTitle) {
-      alert('제목을 선택하거나 입력해주세요!');
+      // alert 대신 키워드 입력 필드로 포커스 이동
+      const titleError = document.createElement('div');
+      titleError.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      titleError.textContent = '제목을 선택하거나 입력해주세요!';
+      document.body.appendChild(titleError);
+      setTimeout(() => titleError.remove(), 3000);
       return;
     }
 
     if (!mainKeyword.trim()) {
-      alert('메인키워드를 입력해주세요!');
+      // 메인키워드 입력 필드로 포커스 이동
+      const keywordInput = document.querySelector('input[placeholder*="메인키워드"]') as HTMLInputElement;
+      if (keywordInput) {
+        keywordInput.focus();
+        keywordInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      // alert 대신 토스트 알림
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      toast.textContent = '메인키워드를 입력해주세요!';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
       return;
     }
 
     if (!selectedSeoGuide) {
-      alert('SEO 가이드를 선택해주세요!');
+      // alert 대신 토스트 알림
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      toast.textContent = 'SEO 가이드를 선택해주세요!';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
       return;
     }
 

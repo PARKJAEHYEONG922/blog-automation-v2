@@ -5,6 +5,7 @@ import ImageGenerator from './ImageGenerator';
 import NaverPublishUI from '../../publishing/components/NaverPublishUI';
 import { ContentProcessor } from '../services/content-processor';
 import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
+import Button from '../../../shared/components/ui/Button';
 import '../../../shared/types/electron.types';
 
 interface Step2Props {
@@ -714,8 +715,8 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     try {
       console.log('🔄 Claude Web에서 수정된 글 가져오기 시작');
       
-      // Claude Web에서 다시 다운로드
-      const newContent = await window.electronAPI.claudeWebDownload();
+      // Claude Web에서 다시 다운로드  
+      const newContent = await window.electronAPI.downloadFromClaude();
       
       if (newContent && newContent.trim()) {
         console.log('✅ 수정된 글 가져오기 성공');
@@ -1122,46 +1123,15 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
             </div>
             
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <button
+              <Button
                 onClick={regenerateImagePrompts}
                 disabled={isRegeneratingPrompts}
-                style={{
-                  backgroundColor: isRegeneratingPrompts ? '#9ca3af' : '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '10px 16px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: isRegeneratingPrompts ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isRegeneratingPrompts) {
-                    e.currentTarget.style.backgroundColor = '#b91c1c';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isRegeneratingPrompts) {
-                    e.currentTarget.style.backgroundColor = '#dc2626';
-                  }
-                }}
+                loading={isRegeneratingPrompts}
+                variant="danger"
+                className="flex items-center gap-2"
               >
                 🔄 이미지 프롬프트 재생성
-                {isRegeneratingPrompts && (
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid transparent',
-                    borderTop: '2px solid white',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                )}
-              </button>
+              </Button>
               
               <span style={{ fontSize: '12px', color: '#7f1d1d' }}>
                 {isRegeneratingPrompts ? '프롬프트 재생성 중...' : 'API 설정을 변경한 후 재생성하면 더 성공 가능성이 높습니다'}
@@ -1277,35 +1247,38 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       {/* 액션 버튼 */}
       <div className="mt-8 flex justify-between items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
         {/* 왼쪽: 이전으로 가기 */}
-        <button 
+        <Button 
           onClick={onGoBack} 
+          variant="secondary"
           className="inline-flex items-center space-x-2 px-5 py-3 bg-gray-500 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 transition-colors duration-200"
         >
           <span>←</span>
           <span>이전으로 가기</span>
-        </button>
+        </Button>
         
         {/* 가운데: 발행 버튼 (다른 플랫폼용) */}
         <div className="flex space-x-3">
           {selectedPlatform && selectedPlatform !== 'naver' && (Object.keys(images).length === imagePositions.length || imagePositions.length === 0) && (
-            <button 
+            <Button 
               onClick={handlePublish}
+              variant="publish"
               className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-500 text-white rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-colors duration-200 shadow-lg shadow-emerald-500/25"
             >
               <span>📤</span>
               <span>{getPlatformName(selectedPlatform)}에 발행하기</span>
-            </button>
+            </Button>
           )}
         </div>
         
         {/* 오른쪽: 처음부터 다시 */}
-        <button 
+        <Button 
           onClick={onReset}
+          variant="danger"
           className="inline-flex items-center space-x-2 px-5 py-3 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors duration-200"
         >
           <span>🔄</span>
           <span>처음부터 다시</span>
-        </button>
+        </Button>
       </div>
 
       <style>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Button from '../../../shared/components/ui/Button';
 
 interface TitleRecommendationSectionProps {
   generatedTitles: string[];
@@ -65,54 +66,42 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
         {/* 제목 생성 버튼들 - 오른쪽 배치 */}
         <div className="flex space-x-3">
           {/* 더미 데이터 버튼 */}
-          <button
+          <Button
             onClick={handleLoadDummy}
             disabled={isGeneratingTitles}
-            className={`
-              inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
-              ${isGeneratingTitles 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-gray-500 hover:bg-gray-600 hover:-translate-y-0.5 shadow-lg shadow-gray-500/25'
-              } text-white
-            `}
+            variant="secondary"
+            className="inline-flex items-center space-x-2"
             title="테스트용 더미 제목 10개를 불러옵니다"
           >
             <span>🧪</span>
             <span>더미 데이터</span>
-          </button>
+          </Button>
           
           {/* 제목 생성 버튼 */}
-          <button
+          <Button
             onClick={onGenerateTitles}
             disabled={isGeneratingTitles || !mainKeyword.trim()}
-            className={`
-              inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
-              ${isGeneratingTitles 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : generatedTitles.length > 0 
-                  ? 'bg-green-500 hover:bg-green-600 hover:-translate-y-0.5 shadow-lg shadow-green-500/25' 
-                  : 'bg-blue-500 hover:bg-blue-600 hover:-translate-y-0.5 shadow-lg shadow-blue-500/25'
-              } text-white
-              ${!mainKeyword.trim() ? 'opacity-50' : ''}
-            `}
+            loading={isGeneratingTitles}
+            variant={generatedTitles.length > 0 ? "success" : "primary"}
+            className="inline-flex items-center space-x-2"
           >
-            {isGeneratingTitles ? (
+            {!isGeneratingTitles && (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>생성 중...</span>
-              </>
-            ) : generatedTitles.length > 0 ? (
-              <>
-                <span>🔄</span>
-                <span>재생성</span>
-              </>
-            ) : (
-              <>
-                <span>✨</span>
-                <span>제목 생성</span>
+                {generatedTitles.length > 0 ? (
+                  <>
+                    <span>🔄</span>
+                    <span>재생성</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✨</span>
+                    <span>제목 생성</span>
+                  </>
+                )}
               </>
             )}
-          </button>
+            {isGeneratingTitles && <span>생성 중...</span>}
+          </Button>
         </div>
       </div>
       
@@ -155,20 +144,17 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
           {/* 직접 입력 제목으로 글 생성 버튼 */}
           {customTitle.trim() && (
             <div className="text-center">
-              <button
+              <Button
                 onClick={onStartGeneration}
                 disabled={isGenerating}
-                className={`
-                  inline-flex items-center space-x-2 px-6 py-3 rounded-xl text-base font-bold transition-all duration-200
-                  ${isGenerating 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-green-500 hover:bg-green-600 hover:-translate-y-1 shadow-lg shadow-green-500/25'
-                  } text-white
-                `}
+                loading={isGenerating}
+                variant="success"
+                size="lg"
+                className="inline-flex items-center space-x-2"
               >
                 <span>🚀</span>
                 <span>입력한 제목으로 글 생성하기</span>
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -248,31 +234,19 @@ const TitleRecommendationSection: React.FC<TitleRecommendationSectionProps> = ({
           {/* 글 생성 버튼 */}
           {((selectedTitle && selectedTitle !== '__CUSTOM__') || (selectedTitle === '__CUSTOM__' && customTitle.trim())) && (
             <div className="text-center">
-              <button
+              <Button
                 onClick={() => {
                   onStartGeneration();
                 }}
                 disabled={isGenerating}
-                className={`
-                  inline-flex items-center space-x-2 px-6 py-3 rounded-xl text-base font-bold transition-all duration-200
-                  ${isGenerating 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-green-500 hover:bg-green-600 hover:-translate-y-1 shadow-lg shadow-green-500/25'
-                  } text-white
-                `}
+                loading={isGenerating}
+                variant="success"
+                size="lg"
+                className="inline-flex items-center space-x-2"
               >
-                {isGenerating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>글 생성 중...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🚀</span>
-                    <span>{selectedTitle === '__CUSTOM__' ? '입력한' : '선택한'} 제목으로 글 생성하기</span>
-                  </>
-                )}
-              </button>
+                {!isGenerating && <span>🚀</span>}
+                <span>{isGenerating ? '글 생성 중...' : `${selectedTitle === '__CUSTOM__' ? '입력한' : '선택한'} 제목으로 글 생성하기`}</span>
+              </Button>
             </div>
           )}
         </>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Button from '../../../shared/components/ui/Button';
 
 interface LLMSettingsProps {
   onClose: () => void;
@@ -400,12 +401,14 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
             </div>
             <h2 className="text-2xl font-bold text-gray-800">AI 모델 설정</h2>
           </div>
-          <button
+          <Button
             onClick={onClose}
-            className="w-8 h-8 bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-500 rounded-lg flex items-center justify-center text-lg cursor-pointer transition-all duration-200 hover:scale-110"
+            variant="ghost"
+            size="sm"
+            className="w-8 h-8 rounded-lg text-gray-500 hover:text-red-500 hover:bg-red-50"
           >
             ✕
-          </button>
+          </Button>
         </div>
 
         {/* 탭 메뉴 */}
@@ -498,31 +501,30 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
                 {/* 테스트 및 적용, 삭제 버튼 */}
                 <div className="flex justify-end space-x-3 mt-4 mb-4">
-                  <button
+                  <Button
                     onClick={() => deleteApiKey('writing')}
                     disabled={testingStatus.writing?.testing || !settings.writing.apiKey}
-                    className={`inline-flex items-center space-x-2 px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-sm ${
-                      testingStatus.writing?.testing || !settings.writing.apiKey ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
+                    variant="danger"
+                    size="sm"
+                    className="inline-flex items-center space-x-2"
                   >
                     <span>🗑️</span>
                     <span>삭제</span>
-                  </button>
+                  </Button>
                   
-                  <button
+                  <Button
                     onClick={() => testApiKey('writing')}
                     disabled={!settings.writing.apiKey || testingStatus.writing?.testing}
-                    className={`inline-flex items-center space-x-2 px-4 py-2 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-lg ${
-                      testingStatus.writing?.success 
-                        ? 'bg-green-500 hover:bg-green-600 shadow-green-500/25' 
-                        : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
-                    } ${
-                      !settings.writing.apiKey || testingStatus.writing?.testing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
+                    loading={testingStatus.writing?.testing}
+                    variant={testingStatus.writing?.success ? "success" : "primary"}
+                    size="sm"
+                    className="inline-flex items-center space-x-2"
                   >
-                    <span>{testingStatus.writing?.testing ? '🔄' : testingStatus.writing?.success ? '✅' : '🧪'}</span>
+                    {!testingStatus.writing?.testing && (
+                      <span>{testingStatus.writing?.success ? '✅' : '🧪'}</span>
+                    )}
                     <span>{testingStatus.writing?.testing ? '테스트 중...' : testingStatus.writing?.success ? '적용 완료' : '테스트 및 적용'}</span>
-                  </button>
+                  </Button>
                 </div>
                 
                 {/* 테스트 결과 메시지 */}
@@ -936,31 +938,30 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
                 {/* 테스트 및 적용, 삭제 버튼 */}
                 <div className="flex justify-end space-x-3 mt-4 mb-4">
-                  <button
+                  <Button
                     onClick={() => deleteApiKey('image')}
                     disabled={testingStatus.image?.testing || !settings.image.apiKey}
-                    className={`inline-flex items-center space-x-2 px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-sm ${
-                      testingStatus.image?.testing || !settings.image.apiKey ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
+                    variant="danger"
+                    size="sm"
+                    className="inline-flex items-center space-x-2"
                   >
                     <span>🗑️</span>
                     <span>삭제</span>
-                  </button>
+                  </Button>
                   
-                  <button
+                  <Button
                     onClick={() => testApiKey('image')}
                     disabled={!settings.image.apiKey || testingStatus.image?.testing}
-                    className={`inline-flex items-center space-x-2 px-4 py-2 text-white text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-lg ${
-                      testingStatus.image?.success 
-                        ? 'bg-purple-500 hover:bg-purple-600 shadow-purple-500/25' 
-                        : 'bg-purple-500 hover:bg-purple-600 shadow-purple-500/25'
-                    } ${
-                      !settings.image.apiKey || testingStatus.image?.testing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
+                    loading={testingStatus.image?.testing}
+                    variant={testingStatus.image?.success ? "success" : "primary"}
+                    size="sm"
+                    className="inline-flex items-center space-x-2"
                   >
-                    <span>{testingStatus.image?.testing ? '🔄' : testingStatus.image?.success ? '✅' : '🧪'}</span>
+                    {!testingStatus.image?.testing && (
+                      <span>{testingStatus.image?.success ? '✅' : '🧪'}</span>
+                    )}
                     <span>{testingStatus.image?.testing ? '테스트 중...' : testingStatus.image?.success ? '적용 완료' : '테스트 및 적용'}</span>
-                  </button>
+                  </Button>
                 </div>
                 
                 {/* 테스트 결과 메시지 */}

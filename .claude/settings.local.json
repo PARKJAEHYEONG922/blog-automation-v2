@@ -59,7 +59,9 @@
       "Bash(ls:*)",
       "Bash(code --version)",
       "Bash(npm:*)",
-      "Bash(move:*)"
+      "Bash(move:*)",
+      "Bash(rg:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }
