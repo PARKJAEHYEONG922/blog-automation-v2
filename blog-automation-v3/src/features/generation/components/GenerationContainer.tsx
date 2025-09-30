@@ -196,6 +196,11 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
   
   // 긴 텍스트를 28자 기준으로 재귀적으로 자르는 함수
   const breakLongText = (text: string): string[] => {
+    // 해시태그가 포함된 줄은 자르지 않음 (태그들을 한 줄에 유지)
+    if (text.includes('#')) {
+      return [text];
+    }
+    
     // 마크다운 제거하여 실제 텍스트 길이 계산
     const plainText = text.replace(/\*\*([^*]+)\*\*/g, '$1');
     

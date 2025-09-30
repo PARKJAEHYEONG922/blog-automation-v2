@@ -490,8 +490,16 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         }
       }
       
-      // 제목 결정: 직접 입력한 제목 > AI 추천 제목 > 기본값
-      const finalTitle = manualTitle || selectedTitle || '수동 업로드된 글';
+      // 파일에서 #제목 추출 (마크다운 제목 형태)
+      let extractedTitle = '';
+      const titleMatch = content.match(/^#\s+(.+)$/m);
+      if (titleMatch && titleMatch[1]) {
+        extractedTitle = titleMatch[1].trim();
+        console.log('📝 파일에서 제목 추출됨:', extractedTitle);
+      }
+      
+      // 제목 결정 우선순위: 직접 입력한 제목 > 파일에서 추출한 제목 > AI 추천 제목 > 기본값
+      const finalTitle = manualTitle || extractedTitle || selectedTitle || '수동 업로드된 글';
       
       // 이미지 프롬프트 자동 생성
       setGenerationStep('이미지 프롬프트 생성 중...');
