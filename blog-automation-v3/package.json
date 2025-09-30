@@ -1,6 +1,6 @@
 {
   "name": "blog-automation-v3",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "AI 블로그 자동화 툴 v3 - 클로드 웹 연동",
   "main": "dist/main.js",
   "scripts": {
