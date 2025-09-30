@@ -1,0 +1,8 @@
+{
+  "tag_name": "v3.0.2",
+  "target_commitish": "master",
+  "name": "v3.0.2 - 다운로드 진행률 표시 수정",
+  "body": "## 🔧 V3.0.2 - 다운로드 진행률 표시 수정\n\n### 🐛 버그 수정\n- 다운로드 진행률 이벤트 리스너가 제대로 정리되지 않는 문제 해결\n- 이벤트 리스너 중복 등록 방지\n- 다운로드 진행률이 잠깐 보였다가 사라지는 문제 수정\n- 디버그 로그 추가로 다운로드 상태 추적 개선\n\n### ✨ 개선 사항\n- 다운로드 완료 후 안정적인 상태 관리\n- 이벤트 리스너 생명주기 관리 개선\n- 에러 핸들링 강화\n\n### 📋 포함된 기능\n- GitHub API 기반 자동 업데이트 확인 시스템\n- 원클릭 자동 다운로드 및 설치 기능\n- **수정된** 실시간 다운로드 진행률 표시\n- Claude Web 연동 글 작성\n- 다중 이미지 생성 모델 지원\n- 네이버 블로그 자동 발행\n- Help 메뉴 정보 다이얼로그\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+  "draft": false,
+  "prerelease": false
+}

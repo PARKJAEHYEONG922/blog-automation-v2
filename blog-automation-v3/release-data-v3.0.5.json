@@ -1,0 +1,8 @@
+{
+  "tag_name": "v3.0.5",
+  "target_commitish": "master",
+  "name": "v3.0.5 - 자동 설치 실행 개선",
+  "body": "## 🛠️ V3.0.5 - 자동 설치 실행 개선\n\n### 🐛 자동 설치 문제 해결\n- 다운로드 완료 후 설치 프로그램이 실행되지 않는 문제 수정\n- `spawn` 대신 `exec` 사용으로 Windows 호환성 개선\n- 설치 파일 존재 여부 확인 추가\n- 설치 프로그램 실행 후 앱 종료 시간 연장 (3초)\n- 상세한 로그 메시지 추가로 디버깅 향상\n\n### ✨ 개선 사항\n- 설치 프로그램 실행 안정성 향상\n- 에러 메시지 개선\n- 다운로드 → 설치 → 재시작 플로우 완성\n\n### 🧪 테스트 방법\n1. v3.0.4 이하 버전에서 Help > 업데이트 확인\n2. v3.0.5 다운로드 및 진행률 확인\n3. 다운로드 완료 후 설치 프로그램 자동 실행 확인\n4. 설치 완료 후 새 버전으로 시작 확인\n\n### 📋 동일한 기능\n- GitHub API 기반 자동 업데이트 확인 시스템\n- 원클릭 자동 다운로드 및 설치 기능\n- 실시간 다운로드 진행률 표시\n- Claude Web 연동 글 작성\n- 다중 이미지 생성 모델 지원\n- 네이버 블로그 자동 발행\n- Help 메뉴 정보 다이얼로그\n- V2 호환 설치 프로그램\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+  "draft": false,
+  "prerelease": false
+}

@@ -63,7 +63,9 @@
       "Bash(rg:*)",
       "Bash(git reset:*)",
       "Bash(set GH_TOKEN=)",
-      "Bash(unset GH_TOKEN)"
+      "Bash(unset GH_TOKEN)",
+      "Bash(gh release create:*)",
+      "Bash(gh release list:*)"
     ],
     "deny": []
   }

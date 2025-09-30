@@ -1,0 +1,8 @@
+{
+  "tag_name": "v3.0.3",
+  "target_commitish": "master",
+  "name": "v3.0.3 - 설치 프로그램 호환성 개선",
+  "body": "## 🔧 V3.0.3 - 설치 프로그램 호환성 개선\n\n### 🐛 설치 문제 해결\n- V2와 동일한 NSIS 설정 적용으로 설치 호환성 개선\n- \"cannot be closed\" 오류 해결\n- 기존 설치된 프로그램 위에 정상 덮어쓰기 가능\n- `allowElevation: true`, `runAfterFinish: true` 등 V2 설정 복원\n\n### ✨ 개선 사항  \n- 설치 프로세스 안정성 향상\n- 기존 프로그램 실행 중에도 설치 가능\n- V2 사용자들의 업그레이드 경험 개선\n\n### 📋 포함된 기능\n- GitHub API 기반 자동 업데이트 확인 시스템\n- 원클릭 자동 다운로드 및 설치 기능\n- 실시간 다운로드 진행률 표시 (수정됨)\n- Claude Web 연동 글 작성\n- 다중 이미지 생성 모델 지원\n- 네이버 블로그 자동 발행\n- Help 메뉴 정보 다이얼로그\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+  "draft": false,
+  "prerelease": false
+}

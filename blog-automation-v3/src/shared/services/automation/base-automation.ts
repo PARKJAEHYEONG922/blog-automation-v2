@@ -1,6 +1,6 @@
 // 기본 브라우저 자동화 클래스
 
-import { IBrowserAutomation, LoginResult, PublishResult as AutomationPublishResult, PlaywrightResult } from '../../types/automation';
+import { IBrowserAutomation, LoginResult, PublishResult as AutomationPublishResult, PlaywrightResult } from '../../types/automation.types';
 
 export abstract class BaseBrowserAutomation implements IBrowserAutomation {
   protected isLoggedIn: boolean = false;

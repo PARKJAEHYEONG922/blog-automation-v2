@@ -84,6 +84,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-check-result', handler);
     return () => ipcRenderer.removeListener('update-check-result', handler);
   },
+  onDownloadProgress: (callback: (data: any) => void) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('download-progress', handler);
+    return () => ipcRenderer.removeListener('download-progress', handler);
+  },
 });
 
 // Types are defined in shared/types/electron.types.ts

@@ -14,26 +14,81 @@ interface UpdateModalProps {
   onDownload: (downloadUrl: string) => void;
 }
 
+interface DownloadProgress {
+  progress: number;
+  downloadedBytes: number;
+  totalBytes: number;
+}
+
 const UpdateModal: React.FC<UpdateModalProps> = ({ isVisible, updateInfo, onClose, onDownload }) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+  const [downloadComplete, setDownloadComplete] = useState(false);
 
   useEffect(() => {
     if (!isVisible) {
       setIsDownloading(false);
+      setDownloadProgress(null);
+      setDownloadComplete(false);
+      return;
     }
+
+    // 다운로드 진행률 이벤트 리스너
+    const handleDownloadProgress = (data: DownloadProgress) => {
+      console.log('다운로드 진행률 수신:', data);
+      setDownloadProgress(data);
+    };
+
+    let removeListener: (() => void) | undefined;
+
+    if (window.electronAPI && window.electronAPI.onDownloadProgress) {
+      removeListener = window.electronAPI.onDownloadProgress(handleDownloadProgress);
+    }
+
+    return () => {
+      if (removeListener) {
+        removeListener();
+      }
+    };
   }, [isVisible]);
 
   if (!isVisible || !updateInfo) return null;
 
   const handleDownload = async () => {
     if (updateInfo.downloadUrl) {
+      console.log('다운로드 시작:', updateInfo.downloadUrl);
       setIsDownloading(true);
-      await onDownload(updateInfo.downloadUrl);
-      setTimeout(() => {
+      setDownloadProgress({ progress: 0, downloadedBytes: 0, totalBytes: 0 });
+      
+      try {
+        const result = await onDownload(updateInfo.downloadUrl);
+        console.log('다운로드 결과:', result);
+        
+        if (result && result.success) {
+          console.log('다운로드 성공 - 완료 상태로 변경');
+          setDownloadComplete(true);
+          setTimeout(() => {
+            console.log('앱이 곧 종료됩니다');
+          }, 1000);
+        } else {
+          console.error('다운로드 실패:', result);
+          setIsDownloading(false);
+          setDownloadProgress(null);
+        }
+      } catch (error) {
+        console.error('다운로드 예외 발생:', error);
         setIsDownloading(false);
-        onClose();
-      }, 1000);
+        setDownloadProgress(null);
+      }
     }
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -78,17 +133,64 @@ const UpdateModal: React.FC<UpdateModalProps> = ({ isVisible, updateInfo, onClos
                 </div>
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <span className="text-amber-500 text-lg">⚠️</span>
-                  <div>
-                    <p className="text-amber-700 font-medium">업데이트 방법</p>
-                    <p className="text-amber-600 text-sm mt-1">
-                      다운로드 후 현재 애플리케이션을 종료하고 새 버전을 설치해주세요.
-                    </p>
+              {/* 다운로드 진행률 표시 */}
+              {isDownloading && downloadProgress && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-green-700 font-medium">📥 다운로드 중...</span>
+                      <span className="text-green-600 font-mono text-sm">{downloadProgress.progress}%</span>
+                    </div>
+                    
+                    {/* 진행률 바 */}
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${downloadProgress.progress}%` }}
+                      ></div>
+                    </div>
+                    
+                    <div className="flex justify-between text-xs text-green-600">
+                      <span>
+                        {formatBytes(downloadProgress.downloadedBytes)} / {formatBytes(downloadProgress.totalBytes)}
+                      </span>
+                      <span>
+                        {downloadProgress.progress === 100 ? '설치 프로그램 실행 중...' : '다운로드 중...'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* 다운로드 완료 */}
+              {downloadComplete && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-green-500 text-lg">✅</span>
+                    <div>
+                      <p className="text-green-700 font-medium">다운로드 완료!</p>
+                      <p className="text-green-600 text-sm mt-1">
+                        설치 프로그램이 시작됩니다. 잠시만 기다려주세요...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 일반 안내 */}
+              {!isDownloading && !downloadComplete && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-amber-500 text-lg">⚠️</span>
+                    <div>
+                      <p className="text-amber-700 font-medium">자동 업데이트</p>
+                      <p className="text-amber-600 text-sm mt-1">
+                        다운로드 버튼을 클릭하면 자동으로 설치 프로그램이 실행됩니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex space-x-3 pt-2">
                 <button

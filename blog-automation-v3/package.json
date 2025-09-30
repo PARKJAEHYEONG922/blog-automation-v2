@@ -50,8 +50,8 @@
     "tailwindcss": "^3.4.1"
   },
   "build": {
-    "appId": "com.blog.automation.v3",
-    "productName": "블로그 자동화 v3",
+    "appId": "com.parkjaehyeong922.blog-automation-v2",
+    "productName": "블로그 자동화",
     "directories": {
       "output": "release"
     },
@@ -65,10 +65,13 @@
     ],
     "nsis": {
       "oneClick": false,
-      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "shortcutName": "블로그 자동화",
+      "allowElevation": true,
+      "deleteAppDataOnUninstall": false,
       "include": "scripts/installer.nsh"
     },
     "win": {

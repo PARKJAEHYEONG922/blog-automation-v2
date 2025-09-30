@@ -1,0 +1,8 @@
+{
+  "tag_name": "v3.0.4",
+  "target_commitish": "master",
+  "name": "v3.0.4 - 자동 업데이트 테스트 버전",
+  "body": "## 🧪 V3.0.4 - 자동 업데이트 테스트 버전\n\n### 🎯 테스트 목적\n- 자동 업데이트 시스템 정상 작동 확인\n- 다운로드 진행률 표시 테스트\n- 설치 프로그램 덮어쓰기 테스트\n- V3.0.3에서 V3.0.4로 업데이트 플로우 검증\n\n### ✅ 확인 사항\n- Help > 업데이트 확인에서 새 버전 감지 여부\n- 다운로드 버튼 클릭 시 진행률 표시\n- 다운로드 완료 후 자동 설치 실행\n- 설치 완료 후 새 버전으로 실행 확인\n\n### 📋 동일한 기능\n- GitHub API 기반 자동 업데이트 확인 시스템\n- 원클릭 자동 다운로드 및 설치 기능\n- 실시간 다운로드 진행률 표시\n- Claude Web 연동 글 작성\n- 다중 이미지 생성 모델 지원\n- 네이버 블로그 자동 발행\n- Help 메뉴 정보 다이얼로그\n- V2 호환 설치 프로그램\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+  "draft": false,
+  "prerelease": false
+}

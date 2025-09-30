@@ -1,0 +1,8 @@
+{
+  "tag_name": "v3.0.0",
+  "target_commitish": "master",
+  "name": "v3.0.0 - 자동 업데이트 시스템 완성",
+  "body": "## 🎉 V3.0.0 - 자동 업데이트 시스템 완성\n\n### ✨ 주요 기능\n- GitHub API 기반 자동 업데이트 확인 시스템\n- 원클릭 자동 다운로드 및 설치 기능\n- 실시간 다운로드 진행률 표시\n- 브라우저 개발자 도구 비활성화로 안정성 향상\n- 커스텀 아이콘 및 NSIS 설치 프로그램\n\n### 🔧 기술적 개선\n- electron-updater 의존성 제거하고 단순화된 업데이트 시스템 구현\n- IPC 통신 기반 메인-렌더러 프로세스 간 데이터 교환\n- Node.js https 모듈을 이용한 직접 파일 다운로드\n- child_process.spawn으로 설치 프로그램 자동 실행\n\n### 🎯 사용자 경험\n- 직관적인 업데이트 모달 UI\n- 다운로드 진행률 실시간 표시 (진행률 바, 바이트 단위 표시)\n- 자동 설치 후 앱 종료로 매끄러운 업데이트 플로우\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+  "draft": false,
+  "prerelease": false
+}
