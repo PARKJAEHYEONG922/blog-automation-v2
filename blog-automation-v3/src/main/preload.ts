@@ -89,6 +89,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('download-progress', handler);
     return () => ipcRenderer.removeListener('download-progress', handler);
   },
+
+  // Naver Cookies management
+  getNaverCookies: () => ipcRenderer.invoke('naver:get-cookies'),
+  saveNaverCookies: (cookies: string) => ipcRenderer.invoke('naver:save-cookies', cookies),
+  deleteNaverCookies: () => ipcRenderer.invoke('naver:delete-cookies'),
+  openNaverLogin: () => ipcRenderer.invoke('naver:open-login'),
+  getNaverTrends: (category?: string, limit?: number, date?: string) => ipcRenderer.invoke('naver:get-trends', category, limit, date),
+  getTrendContents: (keyword: string, date: string, limit?: number) => ipcRenderer.invoke('naver:get-trend-contents', keyword, date, limit),
+
+  // Settings
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+
+  // Blog crawling for trend analysis
+  crawlBlogUrls: (urls: string[], titles: string[]) => ipcRenderer.invoke('blog:crawl-urls', urls, titles),
 });
 
 // Types are defined in shared/types/electron.types.ts

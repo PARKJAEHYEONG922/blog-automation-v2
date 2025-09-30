@@ -234,8 +234,8 @@ export class BlogCrawler {
   }
 
   private convertToPostViewUrl(blogUrl: string): string | null {
-    // 레거시 패턴: https://blog.naver.com/{blogId}/{logNo}
-    const pattern = /https:\/\/blog\.naver\.com\/([^\/]+)\/(\d+)/;
+    // 레거시 패턴: http(s)://blog.naver.com/{blogId}/{logNo}
+    const pattern = /https?:\/\/blog\.naver\.com\/([^\/]+)\/(\d+)/;
     const match = blogUrl.match(pattern);
 
     if (match) {

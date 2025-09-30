@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import TrendModal from './TrendModal';
+import { TrendAnalysisResult } from '../../../shared/services/content/blog-trend-analyzer';
 
 interface KeywordInputSectionProps {
   mainKeyword: string;
@@ -7,6 +9,7 @@ interface KeywordInputSectionProps {
   onMainKeywordChange: (value: string) => void;
   onSubKeywordsChange: (value: string) => void;
   onBlogContentChange: (value: string) => void;
+  onTrendAnalysisComplete?: (result: TrendAnalysisResult) => void;
 }
 
 const KeywordInputSection: React.FC<KeywordInputSectionProps> = ({
@@ -16,15 +19,39 @@ const KeywordInputSection: React.FC<KeywordInputSectionProps> = ({
   onMainKeywordChange,
   onSubKeywordsChange,
   onBlogContentChange,
+  onTrendAnalysisComplete,
 }) => {
+  const [showTrendModal, setShowTrendModal] = useState(false);
+
+  const handleTrendAnalysis = (result: TrendAnalysisResult) => {
+    setShowTrendModal(false);
+    onTrendAnalysisComplete?.(result);
+  };
+
   return (
     <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 mb-5 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <div className="flex items-center space-x-3 mb-2">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
-          🔍
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-semibold">
+            🔍
+          </div>
+          <h3 className="text-xl font-bold text-gray-800">키워드 입력 및 제목 추천</h3>
         </div>
-        <h3 className="text-xl font-bold text-gray-800">키워드 입력 및 제목 추천</h3>
+        <button
+          onClick={() => setShowTrendModal(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-orange-600 hover:to-red-600 transition-all duration-200 transform hover:scale-105"
+        >
+          <span>🔥</span>
+          <span>실시간 추천</span>
+        </button>
       </div>
+
+      {/* Trend Modal */}
+      <TrendModal
+        isOpen={showTrendModal}
+        onClose={() => setShowTrendModal(false)}
+        onAnalysisComplete={handleTrendAnalysis}
+      />
       <p className="text-gray-600 text-sm mb-6 leading-relaxed bg-blue-50 border border-blue-200 rounded-lg p-3">
         💡 메인키워드, SEO 보조키워드, 글 내용을 입력하면 AI가 독자 관심을 끌 매력적인 제목 10개를 추천합니다
       </p>

@@ -7,6 +7,7 @@ import GenerationProgressSection from './GenerationProgressSection';
 import ManualUploadSection from './ManualUploadSection';
 import { BlogPromptService } from '../../../shared/services/content/blog-prompt-service';
 import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
+import { TrendAnalysisResult } from '../../../shared/services/content/blog-trend-analyzer';
 import Button from '../../../shared/components/ui/Button';
 
 interface Step1Props {
@@ -701,6 +702,16 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         onMainKeywordChange={setMainKeyword}
         onSubKeywordsChange={setSubKeywords}
         onBlogContentChange={setBlogContent}
+        onTrendAnalysisComplete={(result: TrendAnalysisResult) => {
+          // 트렌드 분석 결과를 폼에 자동 입력
+          setMainKeyword(result.mainKeyword);
+          setSubKeywords(result.subKeywords.join(', '));
+          setBlogContent(result.contentDirection);
+          setGeneratedTitles(result.recommendedTitles);
+
+          // 성공 알림
+          alert(`✅ 트렌드 분석 완료!\n제목 ${result.recommendedTitles.length}개, 키워드 ${result.subKeywords.length}개 생성됨`);
+        }}
       />
 
       {/* AI 추천 제목 섹션 */}

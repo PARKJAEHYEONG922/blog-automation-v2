@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
+    "google-trends-api": "^4.9.2",
     "marked": "^9.0.0",
     "playwright": "^1.40.0",
     "postcss": "^8.5.6",

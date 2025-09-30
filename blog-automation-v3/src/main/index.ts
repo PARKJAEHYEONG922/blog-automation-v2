@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell, Menu, dialog } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { ClaudeWebService } from '../shared/services/automation/claude-web-service';
 import { ImageService } from '../shared/services/content/image-service';
 import { registerPlaywrightHandlers } from '../shared/services/automation/playwright-service';
@@ -1031,6 +1032,338 @@ ipcMain.handle('app:download-update', async (event: any, downloadUrl: string) =>
   } catch (error) {
     console.error('❌ 업데이트 다운로드 실패:', error);
     return { success: false, error: (error as Error).message };
+  }
+});
+
+// ============= Naver Cookies Management =============
+
+// 네이버 쿠키 저장 경로
+function getNaverCookiesPath(): string {
+  return path.join(app.getPath('userData'), 'naver_cookies.txt');
+}
+
+// 네이버 쿠키 가져오기
+ipcMain.handle('naver:get-cookies', async () => {
+  const fs = require('fs');
+  const cookiesPath = getNaverCookiesPath();
+
+  try {
+    if (fs.existsSync(cookiesPath)) {
+      const cookies = fs.readFileSync(cookiesPath, 'utf-8');
+      console.log('✅ 네이버 쿠키 로드 완료');
+      return cookies;
+    }
+    return null;
+  } catch (error) {
+    console.error('네이버 쿠키 로드 실패:', error);
+    return null;
+  }
+});
+
+// 네이버 쿠키 저장
+ipcMain.handle('naver:save-cookies', async (event: any, cookies: string) => {
+  const fs = require('fs');
+  const cookiesPath = getNaverCookiesPath();
+
+  try {
+    fs.writeFileSync(cookiesPath, cookies, 'utf-8');
+    console.log('✅ 네이버 쿠키 저장 완료');
+    return true;
+  } catch (error) {
+    console.error('네이버 쿠키 저장 실패:', error);
+    throw error;
+  }
+});
+
+// 네이버 쿠키 삭제
+ipcMain.handle('naver:delete-cookies', async () => {
+  const fs = require('fs');
+  const cookiesPath = getNaverCookiesPath();
+
+  try {
+    if (fs.existsSync(cookiesPath)) {
+      fs.unlinkSync(cookiesPath);
+      console.log('✅ 네이버 쿠키 삭제 완료');
+    }
+    return true;
+  } catch (error) {
+    console.error('네이버 쿠키 삭제 실패:', error);
+    throw error;
+  }
+});
+
+// 네이버 로그인 페이지 열기 (Playwright로)
+ipcMain.handle('naver:open-login', async () => {
+  const { chromium } = require('playwright');
+
+  try {
+    console.log('🌐 네이버 로그인 페이지 열기...');
+
+    const browser = await chromium.launch({ headless: false });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    // 네이버 크리에이터 어드바이저 로그인 페이지로 이동
+    const loginUrl = 'https://nid.naver.com/nidlogin.login?url=https://creator-advisor.naver.com';
+    await page.goto(loginUrl);
+
+    console.log('⏳ 로그인 완료까지 대기 중...');
+    console.log('💡 네이버 로그인 후 creator-advisor.naver.com 페이지가 뜰 때까지 기다립니다...');
+
+    // 로그인 완료 대기 (creator-advisor.naver.com으로 이동할 때까지)
+    await page.waitForURL('**/creator-advisor.naver.com/**', { timeout: 300000 }); // 5분 대기
+
+    console.log('✅ 로그인 완료 감지! URL:', page.url());
+
+    // 잠시 대기 (페이지 완전히 로드)
+    await page.waitForTimeout(3000);
+
+    // 쿠키 추출
+    const cookies = await context.cookies();
+    const cookieString = cookies
+      .map(c => `${c.name}=${c.value}`)
+      .join('; ');
+
+    console.log('✅ 쿠키 추출 완료:', cookieString.substring(0, 100) + '...');
+
+    // 쿠키 저장
+    const fs = require('fs');
+    const cookiesPath = getNaverCookiesPath();
+    fs.writeFileSync(cookiesPath, cookieString, 'utf-8');
+    console.log('✅ 쿠키 저장 완료:', cookiesPath);
+
+    await browser.close();
+
+    return { success: true, cookies: cookieString };
+
+  } catch (error) {
+    console.error('네이버 로그인 실패:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+// 네이버 트렌드 가져오기
+ipcMain.handle('naver:get-trends', async (event: any, category?: string, limit: number = 20, date?: string) => {
+  const fs = require('fs');
+  const cookiesPath = getNaverCookiesPath();
+
+  try {
+    // 쿠키 확인
+    if (!fs.existsSync(cookiesPath)) {
+      return { needsLogin: true };
+    }
+
+    const cookies = fs.readFileSync(cookiesPath, 'utf-8');
+
+    // 날짜 설정 (전달받은 날짜 또는 어제)
+    let dateStr: string;
+    if (date) {
+      dateStr = date;
+    } else {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      dateStr = yesterday.toISOString().split('T')[0];
+    }
+
+    // 카테고리 설정
+    const categories = [
+      { name: '비즈니스·경제', value: '비즈니스·경제' },
+      { name: 'IT·컴퓨터', value: 'IT·컴퓨터' },
+      { name: '일상·생각', value: '일상·생각' },
+      { name: '육아·결혼', value: '육아·결혼' },
+      { name: '요리·레시피', value: '요리·레시피' },
+      { name: '패션·미용', value: '패션·미용' },
+      { name: '음악', value: '음악' },
+      { name: '영화·드라마', value: '영화·드라마' },
+    ];
+
+    const selectedCategory = category || categories[0].value;
+    const encodedCategory = encodeURIComponent(selectedCategory);
+
+    // API URL
+    const url = `https://creator-advisor.naver.com/api/v6/trend/category?categories=${encodedCategory}&contentType=text&date=${dateStr}&hasRankChange=true&interval=day&limit=${limit}&service=naver_blog`;
+
+    console.log('🔥 네이버 트렌드 API 호출:', url);
+
+    // API 호출
+    return new Promise((resolve) => {
+      https.get(url, {
+        headers: {
+          'accept': 'application/json',
+          'accept-language': 'ko-KR,ko;q=0.9',
+          'cookie': cookies,
+          'referer': 'https://creator-advisor.naver.com/',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          console.log('📥 응답 상태:', res.statusCode);
+
+          if (res.statusCode === 401 || res.statusCode === 403) {
+            // 쿠키 만료
+            try {
+              fs.unlinkSync(cookiesPath);
+              console.log('✅ 만료된 쿠키 삭제');
+            } catch (e) {}
+            resolve({ needsLogin: true });
+            return;
+          }
+
+          if (res.statusCode !== 200) {
+            resolve({ error: `API 호출 실패: ${res.statusCode}` });
+            return;
+          }
+
+          try {
+            const json = JSON.parse(data);
+
+            // 트렌드 키워드 추출
+            const trends: any[] = [];
+
+            if (json.data && Array.isArray(json.data)) {
+              for (const categoryData of json.data) {
+                if (categoryData.queryList && Array.isArray(categoryData.queryList)) {
+                  for (const item of categoryData.queryList) {
+                    trends.push({
+                      keyword: item.query || item.keyword || item.title || '키워드 없음',
+                      rank: item.rank || trends.length + 1,
+                      rankChange: item.rankChange !== undefined ? item.rankChange : null
+                    });
+
+                    if (trends.length >= limit) break;
+                  }
+                }
+                if (trends.length >= limit) break;
+              }
+            }
+
+            console.log(`✅ 트렌드 ${trends.length}개 가져오기 완료`);
+            resolve({ trends });
+
+          } catch (error) {
+            resolve({ error: 'JSON 파싱 실패' });
+          }
+        });
+      }).on('error', (error) => {
+        console.error('API 호출 오류:', error);
+        resolve({ error: error.message });
+      });
+    });
+
+  } catch (error) {
+    console.error('네이버 트렌드 가져오기 실패:', error);
+    return { error: (error as Error).message };
+  }
+});
+
+// 네이버 트렌드 콘텐츠 가져오기 (특정 키워드의 상위 블로그 글 목록)
+ipcMain.handle('naver:get-trend-contents', async (event, keyword: string, date: string, limit: number = 20) => {
+  try {
+    console.log('🔍 트렌드 콘텐츠 요청:', { keyword, date, limit });
+
+    const cookiesPath = getNaverCookiesPath();
+    console.log('🔍 쿠키 파일 경로:', cookiesPath);
+
+    // 쿠키 확인
+    if (!fs.existsSync(cookiesPath)) {
+      console.log('❌ 쿠키 파일이 없습니다!');
+      return { needsLogin: true };
+    }
+
+    console.log('✅ 쿠키 파일 존재');
+    const cookies = fs.readFileSync(cookiesPath, 'utf-8');
+    console.log('✅ 쿠키 로드 완료, 길이:', cookies.length);
+
+    // URL 인코딩 (파라미터 순서 중요!)
+    const encodedKeyword = encodeURIComponent(keyword);
+    const url = `https://creator-advisor.naver.com/api/v6/trend/trend-contents?date=${date}&interval=day&keyword=${encodedKeyword}&limit=${limit}&service=naver_blog`;
+
+    console.log('📊 네이버 트렌드 콘텐츠 API 호출:', url);
+
+    // API 호출
+    return new Promise((resolve) => {
+      https.get(url, {
+        headers: {
+          'accept': 'application/json',
+          'accept-language': 'ko-KR,ko;q=0.9',
+          'cookie': cookies,
+          'referer': 'https://creator-advisor.naver.com/',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          console.log('📥 응답 상태:', res.statusCode);
+
+          if (res.statusCode === 401 || res.statusCode === 403) {
+            // 쿠키 만료
+            try {
+              fs.unlinkSync(cookiesPath);
+              console.log('✅ 만료된 쿠키 삭제');
+            } catch (e) {}
+            resolve({ needsLogin: true });
+            return;
+          }
+
+          if (res.statusCode !== 200) {
+            resolve({ error: `API 호출 실패: ${res.statusCode}` });
+            return;
+          }
+
+          try {
+            const json = JSON.parse(data);
+
+            // 블로그 글 목록 추출
+            const contents: any[] = [];
+
+            if (json.data && Array.isArray(json.data)) {
+              for (const item of json.data) {
+                if (item.metaUrl && item.title) {
+                  contents.push({
+                    metaUrl: item.metaUrl,
+                    title: item.title,
+                    myContent: item.myContent || false
+                  });
+                }
+
+                if (contents.length >= limit) break;
+              }
+            }
+
+            console.log(`✅ 블로그 글 ${contents.length}개 가져오기 완료`);
+            resolve({ contents });
+
+          } catch (error) {
+            resolve({ error: 'JSON 파싱 실패' });
+          }
+        });
+      }).on('error', (error) => {
+        console.error('API 호출 오류:', error);
+        resolve({ error: error.message });
+      });
+    });
+
+  } catch (error) {
+    console.error('네이버 트렌드 콘텐츠 가져오기 실패:', error);
+    return { error: (error as Error).message };
+  }
+});
+
+// Settings 가져오기
+ipcMain.handle('settings:get', async () => {
+  try {
+    const settingsPath = path.join(app.getPath('userData'), 'llm-settings.json');
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf-8');
+      return JSON.parse(data);
+    }
+    return null;
+  } catch (error) {
+    console.error('Settings 가져오기 실패:', error);
+    return null;
   }
 });
 
