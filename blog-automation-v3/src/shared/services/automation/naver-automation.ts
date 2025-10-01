@@ -299,12 +299,47 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
   async navigateToWritePage(): Promise<boolean> {
     try {
       console.log('📝 네이버 블로그 글쓰기 페이지로 이동...');
-      
-      const writeUrl = `https://blog.naver.com/${this.currentUsername}?Redirect=Write&`;
-      const success = await this.navigate(writeUrl);
-      
-      if (!success) {
+
+      // 1단계: 블로그 홈으로 이동하여 실제 블로그 ID 추출
+      console.log('📍 블로그 홈에서 블로그 ID 추출 중...');
+      const blogHomeUrl = 'https://section.blog.naver.com/BlogHome.naver?directoryNo=0&currentPage=1&groupId=0';
+      const homeSuccess = await this.navigate(blogHomeUrl);
+
+      if (!homeSuccess) {
+        console.warn('⚠️ 블로그 홈 이동 실패');
         return false;
+      }
+
+      await this.waitForTimeout(2000);
+
+      // 블로그 ID 추출 (방문자수 링크에서)
+      const blogIdResult = await this.evaluate(`
+        (function() {
+          const visitLink = document.querySelector('a[ng-href*="/stat/today"]');
+          if (visitLink) {
+            const href = visitLink.getAttribute('ng-href') || visitLink.getAttribute('href');
+            const match = href.match(/admin\\.blog\\.naver\\.com\\/([^\\/]+)\\/stat/);
+            if (match) {
+              return match[1];
+            }
+          }
+          return null;
+        })()
+      `);
+
+      const blogId = blogIdResult?.result;
+      if (!blogId) {
+        console.warn('⚠️ 블로그 ID 추출 실패, 로그인 ID 사용');
+        // 추출 실패 시 로그인 ID 사용
+        const writeUrl = `https://blog.naver.com/${this.currentUsername}?Redirect=Write&`;
+        const success = await this.navigate(writeUrl);
+        if (!success) return false;
+      } else {
+        console.log(`✅ 블로그 ID 추출 성공: ${blogId}`);
+        // 2단계: 추출한 블로그 ID로 글쓰기 페이지 이동
+        const writeUrl = `https://blog.naver.com/${blogId}?Redirect=Write&`;
+        const success = await this.navigate(writeUrl);
+        if (!success) return false;
       }
 
       // 페이지 로드 대기 (iframe 로딩 충분히 대기)
