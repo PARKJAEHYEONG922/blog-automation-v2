@@ -276,18 +276,24 @@ export class ContentProcessor {
 
   /**
    * 긴 텍스트를 28자 기준으로 재귀적으로 자르는 함수
+   * 강조 표시(**텍스트**)가 끊기지 않도록 처리
    */
   private static breakLongText(text: string): string[] {
+    // 해시태그 라인은 절대 자르지 않음
+    if (text.includes('#') && text.match(/#\S+/)) {
+      return [text];
+    }
+
     // 마크다운 제거하여 실제 텍스트 길이 계산
     const plainText = text.replace(/\*\*([^*]+)\*\*/g, '$1');
-    
+
     if (plainText.length <= 28) {
       return [text];
     }
-    
+
     // 15-35자 구간에서 자를 위치 찾기 (범위 확장)
     let cutPosition = -1;
-    
+
     // 1순위: 마침표 (15-35자 구간)
     for (let i = 15; i <= Math.min(35, plainText.length - 1); i++) {
       if (plainText[i] === '.') {
@@ -295,7 +301,7 @@ export class ContentProcessor {
         break;
       }
     }
-    
+
     // 2순위: 쉼표 (15-35자 구간)
     if (cutPosition === -1) {
       for (let i = 15; i <= Math.min(35, plainText.length - 1); i++) {
@@ -305,7 +311,7 @@ export class ContentProcessor {
         }
       }
     }
-    
+
     // 3순위: 접속사 (15-32자 구간)
     if (cutPosition === -1) {
       const conjunctions = ['그리고', '하지만', '또한', '따라서', '그런데', '그러나', '그래서', '또는', '그러면', '그럼', '이제', '이때'];
@@ -320,7 +326,7 @@ export class ContentProcessor {
         if (cutPosition !== -1) break;
       }
     }
-    
+
     // 4순위: 공백 (20-30자 구간에서 뒤에서부터 찾기)
     if (cutPosition === -1) {
       for (let i = Math.min(30, plainText.length - 1); i >= 20; i--) {
@@ -330,18 +336,30 @@ export class ContentProcessor {
         }
       }
     }
-    
+
     // 5순위: 강제로 28자에서 자르기
     if (cutPosition === -1) {
       cutPosition = 28;
     }
-    
+
     if (cutPosition !== -1) {
+      // ** 강조 영역 찾기
+      const boldRanges: Array<{start: number, end: number}> = [];
+      let pos = 0;
+      while (pos < text.length) {
+        const startIdx = text.indexOf('**', pos);
+        if (startIdx === -1) break;
+        const endIdx = text.indexOf('**', startIdx + 2);
+        if (endIdx === -1) break;
+        boldRanges.push({start: startIdx, end: endIdx + 2});
+        pos = endIdx + 2;
+      }
+
       // 원본 텍스트에서 실제 자를 위치 찾기 (마크다운 고려)
       let realCutPosition = 0;
       let plainCount = 0;
       let i = 0;
-      
+
       while (i < text.length && plainCount < cutPosition) {
         if (text.substring(i, i + 2) === '**') {
           // ** 태그는 건너뛰기
@@ -354,13 +372,39 @@ export class ContentProcessor {
           i++;
         }
       }
-      
-      const firstPart = text.substring(0, realCutPosition).trim();
-      const secondPart = text.substring(realCutPosition).trim();
-      
+
+      // 강조로 시작하는지 확인
+      const startsWithBold = text.trim().startsWith('**');
+
+      // 자를 위치가 강조 영역 안에 있는지 확인
+      let insideBold = false;
+      let boldRange: {start: number, end: number} | null = null;
+
+      for (const range of boldRanges) {
+        if (realCutPosition > range.start && realCutPosition < range.end) {
+          insideBold = true;
+          boldRange = range;
+          break;
+        }
+      }
+
+      let firstPart: string;
+      let secondPart: string;
+
+      // 강조로 시작하고 + 강조 영역 안에서 잘라야 하는 경우만 특별 처리
+      if (startsWithBold && insideBold && boldRange) {
+        // 강조 끝까지 포함해서 자르기
+        firstPart = text.substring(0, boldRange.end).trim();
+        secondPart = text.substring(boldRange.end).trim();
+      } else {
+        // 일반적인 경우: 그냥 자르기
+        firstPart = text.substring(0, realCutPosition).trim();
+        secondPart = text.substring(realCutPosition).trim();
+      }
+
       // 재귀적으로 두 번째 부분도 처리
       const restParts = this.breakLongText(secondPart);
-      
+
       return [firstPart, ...restParts];
     } else {
       return [text];
