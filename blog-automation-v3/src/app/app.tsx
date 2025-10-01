@@ -3,6 +3,7 @@ import { SetupContainer } from '../features/setup';
 import { GenerationContainer } from '../features/generation';
 import { LLMSettings, UpdateModal } from '../features/settings';
 import { LogPanel, Button } from '../shared/components';
+import ErrorBoundary from '../shared/components/error/ErrorBoundary';
 
 type Step = 1 | 2;
 
@@ -209,21 +210,23 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-hidden flex">
         <div className={`${showLogs ? 'flex-1' : 'w-full'} overflow-y-auto`}>
           <div className="h-full">
-            {currentStep === 1 && (
-              <SetupContainer 
-                onComplete={handleSetupComplete} 
-                initialData={setupData}
-              />
-            )}
-            {currentStep === 2 && (
-              <GenerationContainer
-                content={generatedContent}
-                setupData={setupData}
-                onReset={handleReset}
-                onGoBack={handleGoBack}
-                aiModelStatus={aiModelStatus}
-              />
-            )}
+            <ErrorBoundary>
+              {currentStep === 1 && (
+                <SetupContainer
+                  onComplete={handleSetupComplete}
+                  initialData={setupData}
+                />
+              )}
+              {currentStep === 2 && (
+                <GenerationContainer
+                  content={generatedContent}
+                  setupData={setupData}
+                  onReset={handleReset}
+                  onGoBack={handleGoBack}
+                  aiModelStatus={aiModelStatus}
+                />
+              )}
+            </ErrorBoundary>
           </div>
         </div>
         <LogPanel isVisible={showLogs} />
@@ -231,14 +234,16 @@ const App: React.FC = () => {
 
       {/* LLM Settings Modal */}
       {showLLMSettings && (
-        <LLMSettings
-          onClose={() => setShowLLMSettings(false)}
-          onSettingsChange={() => {
-            refreshModelStatus();
-            // Step2에서도 감지할 수 있도록 전역 이벤트 발생
-            window.dispatchEvent(new CustomEvent('app-llm-settings-changed'));
-          }}
-        />
+        <ErrorBoundary>
+          <LLMSettings
+            onClose={() => setShowLLMSettings(false)}
+            onSettingsChange={() => {
+              refreshModelStatus();
+              // Step2에서도 감지할 수 있도록 전역 이벤트 발생
+              window.dispatchEvent(new CustomEvent('app-llm-settings-changed'));
+            }}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Update Modal */}
