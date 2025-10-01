@@ -103,15 +103,15 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
           if (style) {
             console.log('🎨 API에서 불러온 이미지 스타일:', style);
-            setImageStyle(style);
+            setImageStyle(style as typeof imageStyle);
           }
           if (quality) {
             console.log('🔧 API에서 불러온 이미지 품질:', quality);
-            setImageQuality(quality);
+            setImageQuality(quality as typeof imageQuality);
           }
           if (size) {
             console.log('📐 API에서 불러온 이미지 크기:', size);
-            setImageSize(size);
+            setImageSize(size as typeof imageSize);
           }
         }
       } catch (error) {
@@ -132,15 +132,15 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
           if (style) {
             console.log('🎨 API 설정 변경 - 이미지 스타일 업데이트:', style);
-            setImageStyle(style);
+            setImageStyle(style as typeof imageStyle);
           }
           if (quality) {
             console.log('🔧 API 설정 변경 - 이미지 품질 업데이트:', quality);
-            setImageQuality(quality);
+            setImageQuality(quality as typeof imageQuality);
           }
           if (size) {
             console.log('📐 API 설정 변경 - 이미지 크기 업데이트:', size);
-            setImageSize(size);
+            setImageSize(size as typeof imageSize);
           }
         }
       } catch (error) {
