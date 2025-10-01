@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ConfirmDialog from './ConfirmDialog';
+import AlertDialog from '../../../shared/components/ui/AlertDialog';
 import DocumentUploadSection from './DocumentUploadSection';
 import KeywordInputSection from './KeywordInputSection';
 import TitleRecommendationSection from './TitleRecommendationSection';
@@ -63,7 +64,16 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<string[]>(initialData?.generatedTitles || []);
   const [selectedTitle, setSelectedTitle] = useState(initialData?.selectedTitle || '');
-  
+
+  // 트렌드 분석 결과 저장 (제목 재생성용)
+  const [trendAnalysisCache, setTrendAnalysisCache] = useState<{
+    contents: any[];
+    mainKeyword: string;
+    allTitles: string[];
+    subKeywords: string[];
+    direction: string;
+  } | null>(null);
+
   // 생성 관련 상태
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState<string>('');
@@ -87,6 +97,19 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     docId: '',
     docName: '',
     type: 'writingStyle'
+  });
+
+  // 알림 다이얼로그 상태
+  const [alertDialog, setAlertDialog] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: ''
   });
 
   // 로컬 스토리지에서 저장된 문서들 로드 및 초기 데이터 복원
@@ -360,13 +383,6 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     }
   };
 
-  // 더미 제목 로드 함수
-  const handleLoadDummyTitles = (dummyTitles: string[]) => {
-    setGeneratedTitles(dummyTitles);
-    setSelectedTitle(''); // 선택된 제목 초기화
-    console.log('더미 제목 데이터 로드됨:', dummyTitles.length + '개');
-  };
-
   // v2 스타일 제목 추천 함수
   const generateTitleRecommendations = async () => {
     if (!mainKeyword.trim()) {
@@ -384,8 +400,36 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     setIsGeneratingTitles(true);
     setGeneratedTitles([]);
     setSelectedTitle('');
-    
+
     try {
+      // 트렌드 분석 캐시가 있으면 제목만 재생성
+      if (trendAnalysisCache && trendAnalysisCache.contents.length > 0) {
+        console.log('🔄 트렌드 분석 데이터로 제목 재생성...');
+        const { BlogTrendAnalyzer } = await import('../../../shared/services/content/blog-trend-analyzer');
+
+        const newTitles = await BlogTrendAnalyzer.regenerateTitlesOnly(
+          trendAnalysisCache.contents,
+          trendAnalysisCache.mainKeyword,
+          trendAnalysisCache.allTitles
+        );
+
+        if (newTitles.length > 0) {
+          setGeneratedTitles(newTitles);
+          setAlertDialog({
+            isOpen: true,
+            type: 'success',
+            title: '제목 재생성 완료',
+            message: `새로운 제목 ${newTitles.length}개가 생성되었습니다.`
+          });
+        } else {
+          throw new Error('제목 생성에 실패했습니다.');
+        }
+
+        setIsGeneratingTitles(false);
+        return;
+      }
+
+      // 캐시가 없으면 기존 방식으로 제목 생성
       // 서비스에서 프롬프트 생성
       const systemPrompt = BlogPromptService.getTitleGenerationSystemPrompt();
       const userPrompt = BlogPromptService.getTitleGenerationUserPrompt({
@@ -709,8 +753,24 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
           setBlogContent(result.contentDirection);
           setGeneratedTitles(result.recommendedTitles);
 
+          // 제목 재생성을 위한 캐시 저장
+          if (result.crawledContents && result.allTitles) {
+            setTrendAnalysisCache({
+              contents: result.crawledContents,
+              mainKeyword: result.mainKeyword,
+              allTitles: result.allTitles,
+              subKeywords: result.subKeywords,
+              direction: result.contentDirection
+            });
+          }
+
           // 성공 알림
-          alert(`✅ 트렌드 분석 완료!\n제목 ${result.recommendedTitles.length}개, 키워드 ${result.subKeywords.length}개 생성됨`);
+          setAlertDialog({
+            isOpen: true,
+            type: 'success',
+            title: '트렌드 분석 완료',
+            message: `제목 ${result.recommendedTitles.length}개, 키워드 ${result.subKeywords.length}개가 생성되었습니다.`
+          });
         }}
       />
 
@@ -724,7 +784,6 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         onGenerateTitles={generateTitleRecommendations}
         onSelectTitle={setSelectedTitle}
         onStartGeneration={handleStartGeneration}
-        onLoadDummyTitles={handleLoadDummyTitles}
       />
 
       {/* 수동 업로드 섹션 */}
@@ -762,6 +821,14 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         message={`"${deleteDialog.docName}" 문서를 정말로 삭제하시겠습니까?`}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
+      />
+
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        type={alertDialog.type}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
       />
     </div>
   );

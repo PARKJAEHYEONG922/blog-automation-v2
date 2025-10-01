@@ -11,6 +11,9 @@ export interface TrendAnalysisResult {
     url: string;
     contentLength: number;
   }[];
+  // 제목 재생성용 데이터
+  crawledContents?: BlogContent[];
+  allTitles?: string[];
 }
 
 export interface TrendAnalysisProgress {
@@ -117,7 +120,10 @@ export class BlogTrendAnalyzer {
           title: c.title,
           url: c.url,
           contentLength: c.contentLength
-        }))
+        })),
+        // 제목 재생성을 위한 데이터 포함
+        crawledContents: successfulContents,
+        allTitles: allTitles || limitedTitles
       };
 
     } catch (error) {
@@ -254,6 +260,112 @@ ${blogsInfo}
     } catch (error) {
       console.error('LLM 분석 실패:', error);
       throw new Error('AI 분석에 실패했습니다: ' + (error as Error).message);
+    }
+  }
+
+  /**
+   * 제목만 재생성 (크롤링 데이터 재사용)
+   */
+  static async regenerateTitlesOnly(
+    contents: BlogContent[],
+    mainKeyword: string,
+    allTitles: string[]
+  ): Promise<string[]> {
+    try {
+      // 크롤링한 글들의 정보 요약
+      const blogsInfo = contents.map((content, index) => {
+        const truncatedContent = content.textContent.length > 3000
+          ? content.textContent.substring(0, 3000) + '...'
+          : content.textContent;
+
+        return `
+[블로그 ${index + 1}]
+제목: ${content.title}
+본문 (${content.contentLength}자):
+${truncatedContent}
+`;
+      }).join('\n\n---\n\n');
+
+      const allTitlesList = allTitles.slice(0, 20).map((title, i) => `${i + 1}. ${title}`).join('\n');
+
+      // 제목만 생성하는 프롬프트
+      const prompt = `당신은 블로그 콘텐츠 전략 전문가입니다.
+
+아래는 "${mainKeyword}" 키워드로 검색했을 때 상위에 랭크된 인기 블로그 글들입니다.
+
+## 상위 랭크 제목들 (참고용):
+${allTitlesList}
+
+## 상세 분석 글들:
+${blogsInfo}
+
+---
+
+위 인기 블로그 글들을 분석하여 **새로운 제목 10개**를 추천해주세요:
+
+- 위 글들과는 다른 새로운 관점이나 각도에서 접근
+- 독자의 관심을 끌 수 있는 매력적인 제목
+- SEO에 최적화된 제목
+- "${mainKeyword}" 키워드가 자연스럽게 포함된 제목
+
+**반드시 아래 JSON 형식으로만 응답해주세요:**
+
+\`\`\`json
+{
+  "titles": [
+    "제목1",
+    "제목2",
+    "제목3",
+    "제목4",
+    "제목5",
+    "제목6",
+    "제목7",
+    "제목8",
+    "제목9",
+    "제목10"
+  ]
+}
+\`\`\``;
+
+      // LLM 설정 가져오기
+      const settingsData = await window.electronAPI.getLLMSettings();
+
+      if (!settingsData?.appliedSettings?.writing?.provider) {
+        throw new Error('글쓰기 AI가 설정되지 않았습니다.');
+      }
+
+      const writingLLM = settingsData.appliedSettings.writing;
+
+      // LLM 클라이언트 생성
+      const client = LLMClientFactory.createClient({
+        provider: writingLLM.provider,
+        apiKey: writingLLM.apiKey,
+        model: writingLLM.model
+      });
+
+      // LLM 호출
+      const llmResponse = await client.generateText([
+        { role: 'user', content: prompt }
+      ]);
+
+      const response = llmResponse.content;
+
+      // JSON 파싱
+      const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/) ||
+                        response.match(/\{[\s\S]*\}/);
+
+      if (!jsonMatch) {
+        throw new Error('LLM 응답 형식이 올바르지 않습니다.');
+      }
+
+      const jsonText = jsonMatch[1] || jsonMatch[0];
+      const parsed = JSON.parse(jsonText);
+
+      return parsed.titles || [];
+
+    } catch (error) {
+      console.error('제목 재생성 실패:', error);
+      throw new Error('제목 재생성에 실패했습니다: ' + (error as Error).message);
     }
   }
 }

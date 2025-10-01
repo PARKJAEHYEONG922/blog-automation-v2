@@ -435,6 +435,79 @@ class PlaywrightService {
     }
   }
 
+  // 쿠키 가져오기
+  async getCookies(): Promise<string | null> {
+    if (!this.context) return null;
+    try {
+      const cookies = await this.context.cookies();
+      const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+      return cookieString;
+    } catch (error) {
+      console.error('쿠키 가져오기 실패:', error);
+      return null;
+    }
+  }
+
+  // 특정 URL로 이동 후 대기
+  async waitForNavigation(url: string, timeout = 300000): Promise<boolean> {
+    if (!this.page) return false;
+    try {
+      await this.page.waitForURL(url, { timeout });
+      return true;
+    } catch (error) {
+      console.error('페이지 네비게이션 대기 실패:', error);
+      return false;
+    }
+  }
+
+  // 네이버 로그인 (크리에이터 어드바이저용)
+  async naverLogin(): Promise<{ success: boolean; cookies?: string; error?: string }> {
+    try {
+      // 브라우저가 초기화되지 않았으면 초기화
+      if (!this.browser) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('브라우저 초기화 실패');
+        }
+      }
+
+      console.log('🌐 네이버 로그인 페이지 열기...');
+
+      // 네이버 크리에이터 어드바이저 로그인 페이지로 이동
+      const loginUrl = 'https://nid.naver.com/nidlogin.login?url=https://creator-advisor.naver.com';
+      await this.navigateToUrl(loginUrl);
+
+      console.log('⏳ 로그인 완료까지 대기 중...');
+      console.log('💡 네이버 로그인 후 creator-advisor.naver.com 페이지가 뜰 때까지 기다립니다...');
+
+      // 로그인 완료 대기 (creator-advisor.naver.com으로 이동할 때까지)
+      const success = await this.waitForNavigation('**/creator-advisor.naver.com/**');
+
+      if (!success) {
+        throw new Error('로그인 대기 시간 초과');
+      }
+
+      console.log('✅ 로그인 완료 감지! URL:', await this.getCurrentUrl());
+
+      // 잠시 대기 (페이지 완전히 로드)
+      await this.waitForTimeout(3000);
+
+      // 쿠키 추출
+      const cookieString = await this.getCookies();
+      if (!cookieString) {
+        throw new Error('쿠키 추출 실패');
+      }
+
+      console.log('✅ 쿠키 추출 완료:', cookieString.substring(0, 100) + '...');
+
+      return { success: true, cookies: cookieString };
+
+    } catch (error) {
+      console.error('네이버 로그인 실패:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
   // 파일 드래그 앤 드롭 (네이버 블로그 이미지 업로드용)
   async dragAndDropFile(filePath: string, targetSelector: string): Promise<boolean> {
     if (!this.page) return false;

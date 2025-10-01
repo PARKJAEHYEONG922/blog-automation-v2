@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ClaudeWebService } from '../shared/services/automation/claude-web-service';
 import { ImageService } from '../shared/services/content/image-service';
-import { registerPlaywrightHandlers } from '../shared/services/automation/playwright-service';
+import { registerPlaywrightHandlers, playwrightService } from '../shared/services/automation/playwright-service';
 import * as https from 'https';
 
 let mainWindow: BrowserWindow;
@@ -1092,52 +1092,29 @@ ipcMain.handle('naver:delete-cookies', async () => {
   }
 });
 
-// 네이버 로그인 페이지 열기 (Playwright로)
+// 네이버 로그인 페이지 열기 (PlaywrightService 사용)
 ipcMain.handle('naver:open-login', async () => {
-  const { chromium } = require('playwright');
-
   try {
-    console.log('🌐 네이버 로그인 페이지 열기...');
+    // PlaywrightService를 통해 네이버 로그인 수행
+    const result = await playwrightService.naverLogin();
 
-    const browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    // 네이버 크리에이터 어드바이저 로그인 페이지로 이동
-    const loginUrl = 'https://nid.naver.com/nidlogin.login?url=https://creator-advisor.naver.com';
-    await page.goto(loginUrl);
-
-    console.log('⏳ 로그인 완료까지 대기 중...');
-    console.log('💡 네이버 로그인 후 creator-advisor.naver.com 페이지가 뜰 때까지 기다립니다...');
-
-    // 로그인 완료 대기 (creator-advisor.naver.com으로 이동할 때까지)
-    await page.waitForURL('**/creator-advisor.naver.com/**', { timeout: 300000 }); // 5분 대기
-
-    console.log('✅ 로그인 완료 감지! URL:', page.url());
-
-    // 잠시 대기 (페이지 완전히 로드)
-    await page.waitForTimeout(3000);
-
-    // 쿠키 추출
-    const cookies = await context.cookies();
-    const cookieString = cookies
-      .map(c => `${c.name}=${c.value}`)
-      .join('; ');
-
-    console.log('✅ 쿠키 추출 완료:', cookieString.substring(0, 100) + '...');
+    if (!result.success) {
+      throw new Error(result.error || '로그인 실패');
+    }
 
     // 쿠키 저장
-    const fs = require('fs');
     const cookiesPath = getNaverCookiesPath();
-    fs.writeFileSync(cookiesPath, cookieString, 'utf-8');
+    fs.writeFileSync(cookiesPath, result.cookies!, 'utf-8');
     console.log('✅ 쿠키 저장 완료:', cookiesPath);
 
-    await browser.close();
+    // 브라우저 닫기
+    await playwrightService.cleanup();
 
-    return { success: true, cookies: cookieString };
+    return { success: true, cookies: result.cookies };
 
   } catch (error) {
     console.error('네이버 로그인 실패:', error);
+    await playwrightService.cleanup();
     return { success: false, error: (error as Error).message };
   }
 });
