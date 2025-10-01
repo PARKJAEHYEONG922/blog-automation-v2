@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'outline';
@@ -7,7 +7,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   children: React.ReactNode;
 }
 
-const Button: React.FC<ButtonProps> = ({
+const ButtonComponent: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -48,5 +48,8 @@ const Button: React.FC<ButtonProps> = ({
     </button>
   );
 };
+
+const Button = memo(ButtonComponent);
+Button.displayName = 'Button';
 
 export default Button;

@@ -1,9 +1,13 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { SetupContainer } from '../features/setup';
-import { GenerationContainer } from '../features/generation';
-import { LLMSettings, UpdateModal } from '../features/settings';
+import React, { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import { LogPanel, Button } from '../shared/components';
 import ErrorBoundary from '../shared/components/error/ErrorBoundary';
+import LoadingFallback from '../shared/components/ui/LoadingFallback';
+
+// Code Splitting: 필요한 시점에만 로드
+const SetupContainer = lazy(() => import('../features/setup').then(module => ({ default: module.SetupContainer })));
+const GenerationContainer = lazy(() => import('../features/generation').then(module => ({ default: module.GenerationContainer })));
+const LLMSettings = lazy(() => import('../features/settings').then(module => ({ default: module.LLMSettings })));
+const UpdateModal = lazy(() => import('../features/settings').then(module => ({ default: module.UpdateModal })));
 
 type Step = 1 | 2;
 
@@ -211,21 +215,23 @@ const App: React.FC = () => {
         <div className={`${showLogs ? 'flex-1' : 'w-full'} overflow-y-auto`}>
           <div className="h-full">
             <ErrorBoundary>
-              {currentStep === 1 && (
-                <SetupContainer
-                  onComplete={handleSetupComplete}
-                  initialData={setupData}
-                />
-              )}
-              {currentStep === 2 && (
-                <GenerationContainer
-                  content={generatedContent}
-                  setupData={setupData}
-                  onReset={handleReset}
-                  onGoBack={handleGoBack}
-                  aiModelStatus={aiModelStatus}
-                />
-              )}
+              <Suspense fallback={<LoadingFallback message="컴포넌트 로딩 중..." fullScreen />}>
+                {currentStep === 1 && (
+                  <SetupContainer
+                    onComplete={handleSetupComplete}
+                    initialData={setupData}
+                  />
+                )}
+                {currentStep === 2 && (
+                  <GenerationContainer
+                    content={generatedContent}
+                    setupData={setupData}
+                    onReset={handleReset}
+                    onGoBack={handleGoBack}
+                    aiModelStatus={aiModelStatus}
+                  />
+                )}
+              </Suspense>
             </ErrorBoundary>
           </div>
         </div>
@@ -235,24 +241,28 @@ const App: React.FC = () => {
       {/* LLM Settings Modal */}
       {showLLMSettings && (
         <ErrorBoundary>
-          <LLMSettings
-            onClose={() => setShowLLMSettings(false)}
-            onSettingsChange={() => {
-              refreshModelStatus();
-              // Step2에서도 감지할 수 있도록 전역 이벤트 발생
-              window.dispatchEvent(new CustomEvent('app-llm-settings-changed'));
-            }}
-          />
+          <Suspense fallback={<LoadingFallback message="설정 로딩 중..." />}>
+            <LLMSettings
+              onClose={() => setShowLLMSettings(false)}
+              onSettingsChange={() => {
+                refreshModelStatus();
+                // Step2에서도 감지할 수 있도록 전역 이벤트 발생
+                window.dispatchEvent(new CustomEvent('app-llm-settings-changed'));
+              }}
+            />
+          </Suspense>
         </ErrorBoundary>
       )}
 
       {/* Update Modal */}
-      <UpdateModal
-        isVisible={showUpdateModal}
-        updateInfo={updateInfo}
-        onClose={() => setShowUpdateModal(false)}
-        onDownload={handleUpdateDownload}
-      />
+      <Suspense fallback={null}>
+        <UpdateModal
+          isVisible={showUpdateModal}
+          updateInfo={updateInfo}
+          onClose={() => setShowUpdateModal(false)}
+          onDownload={handleUpdateDownload}
+        />
+      </Suspense>
 
     </div>
   );
