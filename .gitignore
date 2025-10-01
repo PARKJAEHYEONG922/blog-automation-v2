@@ -117,3 +117,6 @@ ehthumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Claude settings (contains tokens)
+.claude/settings.local.json
