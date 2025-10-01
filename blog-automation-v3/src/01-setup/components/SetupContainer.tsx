@@ -11,7 +11,7 @@ import KeywordInputSection from './KeywordInputSection';
 import TitleRecommendationSection from './TitleRecommendationSection';
 import GenerationProgressSection from './GenerationProgressSection';
 import ManualUploadSection from './ManualUploadSection';
-import { TrendAnalysisResult } from '@/shared/services/content/blog-trend-analyzer';
+import { TrendAnalysisResult } from '@/01-setup/services/blog-trend-analyzer';
 import { useSetup } from '@/01-setup/useSetup';
 
 const Step1Setup: React.FC = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { NaverTrendService, TrendKeyword, TrendCategory } from '@/shared/services/content/naver-trend-service';
-import { TrendAnalysisResult } from '@/shared/services/content/blog-trend-analyzer';
+import { NaverTrendService, TrendKeyword, TrendCategory } from '@/01-setup/services/naver-trend-service';
+import { TrendAnalysisResult } from '@/01-setup/services/blog-trend-analyzer';
 import Button from '@/shared/components/ui/Button';
 import CategorySettingsModal from './CategorySettingsModal';
 import TrendContentModal from './TrendContentModal';

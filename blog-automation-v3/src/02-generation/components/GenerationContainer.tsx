@@ -305,7 +305,7 @@ const Step2Generation: React.FC = () => {
                 
                 {/* v2와 동일한 강제 적용 버튼 */}
                 <button
-                  onClick={() => handleFontSizeChange(currentFontSize)}
+                  onClick={() => applyFontSizeToSelection(currentFontSize)}
                   style={{
                     padding: '6px 8px',
                     backgroundColor: '#f3f4f6',
@@ -335,7 +335,7 @@ const Step2Generation: React.FC = () => {
                 </button>
                 
                 <button
-                  onClick={copyToClipboard}
+                  onClick={async () => await copyToClipboard()}
                   style={{
                     padding: '6px 12px',
                     backgroundColor: '#8b5cf6',
@@ -410,7 +410,7 @@ const Step2Generation: React.FC = () => {
                 border: '1px solid #e5e7eb'
               }}
             >
-              {originalContent || '원본 콘텐츠가 없습니다.'}
+              {workflowData.generatedContent || '원본 콘텐츠가 없습니다.'}
             </div>
           )}
         </div>

@@ -241,12 +241,18 @@ export const useGeneration = (): UseGenerationReturn => {
       if (newContent && newContent.trim()) {
         console.log('✅ 수정된 글 가져오기 성공');
 
-        // 원본 및 편집 콘텐츠 업데이트
-        setOriginalContent(newContent);
-
         // 새로운 콘텐츠로 마크다운 처리
         const processedContent = ContentProcessor.convertToNaverBlogHTML(newContent);
+
+        // 원본 및 편집 콘텐츠 업데이트 (둘 다 HTML 형태로 저장)
+        setOriginalContent(processedContent);
         setEditedContent(processedContent);
+
+        // 에디터에도 반영
+        if (editorRef.current) {
+          editorRef.current.innerHTML = processedContent;
+          updateCharCount();
+        }
 
         // 이미지 위치 재감지
         const imageInfo = ContentProcessor.processImages(newContent);
@@ -334,19 +340,28 @@ export const useGeneration = (): UseGenerationReturn => {
   // 콘텐츠 변경 핸들러
   const handleContentChange = useCallback(() => {
     updateCharCount();
+    if (editorRef.current) {
+      setEditedContent(editorRef.current.innerHTML);
+    }
     setIsEditing(true);
   }, [updateCharCount]);
 
-  // 원본 복원
+  // 원본 복원 (v2와 동일한 방식)
   const restoreOriginal = useCallback(() => {
-    if (editorRef.current) {
-      editorRef.current.innerHTML = originalContent;
-      setEditedContent(originalContent);
-      updateCharCount();
+    if (originalContent) {
+      // 마크다운 원본을 다시 HTML로 변환
+      const processedContent = processMarkdown(originalContent);
+      setEditedContent(processedContent);
+
+      if (editorRef.current) {
+        editorRef.current.innerHTML = processedContent;
+        updateCharCount();
+      }
+
       setIsEditing(false);
       showAlert({ type: 'success', message: '원본 내용으로 복원되었습니다.' });
     }
-  }, [originalContent, updateCharCount, showAlert]);
+  }, [originalContent, processMarkdown, updateCharCount, showAlert]);
 
   // 클립보드에 복사
   const copyToClipboard = useCallback(async (): Promise<boolean> => {
@@ -365,8 +380,10 @@ export const useGeneration = (): UseGenerationReturn => {
         })
       ]);
 
+      showAlert({ type: 'success', message: 'HTML 형식으로 클립보드에 복사되었습니다!' });
       return true;
     } catch (error) {
+      showAlert({ type: 'error', message: '클립보드 복사에 실패했습니다.' });
       console.error('클립보드 복사 실패:', error);
       return false;
     }
@@ -382,9 +399,14 @@ export const useGeneration = (): UseGenerationReturn => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
 
+    // fontSizes에서 해당 폰트 정보 찾기
+    const fontInfo = fontSizes.find(f => f.size === fontSize);
+    if (!fontInfo) return;
+
     const range = selection.getRangeAt(0);
     const span = document.createElement('span');
     span.style.fontSize = fontSize;
+    span.style.fontWeight = fontInfo.weight; // weight 적용
 
     try {
       range.surroundContents(span);
@@ -392,6 +414,7 @@ export const useGeneration = (): UseGenerationReturn => {
       console.error('폰트 크기 적용 실패:', error);
     }
   }, []);
+
 
   // 키보드 이벤트 핸들러
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -416,12 +439,26 @@ export const useGeneration = (): UseGenerationReturn => {
     }
   }, []);
 
-  // 초기 콘텐츠 설정
+  // 초기 콘텐츠 설정 (v2와 동일한 방식)
   useEffect(() => {
     const content = workflowData.generatedContent || '';
+
+    // 원본 콘텐츠 저장 (마크다운)
+    setOriginalContent(content);
+
+    // 자동편집 콘텐츠 생성 (HTML)
     const processed = processMarkdown(content);
-    setOriginalContent(processed);
     setEditedContent(processed);
+
+    // 에디터에도 즉시 반영 (초기 로드 시)
+    if (editorRef.current) {
+      editorRef.current.innerHTML = processed;
+      // 글자 수 업데이트 (인라인으로 처리)
+      const text = editorRef.current.innerText || '';
+      const textWithoutSpaces = text.replace(/\s/g, '');
+      setCharCount(textWithoutSpaces.length);
+      setCharCountWithSpaces(text.length);
+    }
   }, [workflowData.generatedContent, processMarkdown]);
 
   // 이미지 프롬프트 초기 설정

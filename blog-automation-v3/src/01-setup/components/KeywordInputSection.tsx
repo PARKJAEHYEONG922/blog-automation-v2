@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import TrendModal from './TrendModal';
-import { TrendAnalysisResult } from '@/shared/services/content/blog-trend-analyzer';
+import { TrendAnalysisResult } from '@/01-setup/services/blog-trend-analyzer';
 
 interface KeywordInputSectionProps {
   mainKeyword: string;

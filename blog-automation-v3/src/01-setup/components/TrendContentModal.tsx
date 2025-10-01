@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { NaverTrendService, TrendContent } from '@/shared/services/content/naver-trend-service';
-import { BlogTrendAnalyzer, TrendAnalysisResult, TrendAnalysisProgress } from '@/shared/services/content/blog-trend-analyzer';
+import { NaverTrendService, TrendContent } from '@/01-setup/services/naver-trend-service';
+import { BlogTrendAnalyzer, TrendAnalysisResult, TrendAnalysisProgress } from '@/01-setup/services/blog-trend-analyzer';
 import Button from '@/shared/components/ui/Button';
 import { useDialog } from '@/app/DialogContext';
 

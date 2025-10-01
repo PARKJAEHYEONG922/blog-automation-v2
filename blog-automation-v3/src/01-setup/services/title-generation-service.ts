@@ -3,7 +3,7 @@
  */
 
 import { BlogPromptService } from '@/shared/services/content/blog-prompt-service';
-import { BlogTrendAnalyzer, TrendAnalysisResult } from '@/shared/services/content/blog-trend-analyzer';
+import { BlogTrendAnalyzer, TrendAnalysisResult } from '@/01-setup/services/blog-trend-analyzer';
 import { handleAPIError } from '@/shared/utils/error-handler';
 
 export interface TitleGenerationParams {

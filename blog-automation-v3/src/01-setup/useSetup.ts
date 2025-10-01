@@ -86,6 +86,9 @@ export const useSetup = (): UseSetupReturn => {
   const [selectedWritingStyles, setSelectedWritingStyles] = useState<SavedDocument[]>([]);
   const [selectedSeoGuide, setSelectedSeoGuide] = useState<SavedDocument | null>(null);
 
+  // 초기 로드 완료 플래그
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+
   // 다이얼로그 상태
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -109,18 +112,22 @@ export const useSetup = (): UseSetupReturn => {
         setSavedSeoGuides(result.seoGuides);
         setSelectedWritingStyles(result.selectedWritingStyles);
         setSelectedSeoGuide(result.selectedSeoGuide);
+        setIsInitialLoadComplete(true); // 초기 로드 완료 표시
       } catch (error) {
         console.error('문서 로드 실패:', error);
+        setIsInitialLoadComplete(true); // 에러여도 플래그 설정
       }
     };
 
     loadSavedDocuments();
   }, []);
 
-  // 선택된 말투 변경 시 로컬 스토리지 저장
+  // 선택된 말투 변경 시 로컬 스토리지 저장 (초기 로드 이후에만)
   useEffect(() => {
-    SetupService.saveSelectedWritingStyles(selectedWritingStyles);
-  }, [selectedWritingStyles]);
+    if (isInitialLoadComplete) {
+      SetupService.saveSelectedWritingStyles(selectedWritingStyles);
+    }
+  }, [selectedWritingStyles, isInitialLoadComplete]);
 
   // URL 크롤링
   const handleUrlCrawl = useCallback(async (url: string): Promise<{ title: string; contentLength: number } | null> => {
