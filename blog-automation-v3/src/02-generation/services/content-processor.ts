@@ -128,6 +128,17 @@ export class ContentProcessor {
         // 태그 라인은 줄바꿈 안 함 (한 줄로 유지)
         let processedLine = line.trim().replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
         result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedLine}</span></p>`);
+      } else if (line.trim().match(/^\(이미지\d*\)$/)) {
+        // 이미지 플레이스홀더 처리
+        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${line.trim()}</span></p>`);
+
+        // 다음 줄이 ### 소제목이면 구분선 추가
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].trim();
+          if (nextLine.startsWith('### ')) {
+            result.push(`<div class="se-component-content"><div class="se-section se-section-horizontalLine se-l-line1 se-section-align-"><div class="se-module se-module-horizontalLine"><hr class="se-hr"></div></div></div>`);
+          }
+        }
       } else {
         // 일반 텍스트 처리 (28자 이상이면 재귀적으로 자르기)
         const processedLines = this.breakLongText(line.trim());
@@ -136,7 +147,7 @@ export class ContentProcessor {
           result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedLine}</span></p>`);
         }
       }
-      
+
       i++;
     }
     
