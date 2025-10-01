@@ -12,6 +12,7 @@ import { TrendAnalysisResult } from '../../../shared/services/content/blog-trend
 import { StorageService, SavedDocument } from '../../../shared/services/storage/storage-service';
 import { SetupService } from '../services/setup-service';
 import Button from '../../../shared/components/ui/Button';
+import { useDialog } from '../../../app/DialogContext';
 
 interface Step1Props {
   onComplete: (data: {
@@ -45,10 +46,13 @@ interface Step1Props {
 }
 
 const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
-  
+
+  // Dialog 사용
+  const { showAlert, showConfirm } = useDialog();
+
   // 진행률 섹션 참조 (자동 스크롤용)
   const progressSectionRef = useRef<HTMLDivElement>(null);
-  
+
   // 키워드 입력 상태
   const [mainKeyword, setMainKeyword] = useState(initialData?.mainKeyword || '');
   const [subKeywords, setSubKeywords] = useState(initialData?.subKeywords || '');
@@ -141,7 +145,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       if (selectedWritingStyles.length < 2) {
         setSelectedWritingStyles([...selectedWritingStyles, doc]);
       } else {
-        alert('말투 문서는 최대 2개까지만 선택할 수 있습니다!');
+        showAlert({ type: 'warning', message: '말투 문서는 최대 2개까지만 선택할 수 있습니다!' });
       }
     }
   };
@@ -175,7 +179,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       }
     } catch (error) {
       console.error('파일 삭제 실패:', error);
-      alert('파일 삭제에 실패했습니다.');
+      showAlert({ type: 'error', message: '파일 삭제에 실패했습니다.' });
     }
 
     setDeleteDialog({ isOpen: false, docId: '', docName: '', type: 'writingStyle' });
@@ -220,7 +224,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         );
 
         if (existingDoc) {
-          alert(`이미 동일한 제목의 글이 저장되어 있습니다.\n제목: ${result.title}`);
+          showAlert({ type: 'warning', message: `이미 동일한 제목의 글이 저장되어 있습니다.\n제목: ${result.title}` });
           return null;
         }
 
@@ -244,7 +248,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       }
     } catch (error) {
       console.error('URL 크롤링 실패:', error);
-      alert(`블로그 글 가져오기에 실패했습니다.\n오류: ${(error as Error).message}`);
+      showAlert({ type: 'error', message: `블로그 글 가져오기에 실패했습니다.\n오류: ${(error as Error).message}` });
       return null;
     }
   };
@@ -267,7 +271,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       }
     } catch (error) {
       console.error('파일 저장 실패:', error);
-      alert('파일 저장에 실패했습니다.');
+      showAlert({ type: 'error', message: '파일 저장에 실패했습니다.' });
     }
   };
 
@@ -291,14 +295,14 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   // v2 스타일 제목 추천 함수
   const generateTitleRecommendations = async () => {
     if (!mainKeyword.trim()) {
-      alert('메인키워드를 입력해주세요!');
+      showAlert({ type: 'warning', message: '메인키워드를 입력해주세요!' });
       return;
     }
 
     // API 설정 확인
     const apiSettings = await getWritingAPISettings();
     if (!apiSettings) {
-      alert('글쓰기 API가 설정되지 않았습니다. API 설정에서 글쓰기 AI를 연결해주세요.');
+      showAlert({ type: 'warning', message: '글쓰기 API가 설정되지 않았습니다. API 설정에서 글쓰기 AI를 연결해주세요.' });
       return;
     }
 
@@ -390,7 +394,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       if (titles.length > 0) {
         setGeneratedTitles(titles);
       } else {
-        alert('제목 생성에 실패했습니다. 다시 시도해주세요.');
+        showAlert({ type: 'error', message: '제목 생성에 실패했습니다. 다시 시도해주세요.' });
       }
       
     } catch (error) {
@@ -409,7 +413,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         userMessage += `\n\n오류 상세: ${errorMessage}`;
       }
       
-      alert(userMessage);
+      showAlert({ type: 'error', message: userMessage });
     } finally {
       setIsGeneratingTitles(false);
     }

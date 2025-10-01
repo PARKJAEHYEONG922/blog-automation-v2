@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo, lazy, Suspense } from
 import { LogPanel, Button } from '../shared/components';
 import ErrorBoundary from '../shared/components/error/ErrorBoundary';
 import LoadingFallback from '../shared/components/ui/LoadingFallback';
+import { DialogProvider } from './DialogContext';
 
 // Code Splitting: 필요한 시점에만 로드
 const SetupContainer = lazy(() => import('../features/setup').then(module => ({ default: module.SetupContainer })));
@@ -149,7 +150,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <DialogProvider>
+      <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
         <div className="max-w-7xl mx-auto px-6">
@@ -264,7 +266,8 @@ const App: React.FC = () => {
         />
       </Suspense>
 
-    </div>
+      </div>
+    </DialogProvider>
   );
 };
 
