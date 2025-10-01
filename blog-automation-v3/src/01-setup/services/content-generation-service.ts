@@ -126,7 +126,8 @@ class ContentGenerationServiceClass {
     try {
       // 동적 import로 BlogWritingService 불러오기
       const { BlogWritingService } = await import('@/shared/services/content/blog-writing-service');
-      imagePrompts = await BlogWritingService.generateImagePrompts(content);
+      const result = await BlogWritingService.generateImagePrompts(content);
+      imagePrompts = result.imagePrompts || [];  // 객체에서 imagePrompts 배열만 추출
     } catch (error) {
       console.error('이미지 프롬프트 생성 실패:', error);
       imagePrompts = [];

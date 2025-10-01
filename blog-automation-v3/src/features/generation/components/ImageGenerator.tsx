@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Button from '@/shared/components/ui/Button';
+import Button from '../../../shared/components/ui/Button';
 
 interface ImagePrompt {
   index: number;
@@ -78,6 +78,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   
   // Use aiModelStatus prop to determine current image provider and model
   useEffect(() => {
+    console.log('🔄 ImageGenerator - aiModelStatus changed:', aiModelStatus);
+
     if (aiModelStatus.image && aiModelStatus.image !== '미설정') {
       setHasImageClient(true);
       setImageClientInfo(aiModelStatus.image);
@@ -85,6 +87,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       // Extract provider from aiModelStatus (e.g., "openai GPT-Image-1" -> "openai")
       const provider = aiModelStatus.image.toLowerCase().split(' ')[0] as 'gemini' | 'openai' | 'runware';
       setCurrentProvider(provider);
+
+      console.log('✅ ImageGenerator - provider set to:', provider);
     } else {
       setHasImageClient(false);
       setImageClientInfo('미설정');
@@ -124,6 +128,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   // API 설정 변경 이벤트 수신 (App.tsx에서 발생)
   useEffect(() => {
     const handleSettingsChange = async () => {
+      console.log('🔄 ImageGenerator - LLM 설정 변경 감지');
       try {
         const llmSettings = await window.electronAPI?.getLLMSettings?.();
         if (llmSettings?.appliedSettings?.image) {

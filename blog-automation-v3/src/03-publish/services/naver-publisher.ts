@@ -1,8 +1,8 @@
 // 네이버 블로그 발행 서비스
 
-import { PublishingResult, WorkflowData, NaverCredentials, PublishOption } from '../types/publishing.types';
+import { PublishResult, WorkflowData, NaverCredentials, PublishOption } from '../types/publishing.types';
 import { NaverBlogAutomation } from '@/shared/services/automation/naver-automation';
-import type { LoginResult, PublishResult } from '@/shared/types/automation.types';
+import type { LoginResult, PublishResult as AutomationPublishResult } from '@/shared/types/automation.types';
 
 export interface NaverPublishConfig {
   option: PublishOption;
@@ -23,7 +23,7 @@ export class NaverPublisher {
   /**
    * 네이버 블로그 발행
    */
-  async publish(data: WorkflowData, content: string, config: NaverPublishConfig): Promise<PublishingResult> {
+  async publish(data: WorkflowData, content: string, config: NaverPublishConfig): Promise<PublishResult> {
     try {
       console.log('🟢 네이버 블로그 발행 시작...');
 
@@ -88,7 +88,7 @@ export class NaverPublisher {
 
       // 5. 발행 실행 (옵션 매핑)
       const automationOption = config.option === 'temp' ? 'draft' : config.option;
-      const publishResult: PublishResult = await this.automation.publish(
+      const publishResult: AutomationPublishResult = await this.automation.publish(
         automationOption,
         config.scheduledTime
       );
@@ -361,9 +361,9 @@ export class NaverPublisher {
         }
         
         // 발행 실행
-        let publishResult: PublishResult;
+        let publishResult: AutomationPublishResult;
         let selectedBoardName = '기본 카테고리';
-        
+
         if (publishOption === 'temp') {
           publishResult = await this.automation.publish('draft');
         } else {
@@ -372,7 +372,7 @@ export class NaverPublisher {
           if (publishOption === 'scheduled' && scheduledDate && scheduledHour && scheduledMinute) {
             scheduledTime = `${scheduledDate} ${scheduledHour}:${scheduledMinute}:00`;
           }
-          
+
           // 게시판 카테고리 정보를 publish 메서드에 전달
           publishResult = await this.automation.publish(
             publishOption as 'immediate' | 'scheduled',

@@ -2,66 +2,39 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
-import NaverPublishUI from '@/03-publish/platforms/NaverPublishUI';
-import { ContentProcessor } from '@/02-generation/services/content-processor';
-import { BlogWritingService } from '@/shared/services/content/blog-writing-service';
-import Button from '@/shared/components/ui/Button';
-import '@/shared/types/electron.types';
-import { useDialog } from '@/app/DialogContext';
-import { useWorkflow } from '@/app/WorkflowContext';
+import NaverPublishUI from '../../publishing/components/NaverPublishUI';
+import { ContentProcessor } from '../services/content-processor';
+import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
+import Button from '../../../shared/components/ui/Button';
+import '../../../shared/types/electron.types';
+import { useDialog } from '../../../app/DialogContext';
 
-const Step2Generation: React.FC = () => {
+interface Step2Props {
+  content: string;
+  setupData: {
+    writingStylePaths: string[];
+    seoGuidePath: string;
+    topic: string;
+    selectedTitle: string;
+    mainKeyword: string;
+    subKeywords: string;
+    blogContent: string;
+    generatedContent?: string;
+    isAIGenerated: boolean;
+    generatedTitles: string[];
+    imagePrompts?: any[];
+    imagePromptGenerationFailed?: boolean;
+  };
+  onReset: () => void;
+  onGoBack: () => void;
+  aiModelStatus: {
+    writing: string;
+    image: string;
+  };
+}
+
+const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, onGoBack, aiModelStatus }) => {
   const { showAlert } = useDialog();
-  const { workflowData, prevStep, reset } = useWorkflow();
-
-  // WorkflowContext에서 필요한 데이터 추출
-  const setupData = workflowData;
-  const content = workflowData.generatedContent || '';
-  const onGoBack = prevStep;
-  const onReset = reset;
-
-  // AI 모델 상태
-  const [aiModelStatus, setAiModelStatus] = useState({
-    writing: '미설정',
-    image: '미설정'
-  });
-
-  // 모델 상태 새로고침 함수
-  const refreshModelStatus = useCallback(async () => {
-    try {
-      const llmSettings = await window.electronAPI?.getLLMSettings?.();
-      if (llmSettings?.appliedSettings) {
-        const { writing, image } = llmSettings.appliedSettings;
-
-        setAiModelStatus({
-          writing: writing?.provider && writing?.model ?
-            `${writing.provider} ${writing.model}` : '미설정',
-          image: image?.provider && image?.model ?
-            `${image.provider} ${image.model}` : '미설정'
-        });
-      }
-    } catch (error) {
-      console.error('모델 상태 확인 실패:', error);
-    }
-  }, []);
-
-  // 초기화 시 모델 상태 로드
-  useEffect(() => {
-    refreshModelStatus();
-  }, [refreshModelStatus]);
-
-  // AI 설정 변경 이벤트 리스너
-  useEffect(() => {
-    const handleSettingsChanged = () => {
-      refreshModelStatus();
-    };
-
-    window.addEventListener('app-llm-settings-changed', handleSettingsChanged);
-    return () => {
-      window.removeEventListener('app-llm-settings-changed', handleSettingsChanged);
-    };
-  }, [refreshModelStatus]);
-
   const editorRef = useRef<HTMLDivElement>(null);
   const [originalContent, setOriginalContent] = useState<string>('');
   const [editedContent, setEditedContent] = useState<string>('');
@@ -701,10 +674,6 @@ const Step2Generation: React.FC = () => {
 
   // 1단계에서 전달된 이미지 프롬프트들 초기화
   useEffect(() => {
-    console.log('🔍 useEffect - setupData.imagePrompts:', setupData.imagePrompts);
-    console.log('🔍 useEffect - Array.isArray?', Array.isArray(setupData.imagePrompts));
-    console.log('🔍 useEffect - length:', setupData.imagePrompts?.length);
-
     if (setupData.imagePrompts && setupData.imagePrompts.length > 0) {
       console.log(`📋 1단계에서 생성된 이미지 프롬프트 ${setupData.imagePrompts.length}개 로드됨`);
       setImagePrompts(setupData.imagePrompts);
@@ -712,8 +681,6 @@ const Step2Generation: React.FC = () => {
     } else if (setupData.imagePromptGenerationFailed) {
       console.warn('⚠️ 1단계에서 이미지 프롬프트 생성 실패');
       setImagePromptError('1단계에서 이미지 프롬프트 생성에 실패했습니다.');
-    } else {
-      console.warn('⚠️ imagePrompts가 없거나 빈 배열입니다');
     }
   }, [setupData.imagePrompts, setupData.imagePromptGenerationFailed]);
 

@@ -1,6 +1,6 @@
 // 발행 관리자 - 모든 플랫폼의 발행을 통합 관리
 
-import { PublishingResult, WorkflowData, PublishOption } from '../types/publishing.types';
+import { PublishResult, WorkflowData, PublishOption } from '../types/publishing.types';
 import { NaverPublisher } from './naver-publisher';
 
 export interface PublishConfig {
@@ -48,7 +48,7 @@ export class PublishManager {
     data: WorkflowData, 
     content: string, 
     config: PublishConfig
-  ): Promise<PublishingResult> {
+  ): Promise<PublishResult> {
     try {
       const publisher = this.publishers.get(platform);
       
@@ -124,7 +124,7 @@ export class PublishManager {
     copyToClipboard?: () => Promise<boolean>;
     saveAccount?: (username: string, password: string) => void;
     data?: WorkflowData; // WorkflowData 추가
-  }): Promise<PublishingResult> {
+  }): Promise<PublishResult> {
     try {
       const naverPublisher = this.publishers.get('naver');
       

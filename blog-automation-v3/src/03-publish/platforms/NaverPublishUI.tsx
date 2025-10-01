@@ -34,6 +34,9 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
     success: false
   });
 
+  // setState 타입 정의
+  type SetPublishStatus = React.Dispatch<React.SetStateAction<PublishStatus>>;
+
   // 발행 옵션 상태
   const [publishOption, setPublishOption] = useState<PublishOption>('immediate');
   const [scheduledDate, setScheduledDate] = useState<string>('');
@@ -80,7 +83,7 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
   // 네이버 로그인 + 발행 통합 함수 (원본)
   const publishToNaverBlog = async (): Promise<{ success: boolean; message: string }> => {
     if (!naverCredentials.username || !naverCredentials.password) {
-      setPublishStatus(prev => ({
+      setPublishStatus((prev: PublishStatus) => ({
         ...prev,
         error: '아이디와 비밀번호를 입력해주세요.'
       }));
