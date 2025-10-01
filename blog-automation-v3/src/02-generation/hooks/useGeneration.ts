@@ -8,6 +8,7 @@ import { useWorkflow } from '@/app/WorkflowContext';
 import { useDialog } from '@/app/DialogContext';
 import { BlogWritingService } from '@/shared/services/content/blog-writing-service';
 import { ContentProcessor } from '@/02-generation/services/content-processor';
+import { GenerationAutomationService } from '@/02-generation/services/generation-automation-service';
 
 export interface UseGenerationReturn {
   // WorkflowContext
@@ -89,7 +90,7 @@ export const useGeneration = (): UseGenerationReturn => {
   // 모델 상태 새로고침 함수
   const refreshModelStatus = useCallback(async () => {
     try {
-      const llmSettings = await window.electronAPI?.getLLMSettings?.();
+      const llmSettings = await GenerationAutomationService.getLLMSettings();
       if (llmSettings?.appliedSettings) {
         const { writing, image } = llmSettings.appliedSettings;
 
@@ -170,20 +171,7 @@ export const useGeneration = (): UseGenerationReturn => {
     try {
       console.log(`🎨 이미지 생성 시작: ${imagePrompts.length}개 프롬프트 사용`);
 
-      // 1단계에서 생성된 각 프롬프트로 이미지 생성
-      const generatedImages: {[key: string]: string} = {};
-
-      for (let i = 0; i < imagePrompts.length; i++) {
-        const imagePrompt = imagePrompts[i];
-        const imageKey = `이미지${i + 1}`;
-
-        console.log(`🖼️ 이미지 ${i + 1} 생성 중... 프롬프트: ${imagePrompt.prompt.substring(0, 50)}...`);
-
-        const imageUrl = await window.electronAPI.generateImage(imagePrompt.prompt);
-        generatedImages[imageKey] = imageUrl;
-
-        console.log(`✅ 이미지 ${i + 1} 생성 완료`);
-      }
+      const generatedImages = await GenerationAutomationService.generateImages(imagePrompts);
 
       setImages(generatedImages);
       console.log(`🎉 모든 이미지 생성 완료: ${Object.keys(generatedImages).length}개`);
@@ -236,7 +224,7 @@ export const useGeneration = (): UseGenerationReturn => {
       console.log('🔄 Claude Web에서 수정된 글 가져오기 시작');
 
       // Claude Web에서 다시 다운로드
-      const newContent = await window.electronAPI.downloadFromClaude();
+      const newContent = await GenerationAutomationService.downloadFromClaude();
 
       if (newContent && newContent.trim()) {
         console.log('✅ 수정된 글 가져오기 성공');
@@ -311,8 +299,8 @@ export const useGeneration = (): UseGenerationReturn => {
     const finalContent = replaceImagesInContent();
 
     if (selectedPlatform === 'naver') {
-      // v2의 네이버 블로그 발행 로직 재사용
-      window.electronAPI.publishToBlog(finalContent);
+      // 네이버 블로그 발행
+      GenerationAutomationService.publishToNaverBlog(finalContent);
     } else {
       showAlert({ type: 'info', message: `${getPlatformName(selectedPlatform)} 발행 기능은 곧 구현될 예정입니다.` });
     }
