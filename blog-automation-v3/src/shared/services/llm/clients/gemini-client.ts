@@ -88,18 +88,20 @@ export class GeminiClient extends BaseLLMClient {
         // Gemini는 기본적으로 정사각형만 생성하므로 크기 옵션 무시
         let enhancedPrompt = prompt;
 
-        // 스타일 옵션 처리 (Gemini 최적화)
+        // 스타일 옵션 처리 (Gemini 2.5 Flash Image 최적화 - 서술형 프롬프트)
         const style = options?.style || 'photographic';
         if (style === 'photographic') {
-          enhancedPrompt += ', studio-lit photography, high-resolution commercial photography, professional quality';
+          // 실사/사진: 전문 스튜디오 촬영 느낌
+          enhancedPrompt = `A photorealistic photograph of ${prompt}. Captured with professional studio lighting setup using three-point softbox lighting. High-resolution commercial photography with sharp details and natural colors. Professional quality with perfect exposure and composition.`;
+        } else if (style === 'illustration') {
+          // 일러스트: 디지털 아트 느낌
+          enhancedPrompt = `A professional digital illustration of ${prompt}. Clean and detailed artwork with vibrant colors and smooth shading. Modern illustration style suitable for editorial or blog content. High-quality digital art with polished composition.`;
         } else if (style === 'minimalist') {
-          enhancedPrompt += ', minimalist design, clean composition, negative space';
-        } else if (style === 'kawaii') {
-          enhancedPrompt += ', kawaii style, cute and colorful, soft pastel colors';
-        } else if (style === 'artistic') {
-          enhancedPrompt += ', artistic illustration, detailed brushwork, creative composition';
-        } else if (style === 'impressionist') {
-          enhancedPrompt += ', impressionist style, Van Gogh inspired, painterly brushstrokes';
+          // 미니멀: 깔끔하고 간결한 디자인
+          enhancedPrompt = `A minimalist composition featuring ${prompt}. Clean design with simple shapes and negative space. Limited color palette with focus on essential elements. Modern and elegant aesthetic with balanced composition.`;
+        } else if (style === 'natural') {
+          // 자연스러운: 일상적이고 편안한 느낌
+          enhancedPrompt = `A natural and casual scene of ${prompt}. Soft natural lighting with warm and inviting atmosphere. Authentic and relatable composition that feels comfortable and approachable. Real-life everyday aesthetic with genuine feeling.`;
         }
 
         console.log(`🎨 스타일: ${style}, 향상된 프롬프트: "${enhancedPrompt}"`);

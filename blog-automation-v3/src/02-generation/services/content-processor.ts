@@ -110,8 +110,10 @@ export class ContentProcessor {
         }
       }
       
-      // 일반 텍스트 처리
-      if (line.trim().startsWith('## ')) {
+      // 마크다운 구분선 처리 (---) - 시각적으로 보이는 실선
+      if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
+        result.push('<hr style="border: none; border-top: 1px solid #666; margin: 16px auto; width: 30%;">');
+      } else if (line.trim().startsWith('## ')) {
         const text = line.substring(line.indexOf('## ') + 3);
         result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs24" style="color: rgb(0, 0, 0); font-weight: bold;">${text}</span></p>`);
       } else if (line.trim().startsWith('### ')) {
@@ -124,21 +126,15 @@ export class ContentProcessor {
         let text = line.trim();
         text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
         result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${text}</span></p>`);
-      } else if (line.trim().match(/^#\w+/)) {
-        // 태그 라인은 줄바꿈 안 함 (한 줄로 유지)
-        let processedLine = line.trim().replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
+      } else if (line.trim().startsWith('원본태그 =')) {
+        // 태그 라인은 줄바꿈 안 함 ("원본태그 =" 으로 시작하면 태그로 간주, 한 줄로 유지)
+        // "원본태그 =" 제거하고 태그만 표시
+        const tagsOnly = line.trim().replace(/^원본태그\s*=\s*/, '');
+        let processedLine = tagsOnly.replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
         result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedLine}</span></p>`);
       } else if (line.trim().match(/^\(이미지\d*\)$/)) {
-        // 이미지 플레이스홀더 처리
+        // 이미지 플레이스홀더 처리 (자동 구분선 제거 - 클로드가 필요한 곳에만 --- 생성)
         result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${line.trim()}</span></p>`);
-
-        // 다음 줄이 ### 소제목이면 구분선 추가
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1].trim();
-          if (nextLine.startsWith('### ')) {
-            result.push(`<div class="se-component-content"><div class="se-section se-section-horizontalLine se-l-line1 se-section-align-"><div class="se-module se-module-horizontalLine"><hr class="se-hr"></div></div></div>`);
-          }
-        }
       } else {
         // 일반 텍스트 처리 (28자 이상이면 재귀적으로 자르기)
         const processedLines = this.breakLongText(line.trim());
@@ -175,8 +171,7 @@ export class ContentProcessor {
         cleanedContent = cleanedContent.replace(pattern, '');
       }
       
-      // 해시태그 정리
-      cleanedContent = this.cleanHashtags(cleanedContent);
+      // 해시태그 정리 (사용 안 함 - 원본 유지)
       
       // 연속된 공백과 줄바꿈 정리
       cleanedContent = cleanedContent.replace(/\n\s*\n\s*\n/g, '\n\n');

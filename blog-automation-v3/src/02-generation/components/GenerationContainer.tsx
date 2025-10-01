@@ -60,6 +60,7 @@ const Step2Generation: React.FC = () => {
     copyToClipboard,
     handleFontSizeChange,
     applyFontSizeToSelection,
+    insertSeparator,
     handleKeyDown,
     handleClick,
     getPlatformName
@@ -308,7 +309,7 @@ const Step2Generation: React.FC = () => {
                 <button
                   onClick={() => applyFontSizeToSelection(currentFontSize)}
                   style={{
-                    padding: '6px 8px',
+                    padding: '6px 12px',
                     backgroundColor: '#f3f4f6',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
@@ -317,7 +318,23 @@ const Step2Generation: React.FC = () => {
                   }}
                   title="현재 폰트 크기로 선택 영역 통일"
                 >
-                  🔄
+                  적용
+                </button>
+
+                <button
+                  onClick={insertSeparator}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                  title="구분선 추가 (커서 위치에 삽입)"
+                >
+                  ➕ 구분선
                 </button>
 
                 <button

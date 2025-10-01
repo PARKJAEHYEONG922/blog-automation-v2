@@ -406,6 +406,41 @@ export const useGeneration = (): UseGenerationReturn => {
     }
   }, []);
 
+  // 구분선 삽입 함수
+  const insertSeparator = useCallback(() => {
+    if (!editorRef.current) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      // 커서가 없으면 에디터 끝에 추가
+      const separator = '<hr style="border: none; border-top: 1px solid #666; margin: 16px 0; width: 30%;">';
+      editorRef.current.innerHTML += separator;
+      return;
+    }
+
+    // 커서 위치에 구분선 삽입
+    const range = selection.getRangeAt(0);
+
+    // 빈 줄 + 구분선 + 빈 줄 구조로 삽입
+    const separatorHTML = `
+      <p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">&nbsp;</span></p>
+      <hr style="border: none; border-top: 1px solid #666; margin: 16px auto; width: 30%;">
+      <p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">&nbsp;</span></p>
+    `;
+
+    // 선택 영역 삭제하고 구분선 삽입
+    range.deleteContents();
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = separatorHTML;
+
+    while (tempDiv.firstChild) {
+      range.insertNode(tempDiv.firstChild);
+    }
+
+    // 글자 수 업데이트
+    updateCharCount();
+  }, [updateCharCount]);
+
 
   // 키보드 이벤트 핸들러
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -529,6 +564,7 @@ export const useGeneration = (): UseGenerationReturn => {
     copyToClipboard,
     handleFontSizeChange,
     applyFontSizeToSelection,
+    insertSeparator,
     handleKeyDown,
     handleClick,
 

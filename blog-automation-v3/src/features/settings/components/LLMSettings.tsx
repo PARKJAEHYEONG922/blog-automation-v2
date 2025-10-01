@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Button from '@/shared/components/ui/Button';
+import { IMAGE_GENERATION_OPTIONS } from '@/shared/utils/constants';
 
 interface LLMSettingsProps {
   onClose: () => void;
@@ -834,11 +835,9 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                             onChange={(e) => handleStyleChange('image', e.target.value)}
                             className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
                           >
-                            <option value="realistic">사실적 (Realistic)</option>
-                            <option value="photographic">사진 (Photographic)</option>
-                            <option value="illustration">일러스트 (Illustration)</option>
-                            <option value="anime">애니메이션 (Anime)</option>
-                            <option value="dreamy">몽환적 (Dreamy)</option>
+                            {IMAGE_GENERATION_OPTIONS.runware.styles.map(style => (
+                              <option key={style.value} value={style.value}>{style.label}</option>
+                            ))}
                           </select>
                         </div>
 
@@ -872,11 +871,9 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
                             onChange={(e) => handleStyleChange('image', e.target.value)}
                             className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-gray-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all duration-200 cursor-pointer"
                           >
-                            <option value="photographic">사진 (Studio Photography)</option>
-                            <option value="minimalist">미니멀 (Clean Design)</option>
-                            <option value="kawaii">카와이 (Cute & Colorful)</option>
-                            <option value="artistic">아트 (Artistic Illustration)</option>
-                            <option value="impressionist">인상파 (Van Gogh Style)</option>
+                            {IMAGE_GENERATION_OPTIONS.gemini.styles.map(style => (
+                              <option key={style.value} value={style.value}>{style.label}</option>
+                            ))}
                           </select>
                         </div>
 

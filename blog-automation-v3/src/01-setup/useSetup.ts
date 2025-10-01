@@ -369,6 +369,14 @@ export const useSetup = (): UseSetupReturn => {
           imagePrompts: imageResult.imagePrompts,
           imagePromptGenerationFailed: imageResult.failed
         });
+
+        // Step2 전환 알림 다이얼로그
+        showAlert({
+          type: 'success',
+          title: '✅ Step 1 완료',
+          message: `콘텐츠 생성이 완료되었습니다!\n\n이제 Step 2에서 이미지를 추가하고\n콘텐츠를 편집할 수 있습니다.`
+        });
+
         nextStep();
       }, 1000);
 
@@ -420,6 +428,14 @@ export const useSetup = (): UseSetupReturn => {
         imagePrompts: imageResult.imagePrompts,
         imagePromptGenerationFailed: imageResult.failed
       });
+
+      // Step2 전환 알림 다이얼로그
+      showAlert({
+        type: 'success',
+        title: '✅ Step 1 완료',
+        message: `파일 업로드가 완료되었습니다!\n\n이제 Step 2에서 이미지를 추가하고\n콘텐츠를 편집할 수 있습니다.`
+      });
+
       nextStep();
 
     } catch (error) {
