@@ -8,33 +8,42 @@ import { BlogWritingService } from '@/shared/services/content/blog-writing-servi
 import Button from '@/shared/components/ui/Button';
 import '@/shared/types/electron.types';
 import { useDialog } from '@/app/DialogContext';
+import { useWorkflow } from '@/app/WorkflowContext';
 
-interface Step2Props {
-  content: string;
-  setupData: {
-    writingStylePaths: string[];
-    seoGuidePath: string;
-    topic: string;
-    selectedTitle: string;
-    mainKeyword: string;
-    subKeywords: string;
-    blogContent: string;
-    generatedContent?: string;
-    isAIGenerated: boolean;
-    generatedTitles: string[];
-    imagePrompts?: any[];
-    imagePromptGenerationFailed?: boolean;
-  };
-  onReset: () => void;
-  onGoBack: () => void;
-  aiModelStatus: {
-    writing: string;
-    image: string;
-  };
-}
-
-const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, onGoBack, aiModelStatus }) => {
+const Step2Generation: React.FC = () => {
+  // Workflow Context 사용
+  const { workflowData, reset, prevStep } = useWorkflow();
   const { showAlert } = useDialog();
+
+  // AI 모델 상태
+  const [aiModelStatus, setAiModelStatus] = useState({
+    writing: '미설정',
+    image: '미설정'
+  });
+
+  // 모델 상태 로드
+  useEffect(() => {
+    const loadModelStatus = async () => {
+      try {
+        const llmSettings = await window.electronAPI?.getLLMSettings?.();
+        if (llmSettings?.appliedSettings) {
+          const { writing, image } = llmSettings.appliedSettings;
+          setAiModelStatus({
+            writing: writing?.provider && writing?.model ? `${writing.provider} ${writing.model}` : '미설정',
+            image: image?.provider && image?.model ? `${image.provider} ${image.model}` : '미설정'
+          });
+        }
+      } catch (error) {
+        console.error('모델 상태 로드 실패:', error);
+      }
+    };
+    loadModelStatus();
+
+    // LLM 설정 변경 이벤트 리스너
+    const handleSettingsChanged = () => loadModelStatus();
+    window.addEventListener('app-llm-settings-changed', handleSettingsChanged);
+    return () => window.removeEventListener('app-llm-settings-changed', handleSettingsChanged);
+  }, []);
   const editorRef = useRef<HTMLDivElement>(null);
   const [originalContent, setOriginalContent] = useState<string>('');
   const [editedContent, setEditedContent] = useState<string>('');
@@ -634,19 +643,20 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
 
   // v2와 동일한 초기 콘텐츠 로딩
   useEffect(() => {
+    const content = workflowData.generatedContent;
     if (content) {
       // 원본 콘텐츠 저장
       setOriginalContent(content);
-      
+
       // 자동편집 콘텐츠 생성 (네이버 블로그용 HTML) - v2와 동일한 방식
       const processedContent = processMarkdown(content);
       setEditedContent(processedContent);
-      
+
       // 이미지 위치 감지 (원본 마크다운에서)
       const imageInfo = ContentProcessor.processImages(content);
       setImagePositions(imageInfo.imagePositions);
     }
-  }, [content]);
+  }, [workflowData.generatedContent]);
 
   // 편집된 콘텐츠가 변경될 때 에디터에 반영 (초기 로딩 시에만)
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -674,20 +684,20 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
 
   // 1단계에서 전달된 이미지 프롬프트들 초기화
   useEffect(() => {
-    if (setupData.imagePrompts && setupData.imagePrompts.length > 0) {
-      console.log(`📋 1단계에서 생성된 이미지 프롬프트 ${setupData.imagePrompts.length}개 로드됨`);
-      setImagePrompts(setupData.imagePrompts);
+    if (workflowData.imagePrompts && workflowData.imagePrompts.length > 0) {
+      console.log(`📋 1단계에서 생성된 이미지 프롬프트 ${workflowData.imagePrompts.length}개 로드됨`);
+      setImagePrompts(workflowData.imagePrompts);
       setImagePromptError(null);
-    } else if (setupData.imagePromptGenerationFailed) {
+    } else if (workflowData.imagePromptGenerationFailed) {
       console.warn('⚠️ 1단계에서 이미지 프롬프트 생성 실패');
       setImagePromptError('1단계에서 이미지 프롬프트 생성에 실패했습니다.');
     }
-  }, [setupData.imagePrompts, setupData.imagePromptGenerationFailed]);
+  }, [workflowData.imagePrompts, workflowData.imagePromptGenerationFailed]);
 
   // 이미지 프롬프트 재생성 함수
   const regenerateImagePrompts = async () => {
     // 현재 원본 콘텐츠를 사용 (수정된 글이 있다면 그것을, 아니면 초기 콘텐츠를)
-    const currentContent = originalContent || content;
+    const currentContent = originalContent || workflowData.generatedContent;
     if (!currentContent || isRegeneratingPrompts) return;
 
     setIsRegeneratingPrompts(true);
@@ -815,8 +825,8 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
     <div className="max-w-6xl mx-auto min-h-screen bg-gray-50 p-6">
       <style>{sectionStyles}</style>
       {/* 작업 요약 */}
-      <WorkSummary 
-        setupData={setupData}
+      <WorkSummary
+        setupData={workflowData}
         charCount={charCount}
         charCountWithSpaces={charCountWithSpaces}
         imageCount={imagePositions.length}
@@ -1192,7 +1202,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       {/* 선택된 플랫폼별 발행 컴포넌트 */}
       {selectedPlatform === 'naver' && (
         <NaverPublishUI
-          data={setupData}
+          data={workflowData}
           editedContent={editedContent}
           imageUrls={images}
           onComplete={(result) => {
@@ -1254,19 +1264,19 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       {/* 액션 버튼 */}
       <div className="mt-8 flex justify-between items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
         {/* 왼쪽: 이전으로 가기 */}
-        <Button 
-          onClick={onGoBack} 
+        <Button
+          onClick={prevStep}
           variant="secondary"
           className="inline-flex items-center space-x-2 px-5 py-3 bg-gray-500 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 transition-colors duration-200"
         >
           <span>←</span>
           <span>이전으로 가기</span>
         </Button>
-        
+
         {/* 가운데: 발행 버튼 (다른 플랫폼용) */}
         <div className="flex space-x-3">
           {selectedPlatform && selectedPlatform !== 'naver' && (Object.keys(images).length === imagePositions.length || imagePositions.length === 0) && (
-            <Button 
+            <Button
               onClick={handlePublish}
               variant="publish"
               className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-500 text-white rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-colors duration-200 shadow-lg shadow-emerald-500/25"
@@ -1276,10 +1286,10 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
             </Button>
           )}
         </div>
-        
+
         {/* 오른쪽: 처음부터 다시 */}
-        <Button 
-          onClick={onReset}
+        <Button
+          onClick={reset}
           variant="danger"
           className="inline-flex items-center space-x-2 px-5 py-3 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors duration-200"
         >

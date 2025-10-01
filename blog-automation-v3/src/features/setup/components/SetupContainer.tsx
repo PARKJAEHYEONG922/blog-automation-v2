@@ -13,39 +13,11 @@ import { StorageService, SavedDocument } from '@/shared/services/storage/storage
 import { SetupService } from '../services/setup-service';
 import Button from '@/shared/components/ui/Button';
 import { useDialog } from '@/app/DialogContext';
+import { useWorkflow } from '@/app/WorkflowContext';
 
-interface Step1Props {
-  onComplete: (data: {
-    writingStylePaths: string[];
-    seoGuidePath: string;
-    topic: string;
-    selectedTitle: string;
-    mainKeyword: string;
-    subKeywords: string;
-    blogContent: string;
-    generatedContent: string | undefined;
-    isAIGenerated: boolean;
-    generatedTitles: string[];
-    imagePrompts: any[];
-    imagePromptGenerationFailed: boolean;
-  }) => void;
-  initialData?: {
-    writingStylePaths: string[];
-    seoGuidePath: string;
-    topic: string;
-    selectedTitle: string;
-    mainKeyword: string;
-    subKeywords: string;
-    blogContent: string;
-    generatedContent?: string;
-    isAIGenerated: boolean;
-    generatedTitles: string[];
-    imagePrompts?: any[];
-    imagePromptGenerationFailed?: boolean;
-  };
-}
-
-const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
+const Step1Setup: React.FC = () => {
+  // Workflow Context 사용
+  const { workflowData, updateWorkflowData, nextStep } = useWorkflow();
 
   // Dialog 사용
   const { showAlert, showConfirm } = useDialog();
@@ -54,14 +26,14 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   const progressSectionRef = useRef<HTMLDivElement>(null);
 
   // 키워드 입력 상태
-  const [mainKeyword, setMainKeyword] = useState(initialData?.mainKeyword || '');
-  const [subKeywords, setSubKeywords] = useState(initialData?.subKeywords || '');
-  const [blogContent, setBlogContent] = useState(initialData?.blogContent || '');
+  const [mainKeyword, setMainKeyword] = useState(workflowData.mainKeyword || '');
+  const [subKeywords, setSubKeywords] = useState(workflowData.subKeywords || '');
+  const [blogContent, setBlogContent] = useState(workflowData.blogContent || '');
   
   // 제목 추천 관련 상태
   const [isGeneratingTitles, setIsGeneratingTitles] = useState(false);
-  const [generatedTitles, setGeneratedTitles] = useState<string[]>(initialData?.generatedTitles || []);
-  const [selectedTitle, setSelectedTitle] = useState(initialData?.selectedTitle || '');
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>(workflowData.generatedTitles || []);
+  const [selectedTitle, setSelectedTitle] = useState(workflowData.selectedTitle || '');
 
   // 트렌드 분석 결과 저장 (제목 재생성용)
   const [trendAnalysisCache, setTrendAnalysisCache] = useState<{
@@ -114,7 +86,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   useEffect(() => {
     const loadSavedDocuments = async () => {
       try {
-        const result = await SetupService.loadDocuments(initialData);
+        const result = await SetupService.loadDocuments(workflowData);
 
         setSavedWritingStyles(result.writingStyles);
         setSavedSeoGuides(result.seoGuides);
@@ -126,7 +98,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     };
 
     loadSavedDocuments();
-  }, [initialData]);
+  }, []);
 
   // 말투 선택 상태가 변경되면 localStorage에 저장
   useEffect(() => {
@@ -467,8 +439,8 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       setGenerationStep('완료!');
       
       setTimeout(() => {
-        // 통합된 onComplete 호출 - 수동 업로드
-        onComplete({ 
+        // WorkflowContext 업데이트 - 수동 업로드
+        updateWorkflowData({
           writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
           seoGuidePath: selectedSeoGuide?.filePath || '',
           topic: `제목: ${finalTitle}`,
@@ -482,6 +454,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
           imagePrompts: imagePrompts, // 자동 생성된 이미지 프롬프트들
           imagePromptGenerationFailed: expectedImageCount > 0 && generatedImageCount === 0 // 이미지 프롬프트 실패 플래그
         });
+        nextStep(); // Step 2로 이동
       }, 1000);
     } catch (error) {
       console.error('파일 업로드 처리 중 오류:', error);
@@ -608,7 +581,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
         const generatedImageCount = imagePrompts ? imagePrompts.length : 0;
         
         // 글쓰기는 성공했으므로 이미지 프롬프트 실패 여부와 관계없이 완료 처리
-        onComplete({ 
+        updateWorkflowData({
           writingStylePaths: selectedWritingStyles.map(doc => doc.filePath),
           seoGuidePath: selectedSeoGuide?.filePath || '',
           topic: `제목: ${finalTitle}`,
@@ -622,6 +595,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
           imagePrompts: imagePrompts, // 자동 생성된 이미지 프롬프트들 (실패해도 빈 배열)
           imagePromptGenerationFailed: expectedImageCount > 0 && generatedImageCount === 0 // 이미지 프롬프트 실패 플래그
         });
+        nextStep(); // Step 2로 이동
       }, 1000);
       
     } catch (error) {
