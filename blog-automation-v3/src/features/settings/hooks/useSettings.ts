@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
+import { SettingsService, LLMSettings, LLMSettingsData, LLMConfig } from '../services/settings-service';
 
-export interface LLMSettings {
+// 레거시 인터페이스 (기존 코드 호환성)
+export interface LLMSettingsLegacy {
   appliedSettings?: {
     writing?: {
       provider: string;
@@ -19,15 +21,15 @@ export interface LLMSettings {
 }
 
 export const useSettings = () => {
-  const [settings, setSettings] = useState<LLMSettings>({});
+  const [settingsData, setSettingsData] = useState<LLMSettingsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
     try {
-      const loadedSettings = await window.electronAPI.getLLMSettings();
-      setSettings(loadedSettings || {});
+      const data = await SettingsService.loadSettings();
+      setSettingsData(data);
     } catch (error) {
       console.error('설정 로드 실패:', error);
     } finally {
@@ -35,12 +37,14 @@ export const useSettings = () => {
     }
   }, []);
 
-  const saveSettings = useCallback(async (newSettings: LLMSettings) => {
+  const saveSettings = useCallback(async (newSettings: LLMSettingsData) => {
     setIsLoading(true);
     try {
-      await window.electronAPI.saveLLMSettings(newSettings);
-      setSettings(newSettings);
-      return { success: true };
+      const result = await SettingsService.saveSettings(newSettings);
+      if (result.success) {
+        setSettingsData(newSettings);
+      }
+      return result;
     } catch (error) {
       console.error('설정 저장 실패:', error);
       return { success: false, error: error instanceof Error ? error.message : '설정 저장 실패' };
@@ -49,15 +53,15 @@ export const useSettings = () => {
     }
   }, []);
 
-  const testAPIConnection = useCallback(async (config: any) => {
+  const testAPIConnection = useCallback(async (config: LLMConfig) => {
     setIsTesting(true);
     try {
-      const result = await window.electronAPI.testLLMConfig(config);
+      const result = await SettingsService.testAPIConnection(config);
       return result;
     } catch (error) {
-      return { 
-        success: false, 
-        message: error instanceof Error ? error.message : 'API 테스트 실패' 
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'API 테스트 실패'
       };
     } finally {
       setIsTesting(false);
@@ -65,17 +69,11 @@ export const useSettings = () => {
   }, []);
 
   const getModelStatus = useCallback(() => {
-    const appliedSettings = settings.appliedSettings;
-    
-    return {
-      writing: appliedSettings?.writing?.provider && appliedSettings?.writing?.model 
-        ? `${appliedSettings.writing.provider} ${appliedSettings.writing.model}` 
-        : '미설정',
-      image: appliedSettings?.image?.provider && appliedSettings?.image?.model 
-        ? `${appliedSettings.image.provider} ${appliedSettings.image.model}` 
-        : '미설정'
-    };
-  }, [settings]);
+    if (!settingsData) {
+      return { writing: '미설정', image: '미설정' };
+    }
+    return SettingsService.getModelStatus(settingsData.appliedSettings);
+  }, [settingsData]);
 
   // 컴포넌트 마운트 시 설정 로드
   useEffect(() => {
@@ -83,7 +81,8 @@ export const useSettings = () => {
   }, [loadSettings]);
 
   return {
-    settings,
+    settings: settingsData?.appliedSettings, // 레거시 호환성
+    settingsData, // 새로운 전체 데이터
     isLoading,
     isTesting,
     loadSettings,
