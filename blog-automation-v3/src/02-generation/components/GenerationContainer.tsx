@@ -115,62 +115,7 @@ const Step2Generation: React.FC = () => {
 
 
   // v2 Step3와 완전히 동일한 마크다운 처리 함수들
-  
-  // AI 생성 콘텐츠 정리 함수
-  const cleanAIGeneratedContent = (content: string): string => {
-    let cleanedContent = content;
-    
-    // 코드 블록 제거
-    cleanedContent = cleanedContent.replace(/```[\s\S]*?```/g, '');
-    
-    // 연속된 이미지 플레이스홀더는 개별적으로 유지 (통합하지 않음)
-    
-    // 불필요한 구조 설명 제거
-    cleanedContent = cleanedContent.replace(/^(다음은|아래는|위의 내용은|본문은).*?입니다[.:]?\s*$/gm, '');
-    
-    // 해시태그 정리
-    cleanedContent = cleanHashtags(cleanedContent);
-    
-    return cleanedContent;
-  };
-  
-  // v2 원본과 완전히 동일한 해시태그 정리 함수
-  const cleanHashtags = (content: string): string => {
-    try {
-      // 모든 해시태그 찾기 (v2와 동일: #\w+만 매치, 마크다운 헤더는 공백 때문에 매치 안됨)
-      const hashtags = content.match(/#\w+/g) || [];
-      
-      if (hashtags.length === 0) {
-        return content;
-      }
-      
-      // 중복 제거하되 순서 유지
-      const seen = new Set<string>();
-      const uniqueHashtags: string[] = [];
-      
-      for (const tag of hashtags) {
-        if (!seen.has(tag.toLowerCase())) {
-          seen.add(tag.toLowerCase());
-          uniqueHashtags.push(tag);
-        }
-      }
-      
-      // 원본에서 해시태그 부분 제거
-      const contentWithoutTags = content.replace(/#\w+/g, '').trim();
-      
-      // 정리된 태그들을 마지막에 한 줄로 추가
-      if (uniqueHashtags.length > 0) {
-        const tagsLine = uniqueHashtags.join(' ');
-        return `${contentWithoutTags}\n\n${tagsLine}`;
-      }
-      
-      return contentWithoutTags;
-    } catch (error) {
-      console.warn('해시태그 정리 중 오류:', error);
-      return content;
-    }
-  };
-  
+
   // 이미지 번호 매기기 함수
   const addImageNumbers = (content: string): string => {
     let numberedContent = content;
