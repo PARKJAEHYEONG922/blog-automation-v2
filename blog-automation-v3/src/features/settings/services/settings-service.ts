@@ -95,7 +95,11 @@ class SettingsServiceClass {
   async testAPIConnection(config: LLMConfig): Promise<APITestResult> {
     try {
       const result = await window.electronAPI.testLLMConfig(config);
-      return result;
+      // Electron API 응답을 APITestResult로 변환
+      return {
+        success: result.success,
+        message: result.error || (result.success ? 'API 연결 성공' : 'API 연결 실패')
+      };
     } catch (error) {
       return {
         success: false,
