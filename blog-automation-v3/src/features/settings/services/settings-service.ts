@@ -35,6 +35,11 @@ export interface APITestResult {
   message: string;
 }
 
+export interface SaveSettingsResult {
+  success: boolean;
+  error?: string;
+}
+
 class SettingsServiceClass {
   /**
    * LLM 설정 로드
@@ -70,7 +75,7 @@ class SettingsServiceClass {
   /**
    * LLM 설정 저장
    */
-  async saveSettings(data: LLMSettingsData): Promise<{ success: boolean; error?: string }> {
+  async saveSettings(data: LLMSettingsData): Promise<SaveSettingsResult> {
     try {
       await window.electronAPI.saveLLMSettings(data);
       console.log('✅ LLM 설정 저장 완료');

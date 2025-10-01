@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { SettingsService, LLMSettings, LLMSettingsData, LLMConfig } from '../services/settings-service';
+import { SettingsService, LLMSettings, LLMSettingsData, LLMConfig, SaveSettingsResult } from '../services/settings-service';
 
 // 레거시 인터페이스 (기존 코드 호환성)
 export interface LLMSettingsLegacy {
