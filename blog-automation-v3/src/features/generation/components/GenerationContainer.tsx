@@ -465,7 +465,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
 
     if (selectedPlatform === 'naver') {
       // v2의 네이버 블로그 발행 로직 재사용
-      window.electronAPI.publishBlog(finalContent);
+      window.electronAPI.publishToBlog(finalContent);
     } else {
       showAlert({ type: 'info', message: `${getPlatformName(selectedPlatform)} 발행 기능은 곧 구현될 예정입니다.` });
     }

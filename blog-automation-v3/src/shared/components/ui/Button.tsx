@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'outline';
+  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'outline' | 'ghost' | 'publish';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   children: React.ReactNode;
@@ -25,14 +25,16 @@ const ButtonComponent: React.FC<ButtonProps> = ({
     lg: 'px-6 py-3 text-base gap-2.5'
   };
 
-  const variantClasses = {
+  const variantClasses: Record<string, string> = {
     primary: 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25 focus:ring-blue-500',
     secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 focus:ring-gray-500',
     success: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/25 focus:ring-emerald-500',
     danger: 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25 focus:ring-red-500',
     warning: 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/25 focus:ring-amber-500',
     info: 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-500/25 focus:ring-cyan-500',
-    outline: 'bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500'
+    outline: 'bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500',
+    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 focus:ring-gray-500',
+    publish: 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/25 focus:ring-purple-500'
   };
 
   return (

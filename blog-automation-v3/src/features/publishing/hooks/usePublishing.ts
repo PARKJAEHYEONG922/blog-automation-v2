@@ -74,7 +74,7 @@ export const usePublishing = () => {
       // 실제 발행 로직 (플랫폼별 분기)
       updateProgress(50, '콘텐츠 업로드 중...');
       
-      const result = await window.electronAPI.publishBlog(content);
+      const result = await window.electronAPI.publishToBlog(content);
       
       if (result.success) {
         updateProgress(100, '발행 완료!');

@@ -15,7 +15,7 @@ export interface ElectronAPI {
   createDefaultSEO: () => Promise<boolean>;
   
   // 이미지 생성
-  generateImagePrompts: (data: { content: string; imageCount: number }) => Promise<{ prompts: string[] }>;
+  generateImagePrompts: (data: { content: string; imageCount: number }) => Promise<{ success: boolean; prompts: string[]; error?: string }>;
   generateImage: (prompt: string) => Promise<string>;
   
   // 블로그 발행
@@ -37,6 +37,13 @@ export interface ElectronAPI {
   checkForUpdates: () => Promise<{ hasUpdate: boolean; latestVersion?: string; downloadUrl?: string; error?: string }>;
   downloadUpdate: (downloadUrl: string) => Promise<{ success: boolean; error?: string }>;
   onUpdateCheckResult: (callback: (data: any) => void) => (() => void);
+  onDownloadProgress: (callback: (progress: number) => void) => (() => void);
+
+  // 네이버 관련
+  openNaverLogin: () => Promise<void>;
+  getNaverTrends: (keyword: string) => Promise<any>;
+  getNaverCookies: () => Promise<any>;
+  getTrendContents: (urls: string[]) => Promise<any>;
   
   // Playwright 관련
   playwrightInitialize: () => Promise<{ success: boolean; error?: string }>;
