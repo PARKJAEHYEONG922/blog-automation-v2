@@ -3,6 +3,13 @@
  * LLM 설정 저장/로드 및 API 테스트 로직 담당
  */
 
+import {
+  handleFileSystemError,
+  handleAPIError,
+  logError,
+  getErrorMessage
+} from '../../../shared/utils/error-handler';
+
 export interface LLMConfig {
   provider: string;
   model: string;
@@ -63,7 +70,7 @@ class SettingsServiceClass {
         providerApiKeys: this.getDefaultApiKeys()
       };
     } catch (error) {
-      console.error('설정 로드 실패:', error);
+      handleFileSystemError(error, 'LLM 설정 로드');
       return {
         settings: this.getDefaultSettings(),
         appliedSettings: this.getDefaultSettings(),
@@ -81,10 +88,10 @@ class SettingsServiceClass {
       console.log('✅ LLM 설정 저장 완료');
       return { success: true };
     } catch (error) {
-      console.error('설정 저장 실패:', error);
+      const appError = handleFileSystemError(error, 'LLM 설정 저장');
       return {
         success: false,
-        error: error instanceof Error ? error.message : '설정 저장 실패'
+        error: appError.message
       };
     }
   }
@@ -101,9 +108,10 @@ class SettingsServiceClass {
         message: result.error || (result.success ? 'API 연결 성공' : 'API 연결 실패')
       };
     } catch (error) {
+      const appError = handleAPIError(error, `${config.provider} API 테스트`);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'API 테스트 실패'
+        message: appError.message
       };
     }
   }

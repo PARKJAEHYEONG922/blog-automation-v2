@@ -3,6 +3,12 @@
  */
 
 import { StorageService, SavedDocument } from '../../../shared/services/storage/storage-service';
+import {
+  handleFileSystemError,
+  handleAPIError,
+  logError,
+  getErrorMessage
+} from '../../../shared/utils/error-handler';
 
 export interface DocumentLoadResult {
   writingStyles: SavedDocument[];
@@ -61,7 +67,7 @@ class SetupServiceClass {
         }
       }
     } catch (error) {
-      console.error('SEO 가이드 문서 로드 실패:', error);
+      handleFileSystemError(error, 'SEO 가이드 로드');
       // 로컬 스토리지에서 복원 시도
       seoGuides = StorageService.getSeoGuides();
       selectedSeoGuide = seoGuides.find((doc: SavedDocument) =>
@@ -120,12 +126,16 @@ class SetupServiceClass {
 
           resolve(savedDoc);
         } catch (error) {
-          console.error('파일 저장 실패:', error);
-          reject(error);
+          const appError = handleFileSystemError(error, '말투 문서 저장');
+          reject(new Error(appError.message));
         }
       };
 
-      reader.onerror = () => reject(new Error('파일 읽기 실패'));
+      reader.onerror = () => {
+        const error = new Error('파일 읽기 실패');
+        logError(error, 'FileReader - saveWritingStyle');
+        reject(error);
+      };
       reader.readAsText(file);
     });
   }
@@ -150,7 +160,7 @@ class SetupServiceClass {
 
       return savedDoc;
     } catch (error) {
-      console.error('말투 문서 저장 실패:', error);
+      handleFileSystemError(error, '말투 문서 저장');
       throw error;
     }
   }
@@ -180,12 +190,16 @@ class SetupServiceClass {
 
           resolve(savedDoc);
         } catch (error) {
-          console.error('파일 저장 실패:', error);
-          reject(error);
+          const appError = handleFileSystemError(error, 'SEO 가이드 저장');
+          reject(new Error(appError.message));
         }
       };
 
-      reader.onerror = () => reject(new Error('파일 읽기 실패'));
+      reader.onerror = () => {
+        const error = new Error('파일 읽기 실패');
+        logError(error, 'FileReader - saveSeoGuide');
+        reject(error);
+      };
       reader.readAsText(file);
     });
   }
@@ -211,8 +225,8 @@ class SetupServiceClass {
         return { seoGuides: updated };
       }
     } catch (error) {
-      console.error('파일 삭제 실패:', error);
-      throw new Error('파일 삭제에 실패했습니다.');
+      const appError = handleFileSystemError(error, `${type === 'writingStyle' ? '말투' : 'SEO 가이드'} 삭제`);
+      throw new Error(appError.message);
     }
   }
 
@@ -242,7 +256,7 @@ class SetupServiceClass {
         throw new Error(result.error || '크롤링 실패');
       }
     } catch (error) {
-      console.error('URL 크롤링 실패:', error);
+      handleAPIError(error, 'Blog Crawl');
       throw error;
     }
   }
