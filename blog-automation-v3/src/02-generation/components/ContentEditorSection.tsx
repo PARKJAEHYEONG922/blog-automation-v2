@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '@/shared/components/ui/Button';
-import { ContentProcessor } from '../services/content-processor';
+import { ContentProcessor } from '@/02-generation/services/content-processor';
 
 interface ContentEditorSectionProps {
   originalContent: string;

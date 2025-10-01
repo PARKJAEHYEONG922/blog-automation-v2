@@ -8,9 +8,9 @@ import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
 import ContentEditorSection from './ContentEditorSection';
 import ImagePromptSection from './ImagePromptSection';
-import PublishPlatformSection from './PublishPlatformSection';
+import { PublishPlatformSection } from '@/03-publish';
 import Button from '@/shared/components/ui/Button';
-import { useGeneration } from '../hooks/useGeneration';
+import { useGeneration } from '@/02-generation/useGeneration';
 import { useWorkflow } from '@/app/WorkflowContext';
 
 const Step2Generation: React.FC = () => {

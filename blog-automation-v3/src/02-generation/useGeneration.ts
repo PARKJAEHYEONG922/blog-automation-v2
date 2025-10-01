@@ -6,8 +6,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWorkflow } from '@/app/WorkflowContext';
 import { useDialog } from '@/app/DialogContext';
-import { ContentProcessor } from '../services/content-processor';
-import { GenerationService } from '../services/generation-service';
+import { ContentProcessor } from '@/02-generation/services/content-processor';
+import { GenerationService } from '@/02-generation/services/generation-service';
 
 export interface ImageUrls {
   [key: string]: string;

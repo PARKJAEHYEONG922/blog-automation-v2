@@ -7,9 +7,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWorkflow } from '@/app/WorkflowContext';
 import { useDialog } from '@/app/DialogContext';
 import { SavedDocument, StorageService } from '@/shared/services/storage/storage-service';
-import { SetupService } from '../services/setup-service';
-import { TitleGenerationService, TrendAnalysisCache } from '../services/title-generation-service';
-import { ContentGenerationService } from '../services/content-generation-service';
+import { SetupService } from '@/01-setup/services/setup-service';
+import { TitleGenerationService, TrendAnalysisCache } from '@/01-setup/services/title-generation-service';
+import { ContentGenerationService } from '@/01-setup/services/content-generation-service';
 
 export interface UseSetupReturn {
   // 상태

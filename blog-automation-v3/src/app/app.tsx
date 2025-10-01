@@ -6,8 +6,8 @@ import { DialogProvider } from './DialogContext';
 import { WorkflowProvider, useWorkflow } from './WorkflowContext';
 
 // Code Splitting: 필요한 시점에만 로드
-const SetupContainer = lazy(() => import('@/features/setup').then(module => ({ default: module.SetupContainer })));
-const GenerationContainer = lazy(() => import('@/features/generation').then(module => ({ default: module.GenerationContainer })));
+const SetupContainer = lazy(() => import('@/01-setup').then(module => ({ default: module.SetupContainer })));
+const GenerationContainer = lazy(() => import('@/02-generation').then(module => ({ default: module.GenerationContainer })));
 const LLMSettings = lazy(() => import('@/features/settings').then(module => ({ default: module.LLMSettings })));
 const UpdateModal = lazy(() => import('@/features/settings').then(module => ({ default: module.UpdateModal })));
 

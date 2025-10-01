@@ -1,7 +1,7 @@
 /**
  * 콘텐츠 자동 편집 처리를 위한 유틸리티 클래스
  */
-import '../../../shared/types/electron.types';
+import '@/shared/types/electron.types';
 export class ContentProcessor {
   /**
    * 원본 마크다운을 자동편집된 형태로 변환 (V2의 processMarkdown과 동일)
