@@ -398,7 +398,9 @@ export class ContentProcessor {
     return tableHtml;
   }
 
-  // ========== Step2 네이버 블로그 에디터 관련 함수들 (백업 파일에서 이동) ==========
+  // ========== 네이버 블로그 자동화 함수들 (Playwright) ==========
+  // TODO: Step3 리팩토링 시 NaverBlogAutomationService로 이동 예정
+  // 이 함수들은 Step3 발행 단계에서 네이버 블로그 에디터 자동화에 사용됨
 
   /**
    * Step2 글씨 크기 매핑 (4가지만 사용)

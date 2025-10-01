@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Button from '@/shared/components/ui/Button';
+import { GenerationAutomationService } from '@/02-generation/services/generation-automation-service';
 
 interface ImagePrompt {
   index: number;
@@ -96,10 +97,10 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   useEffect(() => {
     const loadImageSettingsFromAPI = async () => {
       try {
-        const llmSettings = await window.electronAPI?.getLLMSettings?.();
-        if (llmSettings?.appliedSettings?.image) {
-          const { style, quality, size } = llmSettings.appliedSettings.image;
-          
+        const imageSettings = await GenerationAutomationService.getImageSettings();
+        if (imageSettings) {
+          const { style, quality, size } = imageSettings;
+
           if (style) {
             console.log('🎨 API에서 불러온 이미지 스타일:', style);
             setImageStyle(style);
@@ -125,10 +126,10 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   useEffect(() => {
     const handleSettingsChange = async () => {
       try {
-        const llmSettings = await window.electronAPI?.getLLMSettings?.();
-        if (llmSettings?.appliedSettings?.image) {
-          const { style, quality, size } = llmSettings.appliedSettings.image;
-          
+        const imageSettings = await GenerationAutomationService.getImageSettings();
+        if (imageSettings) {
+          const { style, quality, size } = imageSettings;
+
           if (style) {
             console.log('🎨 API 설정 변경 - 이미지 스타일 업데이트:', style);
             setImageStyle(style);
@@ -302,7 +303,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       const filename = `blog-image-${imageIndex}-${timestamp}.png`;
       
       // Electron API 사용 (v3 구조에 맞게)
-      if (window.electronAPI) {
+      if (typeof window !== 'undefined' && window.electronAPI) {
         const arrayBuffer = await blob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         
@@ -357,7 +358,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       console.log('프롬프트로 이미지 생성 요청:', enhancedPrompt);
 
       // 실제 API 호출 (옵션은 저장된 LLM 설정 사용)
-      const imageUrl = await window.electronAPI?.generateImage?.(enhancedPrompt);
+      const imageUrl = await GenerationAutomationService.generateImage(enhancedPrompt);
       
       // 정지 요청 확인 (배치 모드일 때만)
       if (shouldStopRef.current && isPartOfBatch) {
@@ -483,22 +484,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   // 이미지 설정을 API 설정에 저장
   const saveImageSettingToAPI = async (settingType: 'style' | 'quality' | 'size', value: string) => {
     try {
-      const currentSettings = await window.electronAPI?.getLLMSettings?.();
-      if (currentSettings?.appliedSettings?.image) {
-        const updatedSettings = {
-          ...currentSettings,
-          appliedSettings: {
-            ...currentSettings.appliedSettings,
-            image: {
-              ...currentSettings.appliedSettings.image,
-              [settingType]: value
-            }
-          }
-        };
-
-        await window.electronAPI?.saveLLMSettings?.(updatedSettings);
-        console.log(`이미지 ${settingType} 설정 저장됨:`, value);
-      }
+      await GenerationAutomationService.updateImageSettings(settingType, value);
     } catch (error) {
       console.error('이미지 설정 저장 실패:', error);
     }

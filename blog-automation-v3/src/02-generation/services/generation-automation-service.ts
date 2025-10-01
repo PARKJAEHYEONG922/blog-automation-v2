@@ -92,4 +92,60 @@ export class GenerationAutomationService {
       return null;
     }
   }
+
+  /**
+   * LLM 설정 저장하기
+   */
+  static async saveLLMSettings(settings: any): Promise<void> {
+    try {
+      await window.electronAPI?.saveLLMSettings?.(settings);
+      console.log('LLM 설정 저장 완료');
+    } catch (error) {
+      console.error('LLM 설정 저장 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 이미지 설정만 업데이트 (기존 설정 유지)
+   */
+  static async updateImageSettings(settingType: 'style' | 'quality' | 'size', value: string): Promise<void> {
+    try {
+      const currentSettings = await this.getLLMSettings();
+      if (currentSettings?.appliedSettings?.image) {
+        const updatedSettings = {
+          ...currentSettings,
+          appliedSettings: {
+            ...currentSettings.appliedSettings,
+            image: {
+              ...currentSettings.appliedSettings.image,
+              [settingType]: value
+            }
+          }
+        };
+
+        await this.saveLLMSettings(updatedSettings);
+        console.log(`이미지 ${settingType} 설정 저장됨:`, value);
+      }
+    } catch (error) {
+      console.error('이미지 설정 업데이트 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 이미지 설정 불러오기 (style, quality, size)
+   */
+  static async getImageSettings(): Promise<{ style?: string; quality?: string; size?: string } | null> {
+    try {
+      const llmSettings = await this.getLLMSettings();
+      if (llmSettings?.appliedSettings?.image) {
+        return llmSettings.appliedSettings.image;
+      }
+      return null;
+    } catch (error) {
+      console.error('이미지 설정 불러오기 실패:', error);
+      return null;
+    }
+  }
 }

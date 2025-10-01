@@ -4,6 +4,7 @@ import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
 import NaverPublishUI from '@/03-publish/platforms/NaverPublishUI';
 import { ContentProcessor } from '@/02-generation/services/content-processor';
+import { GenerationAutomationService } from '@/02-generation/services/generation-automation-service';
 import Button from '@/shared/components/ui/Button';
 import '@/shared/types/electron.types';
 import { useDialog } from '@/app/DialogContext';
@@ -86,7 +87,7 @@ const Step2Generation: React.FC = () => {
   useEffect(() => {
     const loadImageAIInfo = async () => {
       try {
-        const llmSettings = await window.electronAPI?.getLLMSettings?.();
+        const llmSettings = await GenerationAutomationService.getLLMSettings();
         if (llmSettings?.appliedSettings?.image) {
           const { provider, model } = llmSettings.appliedSettings.image;
           if (provider && model) {
