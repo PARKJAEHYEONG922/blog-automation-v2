@@ -213,6 +213,17 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
       if (result) {
         // 파일명으로 사용할 제목 정리
         const fileName = result.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50);
+
+        // 중복 체크: 동일한 이름의 문서가 이미 있는지 확인
+        const existingDoc = savedWritingStyles.find(doc =>
+          doc.name === fileName || doc.name.startsWith(fileName)
+        );
+
+        if (existingDoc) {
+          alert(`이미 동일한 제목의 글이 저장되어 있습니다.\n제목: ${result.title}`);
+          return null;
+        }
+
         const savedDoc = await SetupService.saveWritingStyleDirect(fileName, result.content);
 
         // 상태 업데이트
