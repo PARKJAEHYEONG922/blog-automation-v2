@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import NaverPublishUI from '@/features/publishing/components/NaverPublishUI';
+import NaverPublishUI from './NaverPublishUI';
 import type { WorkflowData, ImageUrls } from '@/shared/types/common.types';
 
 interface PublishPlatformSectionProps {
