@@ -361,10 +361,41 @@ export class ContentProcessor {
    * 마크다운 표를 네이버 블로그 HTML 표로 변환
    */
   private static convertMarkdownTable(tableLines: string[]): string {
-    // 간단한 표 변환 로직 (실제 구현 필요)
-    return tableLines.map(line => 
-      `<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${line}</span></p>`
-    ).join('');
+    const rows: string[][] = [];
+
+    for (const line of tableLines) {
+      if (line.includes('---')) continue; // 구분선 무시
+
+      const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
+      if (cells.length > 0) {
+        rows.push(cells);
+      }
+    }
+
+    if (rows.length === 0) return '';
+
+    let tableHtml = '<div class="se-component se-table" style="text-align: center; margin: 16px auto;"><table class="se-table-content" style="margin: 0 auto;">';
+
+    rows.forEach((row, rowIndex) => {
+      const isHeader = rowIndex === 0;
+      const backgroundColor = isHeader ? 'background-color: rgb(248, 249, 250);' : '';
+
+      tableHtml += '<tr class="se-tr">';
+
+      row.forEach(cell => {
+        let processedCell = cell;
+        // **강조** 처리
+        processedCell = processedCell.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold;">$1</span>');
+
+        tableHtml += `<td class="se-cell" style="border: 1px solid rgb(221, 221, 221); padding: 8px; ${backgroundColor}"><div class="se-module-text"><p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedCell}</span></p></div></td>`;
+      });
+
+      tableHtml += '</tr>';
+    });
+
+    tableHtml += '</table></div>';
+
+    return tableHtml;
   }
 
   // ========== Step2 네이버 블로그 에디터 관련 함수들 (백업 파일에서 이동) ==========

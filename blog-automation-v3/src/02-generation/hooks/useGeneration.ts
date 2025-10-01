@@ -29,12 +29,10 @@ export interface UseGenerationReturn {
   currentFontSize: string;
   fontSizes: Array<{ name: string; size: string; weight: string }>;
   activeTab: 'original' | 'edited';
-  isEditing: boolean;
 
   // 이미지 관련 상태
   imagePositions: string[];
   images: { [key: string]: string };
-  isGeneratingImages: boolean;
   imagePrompts: any[];
   isRegeneratingPrompts: boolean;
   imagePromptError: string | null;
@@ -47,11 +45,14 @@ export interface UseGenerationReturn {
   editorRef: React.RefObject<HTMLDivElement>;
 
   // 상태 업데이트 함수
+  setOriginalContent: (content: string) => void;
   setEditedContent: (content: string) => void;
   setCurrentFontSize: (size: string) => void;
   setActiveTab: (tab: 'original' | 'edited') => void;
-  setIsEditing: (editing: boolean) => void;
   setImages: (images: { [key: string]: string }) => void;
+  setImagePositions: (positions: string[]) => void;
+  setImagePrompts: (prompts: any[]) => void;
+  setImagePromptError: (error: string | null) => void;
   setSelectedPlatform: (platform: string) => void;
 
   // 비즈니스 로직 함수
@@ -152,79 +153,164 @@ export const useGeneration = (): UseGenerationReturn => {
     setImages(newImages);
   }, []);
 
-  // 마크다운 처리 함수들은 GenerationContainer에서 그대로 가져옴
+  // 마크다운 처리 함수
   const processMarkdown = useCallback((content: string): string => {
-    return ContentProcessor.processMarkdown(content);
+    return ContentProcessor.convertToNaverBlogHTML(content);
   }, []);
 
-  // 이미지 프롬프트 생성
+  // 이미지 생성 (프롬프트를 이용해 실제 이미지 생성)
   const generateImagePrompts = useCallback(async () => {
+    if (imagePrompts.length === 0) {
+      showAlert({ type: 'error', message: '이미지 프롬프트가 없습니다. 1단계에서 이미지 프롬프트 생성이 실패했을 수 있습니다.' });
+      return;
+    }
+
+    setIsGeneratingImages(true);
+
+    try {
+      console.log(`🎨 이미지 생성 시작: ${imagePrompts.length}개 프롬프트 사용`);
+
+      // 1단계에서 생성된 각 프롬프트로 이미지 생성
+      const generatedImages: {[key: string]: string} = {};
+
+      for (let i = 0; i < imagePrompts.length; i++) {
+        const imagePrompt = imagePrompts[i];
+        const imageKey = `이미지${i + 1}`;
+
+        console.log(`🖼️ 이미지 ${i + 1} 생성 중... 프롬프트: ${imagePrompt.prompt.substring(0, 50)}...`);
+
+        const imageUrl = await window.electronAPI.generateImage(imagePrompt.prompt);
+        generatedImages[imageKey] = imageUrl;
+
+        console.log(`✅ 이미지 ${i + 1} 생성 완료`);
+      }
+
+      setImages(generatedImages);
+      console.log(`🎉 모든 이미지 생성 완료: ${Object.keys(generatedImages).length}개`);
+
+    } catch (error) {
+      console.error('❌ 이미지 생성 실패:', error);
+      showAlert({ type: 'error', message: `이미지 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}` });
+    } finally {
+      setIsGeneratingImages(false);
+    }
+  }, [imagePrompts, showAlert]);
+
+  // 이미지 프롬프트 재생성
+  const regenerateImagePrompts = useCallback(async () => {
+    // 현재 원본 콘텐츠를 사용 (수정된 글이 있다면 그것을, 아니면 초기 콘텐츠를)
+    const content = workflowData.generatedContent || '';
+    const currentContent = originalContent || content;
+    if (!currentContent || isRegeneratingPrompts) return;
+
     setIsRegeneratingPrompts(true);
     setImagePromptError(null);
 
     try {
-      const content = workflowData.generatedContent || '';
-      const result = await BlogWritingService.generateImagePrompts(content);
+      console.log('🔄 이미지 프롬프트 재생성 시작');
+      const result = await BlogWritingService.generateImagePrompts(currentContent);
 
-      if (result.success && result.imagePrompts) {
+      if (result.success && result.imagePrompts && result.imagePrompts.length > 0) {
+        console.log(`✅ 이미지 프롬프트 재생성 성공: ${result.imagePrompts.length}개`);
         setImagePrompts(result.imagePrompts);
-        showAlert('success', `이미지 프롬프트 ${result.imagePrompts.length}개가 생성되었습니다.`);
+        setImagePromptError(null);
       } else {
-        throw new Error('이미지 프롬프트 생성 실패');
+        console.warn('⚠️ 이미지 프롬프트 재생성 실패:', result.error);
+        setImagePromptError(result.error || '이미지 프롬프트 재생성에 실패했습니다.');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '이미지 프롬프트 생성 중 오류가 발생했습니다.';
-      setImagePromptError(errorMessage);
-      showAlert('error', errorMessage);
+      console.error('❌ 이미지 프롬프트 재생성 중 오류:', error);
+      setImagePromptError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
     } finally {
       setIsRegeneratingPrompts(false);
     }
-  }, [workflowData, showAlert]);
+  }, [originalContent, workflowData, isRegeneratingPrompts]);
 
-  // 이미지 프롬프트 재생성
-  const regenerateImagePrompts = useCallback(async () => {
-    await generateImagePrompts();
-  }, [generateImagePrompts]);
-
-  // 콘텐츠 새로고침
+  // 수정된 글 가져오기 (Claude Web에서)
   const handleRefreshContent = useCallback(async () => {
+    if (isRefreshingContent) return;
+
     setIsRefreshingContent(true);
 
     try {
-      // 현재 편집된 내용을 다시 처리
-      if (editorRef.current) {
-        const currentHtml = editorRef.current.innerHTML;
-        const processed = processMarkdown(currentHtml);
-        setEditedContent(processed);
-        showAlert('success', '콘텐츠가 새로고침되었습니다.');
+      console.log('🔄 Claude Web에서 수정된 글 가져오기 시작');
+
+      // Claude Web에서 다시 다운로드
+      const newContent = await window.electronAPI.downloadFromClaude();
+
+      if (newContent && newContent.trim()) {
+        console.log('✅ 수정된 글 가져오기 성공');
+
+        // 원본 및 편집 콘텐츠 업데이트
+        setOriginalContent(newContent);
+
+        // 새로운 콘텐츠로 마크다운 처리
+        const processedContent = ContentProcessor.convertToNaverBlogHTML(newContent);
+        setEditedContent(processedContent);
+
+        // 이미지 위치 재감지
+        const imageInfo = ContentProcessor.processImages(newContent);
+        setImagePositions(imageInfo.imagePositions);
+
+        // 기존 이미지와 프롬프트 초기화 (새로운 글이므로)
+        setImages({});
+        setImagePrompts([]);
+
+        // 이미지 프롬프트 오류 상태 설정 (재생성 필요)
+        const hasImageTags = newContent.match(/\(이미지\)|\[이미지\]/g);
+        const expectedImageCount = hasImageTags ? hasImageTags.length : 0;
+
+        if (expectedImageCount > 0) {
+          setImagePromptError('새로운 글로 업데이트되었습니다. 이미지 프롬프트를 재생성해주세요.');
+        } else {
+          setImagePromptError(null);
+        }
+
+        console.log(`📊 새 글 통계: ${newContent.length}자, 예상 이미지: ${expectedImageCount}개`);
+
+      } else {
+        throw new Error('Claude Web에서 빈 콘텐츠가 반환되었습니다.');
       }
+
     } catch (error) {
-      showAlert('error', '콘텐츠 새로고침 중 오류가 발생했습니다.');
+      console.error('❌ 수정된 글 가져오기 실패:', error);
+      showAlert({ type: 'error', message: `수정된 글 가져오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\nClaude Web에서 마크다운을 다시 복사해보세요.` });
     } finally {
       setIsRefreshingContent(false);
     }
-  }, [processMarkdown, showAlert]);
+  }, [isRefreshingContent, showAlert]);
 
-  // 콘텐츠에 이미지 삽입
-  const replaceImagesInContent = useCallback(() => {
-    if (editorRef.current && Object.keys(images).length > 0) {
-      const updatedHtml = ContentProcessor.replaceImagePlaceholders(
-        editorRef.current.innerHTML,
-        images
-      );
-      editorRef.current.innerHTML = updatedHtml;
-      updateCharCount();
-    }
-  }, [images]);
+  // 콘텐츠에 이미지 삽입 (발행 시 사용)
+  const replaceImagesInContent = useCallback((): string => {
+    let finalContent = editedContent;
+
+    imagePositions.forEach((imageKey) => {
+      const imageUrl = images[imageKey];
+      if (imageUrl) {
+        // 첫 번째 (이미지)를 실제 이미지로 교체
+        finalContent = finalContent.replace('(이미지)', `![${imageKey}](${imageUrl})`);
+      }
+    });
+
+    return finalContent;
+  }, [editedContent, imagePositions, images]);
 
   // 발행 시작
   const handlePublish = useCallback(() => {
     if (!selectedPlatform) {
-      showAlert('warning', '발행할 플랫폼을 선택해주세요.');
+      showAlert({ type: 'warning', message: '발행할 플랫폼을 선택해주세요.' });
       return;
     }
-    // 발행 로직은 GenerationContainer에서 처리
-  }, [selectedPlatform, showAlert]);
+
+    const finalContent = replaceImagesInContent();
+
+    if (selectedPlatform === 'naver') {
+      // v2의 네이버 블로그 발행 로직 재사용
+      window.electronAPI.publishToBlog(finalContent);
+    } else {
+      showAlert({ type: 'info', message: `${getPlatformName(selectedPlatform)} 발행 기능은 곧 구현될 예정입니다.` });
+    }
+  }, [selectedPlatform, replaceImagesInContent, showAlert]);
 
   // 플랫폼 이름 가져오기
   const getPlatformName = useCallback((platform: string): string => {
@@ -258,14 +344,14 @@ export const useGeneration = (): UseGenerationReturn => {
       setEditedContent(originalContent);
       updateCharCount();
       setIsEditing(false);
-      showAlert('success', '원본 내용으로 복원되었습니다.');
+      showAlert({ type: 'success', message: '원본 내용으로 복원되었습니다.' });
     }
   }, [originalContent, updateCharCount, showAlert]);
 
   // 클립보드에 복사
   const copyToClipboard = useCallback(async (): Promise<boolean> => {
     if (!editorRef.current) {
-      showAlert('error', '에디터가 로드되지 않았습니다.');
+      showAlert({ type: 'error', message: '에디터가 로드되지 않았습니다.' });
       return false;
     }
 
@@ -376,12 +462,10 @@ export const useGeneration = (): UseGenerationReturn => {
     currentFontSize,
     fontSizes,
     activeTab,
-    isEditing,
 
     // 이미지 관련 상태
     imagePositions,
     images,
-    isGeneratingImages,
     imagePrompts,
     isRegeneratingPrompts,
     imagePromptError,
@@ -394,11 +478,14 @@ export const useGeneration = (): UseGenerationReturn => {
     editorRef,
 
     // 상태 업데이트 함수
+    setOriginalContent,
     setEditedContent,
     setCurrentFontSize,
     setActiveTab,
-    setIsEditing,
     setImages,
+    setImagePositions,
+    setImagePrompts,
+    setImagePromptError,
     setSelectedPlatform,
 
     // 비즈니스 로직 함수

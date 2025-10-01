@@ -84,7 +84,10 @@
       "Bash(git pull:*)",
       "Read(//c/**)",
       "Bash(cat:*)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(for func in \"setCurrentFontSize\" \"setIsEditing\" \"setImages\" \"generateImagePrompts\" \"replaceImagesInContent\" \"applyFontSizeToSelection\")",
+      "Bash(do echo \"=== $func ===\")",
+      "Bash(done)"
     ],
     "deny": []
   }

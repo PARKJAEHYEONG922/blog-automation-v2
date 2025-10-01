@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
 import NaverPublishUI from '@/03-publish/platforms/NaverPublishUI';
 import { ContentProcessor } from '@/02-generation/services/content-processor';
-import { BlogWritingService } from '@/shared/services/content/blog-writing-service';
 import Button from '@/shared/components/ui/Button';
 import '@/shared/types/electron.types';
 import { useDialog } from '@/app/DialogContext';
 import { useWorkflow } from '@/app/WorkflowContext';
+import { useGeneration } from '../hooks/useGeneration';
 
 const Step2Generation: React.FC = () => {
   const { showAlert } = useDialog();
@@ -20,84 +20,52 @@ const Step2Generation: React.FC = () => {
   const onGoBack = prevStep;
   const onReset = reset;
 
-  // AI 모델 상태
-  const [aiModelStatus, setAiModelStatus] = useState({
-    writing: '미설정',
-    image: '미설정'
-  });
+  // useGeneration 훅에서 실제 사용하는 상태와 함수만 가져오기
+  const {
+    editorRef,
+    originalContent,
+    editedContent,
+    charCount,
+    charCountWithSpaces,
+    currentFontSize,
+    fontSizes,
+    imagePositions,
+    images,
+    activeTab,
+    imagePrompts,
+    isRegeneratingPrompts,
+    imagePromptError,
+    isRefreshingContent,
+    selectedPlatform,
+    aiModelStatus,
+    setOriginalContent,
+    setEditedContent,
+    setCurrentFontSize,
+    setActiveTab,
+    setImages,
+    setImagePositions,
+    setImagePrompts,
+    setImagePromptError,
+    setSelectedPlatform,
+    handleImagesChange,
+    generateImagePrompts,
+    regenerateImagePrompts,
+    handleRefreshContent,
+    replaceImagesInContent,
+    handlePublish,
+    updateCharCount,
+    handleContentChange,
+    restoreOriginal,
+    copyToClipboard,
+    handleFontSizeChange,
+    applyFontSizeToSelection,
+    handleKeyDown,
+    handleClick,
+    getPlatformName
+  } = useGeneration();
 
-  // 모델 상태 새로고침 함수
-  const refreshModelStatus = useCallback(async () => {
-    try {
-      const llmSettings = await window.electronAPI?.getLLMSettings?.();
-      if (llmSettings?.appliedSettings) {
-        const { writing, image } = llmSettings.appliedSettings;
-
-        setAiModelStatus({
-          writing: writing?.provider && writing?.model ?
-            `${writing.provider} ${writing.model}` : '미설정',
-          image: image?.provider && image?.model ?
-            `${image.provider} ${image.model}` : '미설정'
-        });
-      }
-    } catch (error) {
-      console.error('모델 상태 확인 실패:', error);
-    }
-  }, []);
-
-  // 초기화 시 모델 상태 로드
-  useEffect(() => {
-    refreshModelStatus();
-  }, [refreshModelStatus]);
-
-  // AI 설정 변경 이벤트 리스너
-  useEffect(() => {
-    const handleSettingsChanged = () => {
-      refreshModelStatus();
-    };
-
-    window.addEventListener('app-llm-settings-changed', handleSettingsChanged);
-    return () => {
-      window.removeEventListener('app-llm-settings-changed', handleSettingsChanged);
-    };
-  }, [refreshModelStatus]);
-
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [originalContent, setOriginalContent] = useState<string>('');
-  const [editedContent, setEditedContent] = useState<string>('');
-  const [charCount, setCharCount] = useState(0);
-  const [charCountWithSpaces, setCharCountWithSpaces] = useState(0);
-  const [currentFontSize, setCurrentFontSize] = useState('15px');
-  
-  // v2와 동일한 폰트 크기 옵션
-  const fontSizes = [
-    { name: '대제목 (24px)', size: '24px', weight: 'bold' },
-    { name: '소제목 (19px)', size: '19px', weight: 'bold' },
-    { name: '강조 (16px)', size: '16px', weight: 'bold' },
-    { name: '일반 (15px)', size: '15px', weight: 'normal' }
-  ];
-  const [imagePositions, setImagePositions] = useState<string[]>([]);
-  const [images, setImages] = useState<{[key: string]: string}>({});
-  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  // 로컬에서만 필요한 추가 상태
   const [imageAIInfo, setImageAIInfo] = useState<string>('확인 중...');
-  const [activeTab, setActiveTab] = useState<'original' | 'edited'>('edited');
-  const [imagePrompts, setImagePrompts] = useState<any[]>([]);
-  
-  // 이미지 프롬프트 재생성 관련 상태
-  const [isRegeneratingPrompts, setIsRegeneratingPrompts] = useState(false);
-  const [imagePromptError, setImagePromptError] = useState<string | null>(null);
-  
-  // 수정된 글 가져오기 관련 상태
-  const [isRefreshingContent, setIsRefreshingContent] = useState(false);
-  
-  // 발행 플랫폼 선택 상태
-  const [selectedPlatform, setSelectedPlatform] = useState<string>('');
-  
-  // 이미지 변경 콜백 메모이제이션
-  const handleImagesChange = useCallback((newImages: { [key: string]: string }) => {
-    setImages(newImages);
-  }, []);
   
   // 컴포넌트 마운트 시 스크롤을 최상단으로 이동
   useEffect(() => {
@@ -113,244 +81,6 @@ const Step2Generation: React.FC = () => {
     }
   }, []);
 
-
-  // v2 Step3와 완전히 동일한 마크다운 처리 함수들
-
-  // 이미지 번호 매기기 함수
-  const addImageNumbers = (content: string): string => {
-    let numberedContent = content;
-    let imageCount = 1;
-    
-    // (이미지)를 (이미지1), (이미지2) 등으로 변경
-    numberedContent = numberedContent.replace(/\(이미지\)/g, () => {
-      return `(이미지${imageCount++})`;
-    });
-    
-    return numberedContent;
-  };
-  
-  // 마크다운 테이블을 네이버 블로그 테이블로 변환
-  const convertMarkdownTable = (tableLines: string[]): string => {
-    const rows: string[][] = [];
-    
-    for (const line of tableLines) {
-      if (line.includes('---')) continue; // 구분선 무시
-      
-      const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
-      if (cells.length > 0) {
-        rows.push(cells);
-      }
-    }
-    
-    if (rows.length === 0) return '';
-    
-    let tableHtml = '<div class="se-component se-table" style="text-align: center; margin: 16px auto;"><table class="se-table-content" style="margin: 0 auto;">';
-    
-    rows.forEach((row, rowIndex) => {
-      const isHeader = rowIndex === 0;
-      const backgroundColor = isHeader ? 'background-color: rgb(248, 249, 250);' : '';
-      
-      tableHtml += '<tr class="se-tr">';
-      
-      row.forEach(cell => {
-        let processedCell = cell;
-        // **강조** 처리
-        processedCell = processedCell.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold;">$1</span>');
-        
-        tableHtml += `<td class="se-cell" style="border: 1px solid rgb(221, 221, 221); padding: 8px; ${backgroundColor}"><div class="se-module-text"><p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedCell}</span></p></div></td>`;
-      });
-      
-      tableHtml += '</tr>';
-    });
-    
-    tableHtml += '</table></div>';
-    
-    return tableHtml;
-  };
-  
-  // 긴 텍스트를 28자 기준으로 재귀적으로 자르는 함수
-  const breakLongText = (text: string): string[] => {
-    // 해시태그가 포함된 줄은 자르지 않음 (태그들을 한 줄에 유지)
-    if (text.includes('#')) {
-      return [text];
-    }
-    
-    // 마크다운 제거하여 실제 텍스트 길이 계산
-    const plainText = text.replace(/\*\*([^*]+)\*\*/g, '$1');
-    
-    if (plainText.length <= 28) {
-      return [text]; // 28자 이하면 그대로 반환
-    }
-    
-    // 15-28자 구간에서 자를 위치 찾기
-    let cutPosition = -1;
-    
-    // 1순위: 마침표
-    for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
-      if (plainText[i] === '.') {
-        cutPosition = i + 1;
-        break;
-      }
-    }
-    
-    // 2순위: 쉼표 (마침표를 못 찾은 경우만)
-    if (cutPosition === -1) {
-      for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
-        if (plainText[i] === ',') {
-          cutPosition = i + 1;
-          break;
-        }
-      }
-    }
-    
-    // 3순위: 접속사 (마침표, 쉼표를 못 찾은 경우만)
-    if (cutPosition === -1) {
-      for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
-        const remaining = plainText.substring(i);
-        if (remaining.startsWith('그리고') || remaining.startsWith('하지만') || 
-            remaining.startsWith('또한') || remaining.startsWith('따라서') ||
-            remaining.startsWith('그런데') || remaining.startsWith('그러나') ||
-            remaining.startsWith('그래서') || remaining.startsWith('또는') ||
-            remaining.startsWith('그러면') || remaining.startsWith('그럼') ||
-            remaining.startsWith('이제') || remaining.startsWith('이때') ||
-            remaining.startsWith('반면') || remaining.startsWith('한편') ||
-            remaining.startsWith('예를 들어') || remaining.startsWith('특히') ||
-            remaining.startsWith('특별히')) {
-          cutPosition = i;
-          break;
-        }
-      }
-    }
-    
-    // 4순위: 공백 (다른 구분자를 못 찾은 경우만)
-    if (cutPosition === -1) {
-      for (let i = 15; i <= Math.min(28, plainText.length - 3); i++) {
-        if (plainText[i] === ' ') {
-          cutPosition = i;
-        }
-      }
-    }
-    
-    if (cutPosition > 0) {
-      // 원본 텍스트(마크다운 포함)에서 해당 위치로 자르기
-      let realCutPosition = 0;
-      let plainCount = 0;
-      let i = 0;
-      
-      while (i < text.length && plainCount < cutPosition) {
-        if (text.substring(i, i + 2) === '**') {
-          // 마크다운 태그는 건너뛰기
-          realCutPosition = i + 2;
-          i += 2;
-        } else {
-          // 일반 문자는 카운트
-          plainCount++;
-          realCutPosition = i + 1;
-          i++;
-        }
-      }
-      
-      // 마크다운 태그 중간에서 자르는 것 방지
-      let markdownCount = 0;
-      for (let j = 0; j < realCutPosition; j++) {
-        if (text.substring(j, j + 2) === '**') {
-          markdownCount++;
-          j++; // ** 두 글자이므로 하나 더 건너뛰기
-        }
-      }
-      
-      // 홀수 개의 ** 태그가 있으면 마크다운 내부이므로 조정
-      if (markdownCount % 2 === 1) {
-        // 다음 ** 태그 뒤로 이동
-        while (realCutPosition < text.length - 1) {
-          if (text.substring(realCutPosition, realCutPosition + 2) === '**') {
-            realCutPosition += 2;
-            break;
-          }
-          realCutPosition++;
-        }
-      }
-      
-      const firstPart = text.substring(0, realCutPosition).trim();
-      const secondPart = text.substring(realCutPosition).trim();
-      
-      // 재귀적으로 두 번째 부분도 처리
-      const restParts = breakLongText(secondPart);
-      
-      return [firstPart, ...restParts];
-    } else {
-      // 자를 위치를 못 찾으면 그대로 반환
-      return [text];
-    }
-  };
-  
-  // v2와 완전히 동일한 마크다운 처리 메인 함수
-  const processMarkdown = (content: string): string => {
-    
-    // 먼저 콘텐츠 정리
-    const cleanedContent = cleanAIGeneratedContent(content);
-    
-    // 이미지 플레이스홀더에 번호 매기기
-    const numberedContent = addImageNumbers(cleanedContent);
-    
-    const lines = numberedContent.split('\n');
-    const result: string[] = [];
-    let i = 0;
-    
-    while (i < lines.length) {
-      const line = lines[i];
-      
-      // 표 감지 (| 포함된 연속 라인들)
-      if (line.includes('|')) {
-        const tableLines: string[] = [];
-        let j = i;
-        
-        // 연속된 표 라인들 수집
-        while (j < lines.length && (lines[j].includes('|') || lines[j].includes('---'))) {
-          tableLines.push(lines[j]);
-          j++;
-        }
-        
-        if (tableLines.length > 0) {
-          result.push(convertMarkdownTable(tableLines));
-          i = j;
-          continue;
-        }
-      }
-      
-      // 일반 텍스트 처리
-      if (line.trim().match(/^#\s+/) && !line.trim().startsWith('## ')) {
-        // 단일 # 제목은 제거 (# 다음에 공백이 있는 마크다운 제목만)
-        // 해시태그들 (#태그1 #태그2)은 공백 없이 연결되므로 제거되지 않음
-      } else if (line.trim().startsWith('## ')) {
-        const text = line.substring(line.indexOf('## ') + 3);
-        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs24" style="color: rgb(0, 0, 0); font-weight: bold;">${text}</span></p>`);
-      } else if (line.trim().startsWith('### ')) {
-        const text = line.substring(line.indexOf('### ') + 4);
-        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs19" style="color: rgb(0, 0, 0); font-weight: bold;">${text}</span></p>`);
-      } else if (line.trim() === '') {
-        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">&nbsp;</span></p>`);
-      } else if (line.trim().match(/^(\d+\.|[-•*]\s+|✓\s+|[①-⑳]\s+|[가-힣]\.\s+)/)) {
-        // 모든 리스트 항목 처리 - 줄바꿈 금지
-        let text = line.trim();
-        // **강조** 처리만 적용하고 문장별 개행은 하지 않음
-        text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
-        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${text}</span></p>`);
-      } else {        
-        // 일반 텍스트 처리 (28자 이상이면 재귀적으로 자르기)
-        const processedLines = breakLongText(line.trim());
-        for (const textLine of processedLines) {
-          let processedLine = textLine.replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
-          result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedLine}</span></p>`);
-        }
-      }
-      
-      i++;
-    }
-    
-    const finalResult = result.join('');
-    return finalResult;
-  };
 
   // 이미지 AI 설정 정보 가져오기
   useEffect(() => {
@@ -376,244 +106,16 @@ const Step2Generation: React.FC = () => {
     loadImageAIInfo();
   }, []);
 
-  const generateImagePrompts = async () => {
-    if (imagePrompts.length === 0) {
-      showAlert({ type: 'error', message: '이미지 프롬프트가 없습니다. 1단계에서 이미지 프롬프트 생성이 실패했을 수 있습니다.' });
-      return;
-    }
-
-    setIsGeneratingImages(true);
-
-    try {
-      console.log(`🎨 이미지 생성 시작: ${imagePrompts.length}개 프롬프트 사용`);
-
-      // 1단계에서 생성된 각 프롬프트로 이미지 생성
-      const generatedImages: {[key: string]: string} = {};
-
-      for (let i = 0; i < imagePrompts.length; i++) {
-        const imagePrompt = imagePrompts[i];
-        const imageKey = `이미지${i + 1}`;
-
-        console.log(`🖼️ 이미지 ${i + 1} 생성 중... 프롬프트: ${imagePrompt.prompt.substring(0, 50)}...`);
-
-        const imageUrl = await window.electronAPI.generateImage(imagePrompt.prompt);
-        generatedImages[imageKey] = imageUrl;
-
-        console.log(`✅ 이미지 ${i + 1} 생성 완료`);
-      }
-
-      setImages(generatedImages);
-      console.log(`🎉 모든 이미지 생성 완료: ${Object.keys(generatedImages).length}개`);
-
-    } catch (error) {
-      console.error('❌ 이미지 생성 실패:', error);
-      showAlert({ type: 'error', message: `이미지 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}` });
-    } finally {
-      setIsGeneratingImages(false);
-    }
-  };
-
-  const replaceImagesInContent = () => {
-    let finalContent = editedContent;
-    
-    imagePositions.forEach((imageKey, index) => {
-      const imageUrl = images[imageKey];
-      if (imageUrl) {
-        // 첫 번째 (이미지)를 실제 이미지로 교체
-        finalContent = finalContent.replace('(이미지)', `![${imageKey}](${imageUrl})`);
-      }
-    });
-    
-    return finalContent;
-  };
-
-  const handlePublish = () => {
-    if (!selectedPlatform) {
-      showAlert({ type: 'warning', message: '발행할 플랫폼을 선택해주세요.' });
-      return;
-    }
-
-    const finalContent = replaceImagesInContent();
-
-    if (selectedPlatform === 'naver') {
-      // v2의 네이버 블로그 발행 로직 재사용
-      window.electronAPI.publishToBlog(finalContent);
-    } else {
-      showAlert({ type: 'info', message: `${getPlatformName(selectedPlatform)} 발행 기능은 곧 구현될 예정입니다.` });
-    }
-  };
-  
-  // 플랫폼 이름 반환 함수
-  const getPlatformName = (platform: string): string => {
-    switch (platform) {
-      case 'naver': return '네이버 블로그';
-      case 'tistory': return '티스토리';
-      case 'wordpress': return '워드프레스';
-      case 'google': return '구글 블로그';
-      default: return '선택된 플랫폼';
-    }
-  };
-
-  // v2와 동일한 글자 수 계산
-  const updateCharCount = () => {
-    if (editorRef.current) {
-      const textContent = editorRef.current.innerText || '';
-      const textContentNoSpaces = textContent.replace(/\s+/g, '');
-      
-      setCharCount(textContentNoSpaces.length);
-      setCharCountWithSpaces(textContent.length);
-    }
-  };
-
-  // v2와 동일한 콘텐츠 변경 처리
-  const handleContentChange = () => {
-    if (editorRef.current) {
-      const newContent = editorRef.current.innerHTML;
-      setEditedContent(newContent);
-      updateCharCount();
-    }
-  };
-
-  // v2와 동일한 원본 복원 처리
-  const restoreOriginal = () => {
-    if (originalContent) {
-      const processedContent = processMarkdown(originalContent);
-      setEditedContent(processedContent);
-      setIsInitialLoad(true); // 복원 시에는 다시 초기화 허용
-    }
-  };
-
-  // v2와 동일한 클립보드 복사
-  const copyToClipboard = async (): Promise<boolean> => {
-    if (!editorRef.current) {
-      console.error('에디터 참조를 찾을 수 없습니다');
-      throw new Error('에디터 참조를 찾을 수 없습니다');
-    }
-
-    try {
-      // 먼저 포커스를 주어 Document focus 문제 해결
-      editorRef.current.focus();
-      
-      // 약간의 지연을 두어 포커스가 완전히 적용되도록 함
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(editorRef.current);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      
-      // 최신 Clipboard API 사용 시도
-      try {
-        const htmlContent = editorRef.current.innerHTML;
-        const textContent = editorRef.current.textContent || '';
-        
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'text/html': new Blob([htmlContent], { type: 'text/html' }),
-            'text/plain': new Blob([textContent], { type: 'text/plain' })
-          })
-        ]);
-        
-        selection?.removeAllRanges();
-        console.log('✅ HTML 형식으로 클립보드에 복사되었습니다!');
-        return true;
-      } catch (clipboardError) {
-        console.warn('최신 Clipboard API 실패, 구형 방법 시도:', clipboardError);
-        
-        // 구형 execCommand 방법으로 폴백
-        const success = document.execCommand('copy');
-        selection?.removeAllRanges();
-        
-        if (success) {
-          console.log('✅ 구형 방법으로 클립보드에 복사되었습니다!');
-          return true;
-        } else {
-          throw new Error('복사 명령 실패');
-        }
-      }
-    } catch (error) {
-      console.error('❌ 복사 실패:', error);
-      throw error;
-    }
-  };
-
-  // v2와 동일한 폰트 크기 변경 처리
-  const handleFontSizeChange = (newSize: string) => {
-    applyFontSizeToSelection(newSize);
-    setCurrentFontSize(newSize);
-  };
-
-  // v2와 동일한 선택된 텍스트에 폰트 크기 적용
-  const applyFontSizeToSelection = (fontSize: string) => {
-    if (!editorRef.current) return;
-    
-    const fontInfo = fontSizes.find(f => f.size === fontSize);
-    if (!fontInfo) return;
-
-    editorRef.current.focus();
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    // 선택된 텍스트가 있는 경우만 처리
-    if (selection.toString().length > 0) {
-      // execCommand 사용하되 즉시 정리
-      document.execCommand('fontSize', false, '7'); // 임시 크기
-      
-      // 생성된 font 태그들을 span으로 교체
-      const fontTags = editorRef.current.querySelectorAll('font[size="7"]');
-      
-      fontTags.forEach(fontTag => {
-        const selectedText = fontTag.textContent || '';
-        
-        // 새로운 span 생성
-        const newSpan = document.createElement('span');
-        newSpan.className = `se-ff-nanumgothic se-fs${fontSize.replace('px', '')}`;
-        newSpan.style.color = 'rgb(0, 0, 0)';
-        
-        // font-weight 설정
-        if (fontInfo.weight === 'bold') {
-          newSpan.style.fontWeight = 'bold';
-        } else {
-          newSpan.style.fontWeight = 'normal';
-        }
-        
-        newSpan.textContent = selectedText;
-        
-        // font 태그를 새 span으로 교체
-        fontTag.parentNode?.replaceChild(newSpan, fontTag);
-      });
-      
-      handleContentChange();
-    }
-  };
-
-  // v2와 동일한 키보드 이벤트 처리
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    // 폰트 크기 단축키
-    if (e.ctrlKey && e.key >= '1' && e.key <= '4') {
-      e.preventDefault();
-      const sizes = ['24px', '19px', '16px', '15px'];
-      const newSize = sizes[parseInt(e.key) - 1];
-      handleFontSizeChange(newSize);
-    }
-  };
-
-  // v2와 동일한 클릭 이벤트 처리
-  const handleClick = () => {
-    updateCharCount();
-  };
-
   // v2와 동일한 초기 콘텐츠 로딩
   useEffect(() => {
     if (content) {
       // 원본 콘텐츠 저장
       setOriginalContent(content);
-      
+
       // 자동편집 콘텐츠 생성 (네이버 블로그용 HTML) - v2와 동일한 방식
-      const processedContent = processMarkdown(content);
+      const processedContent = ContentProcessor.convertToNaverBlogHTML(content);
       setEditedContent(processedContent);
-      
+
       // 이미지 위치 감지 (원본 마크다운에서)
       const imageInfo = ContentProcessor.processImages(content);
       setImagePositions(imageInfo.imagePositions);
@@ -661,94 +163,6 @@ const Step2Generation: React.FC = () => {
       console.warn('⚠️ imagePrompts가 없거나 빈 배열입니다');
     }
   }, [setupData.imagePrompts, setupData.imagePromptGenerationFailed]);
-
-  // 이미지 프롬프트 재생성 함수
-  const regenerateImagePrompts = async () => {
-    // 현재 원본 콘텐츠를 사용 (수정된 글이 있다면 그것을, 아니면 초기 콘텐츠를)
-    const currentContent = originalContent || content;
-    if (!currentContent || isRegeneratingPrompts) return;
-
-    setIsRegeneratingPrompts(true);
-    setImagePromptError(null);
-    
-    try {
-      console.log('🔄 이미지 프롬프트 재생성 시작');
-      const result = await BlogWritingService.generateImagePrompts(currentContent);
-      
-      if (result.success && result.imagePrompts && result.imagePrompts.length > 0) {
-        console.log(`✅ 이미지 프롬프트 재생성 성공: ${result.imagePrompts.length}개`);
-        setImagePrompts(result.imagePrompts);
-        setImagePromptError(null);
-      } else {
-        console.warn('⚠️ 이미지 프롬프트 재생성 실패:', result.error);
-        setImagePromptError(result.error || '이미지 프롬프트 재생성에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('❌ 이미지 프롬프트 재생성 중 오류:', error);
-      setImagePromptError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
-    } finally {
-      setIsRegeneratingPrompts(false);
-    }
-  };
-
-  // 수정된 글 가져오기 함수
-  const handleRefreshContent = async () => {
-    if (isRefreshingContent) return;
-    
-    setIsRefreshingContent(true);
-    
-    try {
-      console.log('🔄 Claude Web에서 수정된 글 가져오기 시작');
-      
-      // Claude Web에서 다시 다운로드  
-      const newContent = await window.electronAPI.downloadFromClaude();
-      
-      if (newContent && newContent.trim()) {
-        console.log('✅ 수정된 글 가져오기 성공');
-        
-        // 원본 및 편집 콘텐츠 업데이트
-        setOriginalContent(newContent);
-        
-        // 새로운 콘텐츠로 마크다운 처리
-        const processedContent = processMarkdown(newContent);
-        setEditedContent(processedContent);
-        
-        // 이미지 위치 재감지
-        const imageInfo = ContentProcessor.processImages(newContent);
-        setImagePositions(imageInfo.imagePositions);
-        
-        // 기존 이미지와 프롬프트 초기화 (새로운 글이므로)
-        setImages({});
-        setImagePrompts([]);
-        
-        // 이미지 프롬프트 오류 상태 설정 (재생성 필요)
-        const hasImageTags = newContent.match(/\(이미지\)|\[이미지\]/g);
-        const expectedImageCount = hasImageTags ? hasImageTags.length : 0;
-        
-        if (expectedImageCount > 0) {
-          setImagePromptError('새로운 글로 업데이트되었습니다. 이미지 프롬프트를 재생성해주세요.');
-        } else {
-          setImagePromptError(null);
-        }
-        
-        // 편집기 초기화 플래그 설정
-        setIsInitialLoad(true);
-        
-        console.log(`📊 새 글 통계: ${newContent.length}자, 예상 이미지: ${expectedImageCount}개`);
-        
-      } else {
-        throw new Error('Claude Web에서 빈 콘텐츠가 반환되었습니다.');
-      }
-      
-    } catch (error) {
-      console.error('❌ 수정된 글 가져오기 실패:', error);
-      showAlert({ type: 'error', message: `수정된 글 가져오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\nClaude Web에서 마크다운을 다시 복사해보세요.` });
-    } finally {
-      setIsRefreshingContent(false);
-    }
-  };
-
-  // 콘텐츠 통계는 편집기에서 실시간 계산하므로 제거
 
   // v2와 동일한 CSS 스타일
   const sectionStyles = `
