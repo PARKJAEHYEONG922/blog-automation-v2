@@ -244,13 +244,20 @@ class SetupServiceClass {
   async crawlBlogContent(url: string): Promise<{ title: string; content: string } | null> {
     try {
       console.log('블로그 URL 크롤링 시작:', url);
-      const result = await window.electronAPI.crawlBlog(url);
 
-      if (result && result.content) {
-        console.log('✅ 크롤링 성공:', result.title);
+      // BlogCrawler를 동적 import
+      const { BlogCrawler } = await import('../../../shared/services/content/blog-crawler');
+      const crawler = new BlogCrawler();
+
+      // 임시 제목으로 크롤링 (실제 제목은 크롤링에서 추출됨)
+      const result = await (crawler as any).crawlBlogContent(url, '크롤링중');
+
+      if (result && result.success && result.textContent) {
+        const title = result.title || '제목 없음';
+        console.log('✅ 크롤링 성공:', title);
         return {
-          title: result.title || '제목 없음',
-          content: result.content
+          title,
+          content: result.textContent
         };
       } else {
         throw new Error(result.error || '크롤링 실패');
