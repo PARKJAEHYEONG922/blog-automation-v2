@@ -124,7 +124,11 @@ export class ContentProcessor {
         let text = line.trim();
         text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
         result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${text}</span></p>`);
-      } else {        
+      } else if (line.trim().match(/^#\w+/)) {
+        // 태그 라인은 줄바꿈 안 함 (한 줄로 유지)
+        let processedLine = line.trim().replace(/\*\*([^*]+)\*\*/g, '<span class="se-ff-nanumgothic se-fs16" style="color: rgb(0, 0, 0); font-weight: bold;">$1</span>');
+        result.push(`<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);">${processedLine}</span></p>`);
+      } else {
         // 일반 텍스트 처리 (28자 이상이면 재귀적으로 자르기)
         const processedLines = this.breakLongText(line.trim());
         for (const textLine of processedLines) {
