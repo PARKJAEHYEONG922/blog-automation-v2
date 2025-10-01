@@ -132,8 +132,8 @@ class SettingsServiceClass {
   private getDefaultSettings(): LLMSettings {
     return {
       writing: {
-        provider: 'claude',
-        model: 'claude-sonnet-4-20250514',
+        provider: 'gemini',
+        model: 'gemini-2.0-flash-exp',
         apiKey: ''
       },
       image: {

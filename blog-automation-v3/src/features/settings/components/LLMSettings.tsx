@@ -38,7 +38,7 @@ const LLMSettings: React.FC<LLMSettingsProps> = ({ onClose, onSettingsChange }) 
 
   // LLM 설정
   const [settings, setSettings] = useState<LLMSettings>({
-    writing: { provider: 'claude', model: 'claude-sonnet-4-20250514', apiKey: '' },
+    writing: { provider: 'gemini', model: 'gemini-2.0-flash-exp', apiKey: '' },
     image: { provider: 'gemini', model: 'gemini-2.5-flash-image-preview', apiKey: '', style: 'photographic', quality: 'high', size: '1024x1024' }
   });
 
