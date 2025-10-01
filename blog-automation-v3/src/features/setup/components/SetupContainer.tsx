@@ -9,6 +9,8 @@ import ManualUploadSection from './ManualUploadSection';
 import { BlogPromptService } from '../../../shared/services/content/blog-prompt-service';
 import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
 import { TrendAnalysisResult } from '../../../shared/services/content/blog-trend-analyzer';
+import { StorageService, SavedDocument } from '../../../shared/services/storage/storage-service';
+import { SetupService } from '../services/setup-service';
 import Button from '../../../shared/components/ui/Button';
 
 interface Step1Props {
@@ -40,14 +42,6 @@ interface Step1Props {
     imagePrompts?: any[];
     imagePromptGenerationFailed?: boolean;
   };
-}
-
-interface SavedDocument {
-  id: string;
-  name: string;
-  content: string;
-  filePath: string;
-  createdAt: string;
 }
 
 const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
@@ -115,81 +109,15 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   // 로컬 스토리지에서 저장된 문서들 로드 및 초기 데이터 복원
   useEffect(() => {
     const loadSavedDocuments = async () => {
-      const savedWritingStylesData = localStorage.getItem('savedWritingStyles');
-      let loadedWritingStyles: SavedDocument[] = [];
-      
-      if (savedWritingStylesData) {
-        loadedWritingStyles = JSON.parse(savedWritingStylesData);
-        setSavedWritingStyles(loadedWritingStyles);
-      }
-      
       try {
-        const seoGuides = await window.electronAPI.loadDocuments('seoGuide');
-        if (seoGuides && seoGuides.length > 0) {
-          setSavedSeoGuides(seoGuides);
-          localStorage.setItem('savedSeoGuides', JSON.stringify(seoGuides));
-          
-          // 초기 데이터가 있으면 해당 SEO 가이드 선택
-          if (initialData?.seoGuidePath) {
-            const selectedSEO = seoGuides.find((doc: SavedDocument) => doc.filePath === initialData.seoGuidePath);
-            if (selectedSEO) {
-              setSelectedSeoGuide(selectedSEO);
-            }
-          } else {
-            const defaultSEO = seoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
-            if (defaultSEO && !selectedSeoGuide) {
-              setSelectedSeoGuide(defaultSEO);
-            }
-          }
-        } else {
-          await window.electronAPI.createDefaultSEO();
-          const newSeoGuides = await window.electronAPI.loadDocuments('seoGuide');
-          if (newSeoGuides && newSeoGuides.length > 0) {
-            setSavedSeoGuides(newSeoGuides);
-            localStorage.setItem('savedSeoGuides', JSON.stringify(newSeoGuides));
-            
-            const defaultSEO = newSeoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
-            if (defaultSEO && !selectedSeoGuide) {
-              setSelectedSeoGuide(defaultSEO);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('SEO 가이드 문서 로드 실패:', error);
-        const savedSeoGuidesData = localStorage.getItem('savedSeoGuides');
-        if (savedSeoGuidesData) {
-          const seoGuides = JSON.parse(savedSeoGuidesData);
-          setSavedSeoGuides(seoGuides);
-          
-          const defaultSEO = seoGuides.find((doc: SavedDocument) => doc.name.includes('기본'));
-          if (defaultSEO && !selectedSeoGuide) {
-            setSelectedSeoGuide(defaultSEO);
-          }
-        }
-      }
+        const result = await SetupService.loadDocuments(initialData);
 
-      // 초기 데이터가 있으면 선택된 말투 문서들도 복원
-      if (initialData?.writingStylePaths && initialData.writingStylePaths.length > 0) {
-        const selectedStyles = loadedWritingStyles.filter(doc =>
-          initialData.writingStylePaths.includes(doc.filePath)
-        );
-        setSelectedWritingStyles(selectedStyles);
-      } else {
-        // localStorage에서 마지막 선택 상태 복원
-        const savedSelectionData = localStorage.getItem('selectedWritingStyles');
-        if (savedSelectionData) {
-          try {
-            const savedSelection = JSON.parse(savedSelectionData);
-            const selectedStyles = loadedWritingStyles.filter(doc =>
-              savedSelection.includes(doc.id)
-            );
-            if (selectedStyles.length > 0) {
-              setSelectedWritingStyles(selectedStyles);
-            }
-          } catch (error) {
-            console.error('말투 선택 상태 복원 실패:', error);
-          }
-        }
+        setSavedWritingStyles(result.writingStyles);
+        setSavedSeoGuides(result.seoGuides);
+        setSelectedWritingStyles(result.selectedWritingStyles);
+        setSelectedSeoGuide(result.selectedSeoGuide);
+      } catch (error) {
+        console.error('문서 로드 실패:', error);
       }
     };
 
@@ -199,8 +127,7 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   // 말투 선택 상태가 변경되면 localStorage에 저장
   useEffect(() => {
     if (selectedWritingStyles.length > 0) {
-      const selectedIds = selectedWritingStyles.map(doc => doc.id);
-      localStorage.setItem('selectedWritingStyles', JSON.stringify(selectedIds));
+      SetupService.saveSelectedWritingStyles(selectedWritingStyles);
     }
   }, [selectedWritingStyles]);
 
@@ -230,31 +157,21 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
   };
 
   const confirmDelete = async () => {
-    const { type, docId } = deleteDialog;
+    const { type, docId, docName } = deleteDialog;
 
     try {
+      const result = await SetupService.deleteDocument(docId, type, docName);
+
       if (type === 'writingStyle') {
-        const docToDelete = savedWritingStyles.find(doc => doc.id === docId);
-        if (docToDelete) {
-          await window.electronAPI.deleteDocument(docToDelete.filePath);
-        }
-        
+        // 선택 목록에서도 제거
         setSelectedWritingStyles(selectedWritingStyles.filter(doc => doc.id !== docId));
-        const updated = savedWritingStyles.filter(doc => doc.id !== docId);
-        setSavedWritingStyles(updated);
-        localStorage.setItem('savedWritingStyles', JSON.stringify(updated));
+        setSavedWritingStyles(result.writingStyles!);
       } else {
-        const docToDelete = savedSeoGuides.find(doc => doc.id === docId);
-        if (docToDelete) {
-          await window.electronAPI.deleteDocument(docToDelete.filePath);
-        }
-        
+        // SEO 가이드가 선택되어 있었으면 해제
         if (selectedSeoGuide?.id === docId) {
           setSelectedSeoGuide(null);
         }
-        const updated = savedSeoGuides.filter(doc => doc.id !== docId);
-        setSavedSeoGuides(updated);
-        localStorage.setItem('savedSeoGuides', JSON.stringify(updated));
+        setSavedSeoGuides(result.seoGuides!);
       }
     } catch (error) {
       console.error('파일 삭제 실패:', error);
@@ -287,77 +204,32 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     }
   };
 
-  // 자동 저장 함수
-  const saveDocumentAuto = async (type: 'writingStyle' | 'seoGuide', name: string, content: string): Promise<SavedDocument> => {
-    const filePath = await window.electronAPI.saveDocument(type, name, content);
-    
-    const newDocument: SavedDocument = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      content,
-      filePath,
-      createdAt: new Date().toISOString()
-    };
-
-    if (type === 'writingStyle') {
-      const existingIndex = savedWritingStyles.findIndex(doc => doc.name === name.trim());
-      let updated;
-      if (existingIndex >= 0) {
-        await window.electronAPI.deleteDocument(savedWritingStyles[existingIndex].filePath);
-        updated = [...savedWritingStyles];
-        updated[existingIndex] = newDocument;
-      } else {
-        updated = [...savedWritingStyles, newDocument];
-      }
-      setSavedWritingStyles(updated);
-      localStorage.setItem('savedWritingStyles', JSON.stringify(updated));
-    } else {
-      const existingIndex = savedSeoGuides.findIndex(doc => doc.name === name.trim());
-      let updated;
-      if (existingIndex >= 0) {
-        await window.electronAPI.deleteDocument(savedSeoGuides[existingIndex].filePath);
-        updated = [...savedSeoGuides];
-        updated[existingIndex] = newDocument;
-      } else {
-        updated = [...savedSeoGuides, newDocument];
-      }
-      setSavedSeoGuides(updated);
-      localStorage.setItem('savedSeoGuides', JSON.stringify(updated));
-    }
-    
-    return newDocument;
-  };
 
   // URL 크롤링 핸들러
   const handleUrlCrawl = async (url: string): Promise<{ title: string; contentLength: number } | null> => {
     try {
-      const { BlogCrawler } = await import('../../../shared/services/content/blog-crawler');
-      const crawler = new BlogCrawler();
+      const result = await SetupService.crawlBlogContent(url);
 
-      // 임시 제목으로 시작 (크롤링에서 실제 제목을 추출할 것임)
-      const tempTitle = '크롤링중';
+      if (result) {
+        // 파일명으로 사용할 제목 정리
+        const fileName = result.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50);
+        const savedDoc = await SetupService.saveWritingStyleDirect(fileName, result.content);
 
-      // 블로그 콘텐츠 크롤링 (실제 제목은 크롤링 과정에서 추출됨)
-      const blogContent = await (crawler as any).crawlBlogContent(url, tempTitle);
-
-      if (blogContent.success) {
-        // 크롤링에서 추출한 실제 제목을 파일명으로 사용
-        const actualTitle = blogContent.title || '제목없음';
-        const fileName = actualTitle.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50);
-        const savedDoc = await saveDocumentAuto('writingStyle', fileName, blogContent.textContent);
+        // 상태 업데이트
+        setSavedWritingStyles(StorageService.getWritingStyles());
 
         // 자동으로 선택 목록에 추가
         if (selectedWritingStyles.length < 2) {
           setSelectedWritingStyles([...selectedWritingStyles, savedDoc]);
         }
 
-        // 성공 정보 반환 (alert 대신 모달에서 표시)
+        // 성공 정보 반환
         return {
-          title: actualTitle,
-          contentLength: blogContent.contentLength
+          title: result.title,
+          contentLength: result.content.length
         };
       } else {
-        throw new Error(blogContent.error || '크롤링 실패');
+        throw new Error('크롤링 실패');
       }
     } catch (error) {
       console.error('URL 크롤링 실패:', error);
@@ -366,28 +238,26 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
     }
   };
 
-  const handleFileUpload = (type: 'writingStyle' | 'seoGuide', file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const content = e.target?.result as string;
-      const fileName = file.name.replace(/\.(txt|md)$/, '');
-      
-      try {
-        const savedDoc = await saveDocumentAuto(type, fileName, content);
-        
-        if (type === 'writingStyle') {
-          if (selectedWritingStyles.length < 2) {
-            setSelectedWritingStyles([...selectedWritingStyles, savedDoc]);
-          }
-        } else {
-          setSelectedSeoGuide(savedDoc);
+  const handleFileUpload = async (type: 'writingStyle' | 'seoGuide', file: File) => {
+    try {
+      let savedDoc: SavedDocument;
+
+      if (type === 'writingStyle') {
+        savedDoc = await SetupService.saveWritingStyle(file);
+        setSavedWritingStyles(StorageService.getWritingStyles());
+
+        if (selectedWritingStyles.length < 2) {
+          setSelectedWritingStyles([...selectedWritingStyles, savedDoc]);
         }
-      } catch (error) {
-        console.error('파일 저장 실패:', error);
-        alert('파일 저장에 실패했습니다.');
+      } else {
+        savedDoc = await SetupService.saveSeoGuide(file);
+        setSavedSeoGuides(StorageService.getSeoGuides());
+        setSelectedSeoGuide(savedDoc);
       }
-    };
-    reader.readAsText(file);
+    } catch (error) {
+      console.error('파일 저장 실패:', error);
+      alert('파일 저장에 실패했습니다.');
+    }
   };
 
   // 현재 적용된 글쓰기 API 설정 가져오기
