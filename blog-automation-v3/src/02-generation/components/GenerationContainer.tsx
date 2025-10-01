@@ -395,7 +395,7 @@ const Step2Generation: React.FC = () => {
               suppressContentEditableWarning={true}
             />
           ) : (
-            <div 
+            <div
               style={{
                 padding: '20px',
                 fontSize: '15px',
@@ -411,7 +411,7 @@ const Step2Generation: React.FC = () => {
                 border: '1px solid #e5e7eb'
               }}
             >
-              {workflowData.generatedContent || '원본 콘텐츠가 없습니다.'}
+              {originalContent || workflowData.generatedContent || '원본 콘텐츠가 없습니다.'}
             </div>
           )}
         </div>

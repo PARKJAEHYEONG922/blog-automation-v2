@@ -229,11 +229,23 @@ export const useGeneration = (): UseGenerationReturn => {
       if (newContent && newContent.trim()) {
         console.log('✅ 수정된 글 가져오기 성공');
 
-        // 새로운 콘텐츠로 마크다운 처리
+        // ⚠️ HTML 변환 전에 이미지 태그 감지 (마크다운 상태)
+        const hasImageTags = newContent.match(/\(이미지\)|\[이미지\]/g);
+        const expectedImageCount = hasImageTags ? hasImageTags.length : 0;
+
+        // 이미지 위치 재감지 (마크다운 상태에서)
+        const imageInfo = ContentProcessor.processImages(newContent);
+        setImagePositions(imageInfo.imagePositions);
+
+        console.log(`📊 새 글 통계: ${newContent.length}자, 예상 이미지: ${expectedImageCount}개`);
+
+        // 원본 콘텐츠 저장 (마크다운 그대로)
+        setOriginalContent(newContent);
+
+        // 마크다운 → HTML 변환
         const processedContent = ContentProcessor.convertToNaverBlogHTML(newContent);
 
-        // 원본 및 편집 콘텐츠 업데이트 (둘 다 HTML 형태로 저장)
-        setOriginalContent(processedContent);
+        // 자동편집 콘텐츠 업데이트 (HTML)
         setEditedContent(processedContent);
 
         // 에디터에도 반영
@@ -242,25 +254,16 @@ export const useGeneration = (): UseGenerationReturn => {
           updateCharCount();
         }
 
-        // 이미지 위치 재감지
-        const imageInfo = ContentProcessor.processImages(newContent);
-        setImagePositions(imageInfo.imagePositions);
-
         // 기존 이미지와 프롬프트 초기화 (새로운 글이므로)
         setImages({});
         setImagePrompts([]);
 
         // 이미지 프롬프트 오류 상태 설정 (재생성 필요)
-        const hasImageTags = newContent.match(/\(이미지\)|\[이미지\]/g);
-        const expectedImageCount = hasImageTags ? hasImageTags.length : 0;
-
         if (expectedImageCount > 0) {
           setImagePromptError('새로운 글로 업데이트되었습니다. 이미지 프롬프트를 재생성해주세요.');
         } else {
           setImagePromptError(null);
         }
-
-        console.log(`📊 새 글 통계: ${newContent.length}자, 예상 이미지: ${expectedImageCount}개`);
 
       } else {
         throw new Error('Claude Web에서 빈 콘텐츠가 반환되었습니다.');
