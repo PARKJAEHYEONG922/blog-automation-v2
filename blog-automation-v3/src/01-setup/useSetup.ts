@@ -32,6 +32,8 @@ export interface UseSetupReturn {
   setSubKeywords: (value: string) => void;
   setBlogContent: (value: string) => void;
   setSelectedTitle: (value: string) => void;
+  setGeneratedTitles: (titles: string[]) => void;
+  setTrendAnalysisCache: (cache: TrendAnalysisCache | null) => void;
 
   // 비즈니스 로직 함수
   handleUrlCrawl: (url: string) => Promise<{ title: string; contentLength: number } | null>;
@@ -448,6 +450,8 @@ export const useSetup = (): UseSetupReturn => {
     setSubKeywords,
     setBlogContent,
     setSelectedTitle,
+    setGeneratedTitles,
+    setTrendAnalysisCache,
 
     // 비즈니스 로직
     handleUrlCrawl,

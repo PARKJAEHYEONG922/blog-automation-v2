@@ -37,6 +37,8 @@ const Step1Setup: React.FC = () => {
     setSubKeywords,
     setBlogContent,
     setSelectedTitle,
+    setGeneratedTitles,
+    setTrendAnalysisCache,
 
     // 비즈니스 로직
     handleUrlCrawl,
@@ -96,8 +98,16 @@ const Step1Setup: React.FC = () => {
           setSubKeywords(result.subKeywords.join(', '));
           setBlogContent(result.contentDirection);
           setSelectedTitle(''); // 기존 선택 초기화
+          setGeneratedTitles(result.recommendedTitles); // AI 추천제목에 표시
 
-          // TODO: 트렌드 분석 캐시 저장 (useSetup에 추가 필요)
+          // 트렌드 분석 캐시 저장 (재생성 버튼용)
+          if (result.crawledContents && result.allTitles) {
+            setTrendAnalysisCache({
+              contents: result.crawledContents,
+              mainKeyword: result.mainKeyword,
+              allTitles: result.allTitles
+            });
+          }
 
           // 성공 알림
           setAlertDialog({
