@@ -170,15 +170,39 @@ const Step1Setup: React.FC<Step1Props> = ({ onComplete, initialData }) => {
 
       // 초기 데이터가 있으면 선택된 말투 문서들도 복원
       if (initialData?.writingStylePaths && initialData.writingStylePaths.length > 0) {
-        const selectedStyles = loadedWritingStyles.filter(doc => 
+        const selectedStyles = loadedWritingStyles.filter(doc =>
           initialData.writingStylePaths.includes(doc.filePath)
         );
         setSelectedWritingStyles(selectedStyles);
+      } else {
+        // localStorage에서 마지막 선택 상태 복원
+        const savedSelectionData = localStorage.getItem('selectedWritingStyles');
+        if (savedSelectionData) {
+          try {
+            const savedSelection = JSON.parse(savedSelectionData);
+            const selectedStyles = loadedWritingStyles.filter(doc =>
+              savedSelection.includes(doc.id)
+            );
+            if (selectedStyles.length > 0) {
+              setSelectedWritingStyles(selectedStyles);
+            }
+          } catch (error) {
+            console.error('말투 선택 상태 복원 실패:', error);
+          }
+        }
       }
     };
-    
+
     loadSavedDocuments();
   }, [initialData]);
+
+  // 말투 선택 상태가 변경되면 localStorage에 저장
+  useEffect(() => {
+    if (selectedWritingStyles.length > 0) {
+      const selectedIds = selectedWritingStyles.map(doc => doc.id);
+      localStorage.setItem('selectedWritingStyles', JSON.stringify(selectedIds));
+    }
+  }, [selectedWritingStyles]);
 
   // 말투 문서 선택/해제
   const toggleWritingStyle = (doc: SavedDocument) => {
