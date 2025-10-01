@@ -13,7 +13,8 @@ const mainConfig = {
     extensions: ['.ts', '.js'],
     alias: {
       '@': path.resolve(__dirname, 'src')
-    }},
+    }
+  },
   module: {
     rules: [
       {
@@ -50,7 +51,8 @@ const rendererConfig = {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
     alias: {
       '@': path.resolve(__dirname, 'src')
-    }},
+    }
+  },
   module: {
     rules: [
       {
@@ -89,7 +91,8 @@ const preloadConfig = {
     extensions: ['.ts', '.js'],
     alias: {
       '@': path.resolve(__dirname, 'src')
-    }},
+    }
+  },
   module: {
     rules: [
       {
