@@ -1,5 +1,11 @@
 // Electron 관련 타입 정의
 
+export interface DownloadProgress {
+  progress: number;
+  downloadedBytes: number;
+  totalBytes: number;
+}
+
 export interface ElectronAPI {
   // Claude Web 관련
   openClaudeWeb: () => Promise<void>;
@@ -37,13 +43,13 @@ export interface ElectronAPI {
   checkForUpdates: () => Promise<{ hasUpdate: boolean; latestVersion?: string; downloadUrl?: string; error?: string }>;
   downloadUpdate: (downloadUrl: string) => Promise<{ success: boolean; error?: string }>;
   onUpdateCheckResult: (callback: (data: any) => void) => (() => void);
-  onDownloadProgress: (callback: (progress: number) => void) => (() => void);
+  onDownloadProgress: (callback: (data: DownloadProgress) => void) => (() => void);
 
   // 네이버 관련
-  openNaverLogin: () => Promise<void>;
-  getNaverTrends: (keyword: string) => Promise<any>;
+  openNaverLogin: () => Promise<{ success: boolean; error?: string }>;
+  getNaverTrends: (category?: string, limit?: number, date?: string) => Promise<any>;
   getNaverCookies: () => Promise<any>;
-  getTrendContents: (urls: string[]) => Promise<any>;
+  getTrendContents: (keyword: string, date: string, limit?: number) => Promise<any>;
   
   // Playwright 관련
   playwrightInitialize: () => Promise<{ success: boolean; error?: string }>;

@@ -1,7 +1,8 @@
 // 네이버 블로그 자동화 로직
 
 import { BaseBrowserAutomation } from './base-automation';
-import { INaverBlogAutomation, LoginResult, PublishResult as AutomationPublishResult, TwoFactorAuthInfo } from '../../types/automation';
+import type { LoginResult, PublishResult, INaverBlogAutomation } from '../../types/automation.types';
+// @ts-ignore
 import '../../types/electron.types';
 
 // URL 변경 감지 결과 타입
@@ -1031,7 +1032,7 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
   /**
    * 발행
    */
-  async publish(option: 'immediate' | 'scheduled' | 'draft', scheduledTime?: string, boardCategory?: string): Promise<AutomationPublishResult> {
+  async publish(option: 'immediate' | 'scheduled' | 'draft', scheduledTime?: string, boardCategory?: string): Promise<PublishResult> {
     try {
       console.log(`🚀 네이버 블로그 발행 시작... (${option})`);
 
@@ -1050,7 +1051,7 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
   /**
    * 임시저장 (원본과 동일)
    */
-  private async saveDraft(): Promise<AutomationPublishResult> {
+  private async saveDraft(): Promise<PublishResult> {
     console.log('💾 임시저장 버튼 클릭 중...');
     
     // 네이버 블로그의 실제 "저장" 버튼 클릭
@@ -1079,7 +1080,7 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
   /**
    * 포스트 발행 (원본과 동일)
    */
-  private async publishPost(option: 'immediate' | 'scheduled', scheduledTime?: string, boardCategory?: string): Promise<AutomationPublishResult> {
+  private async publishPost(option: 'immediate' | 'scheduled', scheduledTime?: string, boardCategory?: string): Promise<PublishResult> {
     try {
       // 1단계: 발행 버튼 클릭하여 발행 설정 팝업 열기
       console.log('📝 발행 버튼 클릭하여 팝업 열기...');

@@ -1,7 +1,8 @@
 // 네이버 블로그 발행 서비스
 
-import { PublishResult, WorkflowData, NaverCredentials, PublishOption } from '../types/publishing.types';
+import { PublishingResult, WorkflowData, NaverCredentials, PublishOption } from '../types/publishing.types';
 import { NaverBlogAutomation } from '../../../shared/services/automation/naver-automation';
+import type { LoginResult, PublishResult } from '../../../shared/types/automation.types';
 
 export interface NaverPublishConfig {
   option: PublishOption;
@@ -22,7 +23,7 @@ export class NaverPublisher {
   /**
    * 네이버 블로그 발행
    */
-  async publish(data: WorkflowData, content: string, config: NaverPublishConfig): Promise<PublishResult> {
+  async publish(data: WorkflowData, content: string, config: NaverPublishConfig): Promise<PublishingResult> {
     try {
       console.log('🟢 네이버 블로그 발행 시작...');
 
@@ -87,7 +88,7 @@ export class NaverPublisher {
 
       // 5. 발행 실행 (옵션 매핑)
       const automationOption = config.option === 'temp' ? 'draft' : config.option;
-      const publishResult = await this.automation.publish(
+      const publishResult: PublishResult = await this.automation.publish(
         automationOption,
         config.scheduledTime
       );
@@ -306,7 +307,7 @@ export class NaverPublisher {
         error: '네이버 로그인 중...'
       });
       
-      const loginStatus = await this.automation.login(credentials.username, credentials.password);
+      const loginStatus: LoginResult = await this.automation.login(credentials.username, credentials.password);
       
       if (loginStatus === 'success') {
         // 로그인 성공 - 계정 자동 저장 (성공한 로그인만)
@@ -360,7 +361,7 @@ export class NaverPublisher {
         }
         
         // 발행 실행
-        let publishResult;
+        let publishResult: PublishResult;
         let selectedBoardName = '기본 카테고리';
         
         if (publishOption === 'temp') {

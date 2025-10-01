@@ -65,7 +65,26 @@
       "Bash(set GH_TOKEN=)",
       "Bash(unset GH_TOKEN)",
       "Bash(gh release create:*)",
-      "Bash(gh release list:*)"
+      "Bash(gh release list:*)",
+      "Bash(claude --version)",
+      "Bash(claude update)",
+      "Bash(claude model list)",
+      "Bash(claude model set claude-4.5-sonnet)",
+      "Bash(claude model)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:docs.claude.com)",
+      "Bash(curl -H \"Authorization: token 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\" )",
+      "Bash(https://api.github.com/repos/PARKJAEHYEONG922/blog-automation-v2/releases/tags/v3.0.3)",
+      "Bash(curl:*)",
+      "Bash(https://api.github.com/repos/PARKJAEHYEONG922/blog-automation-v2/releases/251011120 )",
+      "Bash(https://api.github.com/repos/PARKJAEHYEONG922/blog-automation-v2/releases/assets/298795480)",
+      "Bash(\"https://uploads.github.com/repos/PARKJAEHYEONG922/blog-automation-v2/releases/251011120/assets?name=blog-automation-v3-setup-3.0.3.exe\" )",
+      "Bash(https://api.github.com/repos/PARKJAEHYEONG922/blog-automation-v2/releases/assets/298863136)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Read(//c/**)",
+      "Bash(cat:*)",
+      "Bash(xargs sed:*)"
     ],
     "deny": []
   }

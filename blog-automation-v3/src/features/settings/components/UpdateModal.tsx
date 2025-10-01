@@ -1,3 +1,4 @@
+import type { DownloadProgress } from '../../../shared/types/electron.types';
 import React, { useState, useEffect } from 'react';
 
 interface UpdateInfo {
@@ -11,14 +12,9 @@ interface UpdateModalProps {
   isVisible: boolean;
   updateInfo: UpdateInfo | null;
   onClose: () => void;
-  onDownload: (downloadUrl: string) => void;
+  onDownload: (downloadUrl: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-interface DownloadProgress {
-  progress: number;
-  downloadedBytes: number;
-  totalBytes: number;
-}
 
 const UpdateModal: React.FC<UpdateModalProps> = ({ isVisible, updateInfo, onClose, onDownload }) => {
   const [isDownloading, setIsDownloading] = useState(false);

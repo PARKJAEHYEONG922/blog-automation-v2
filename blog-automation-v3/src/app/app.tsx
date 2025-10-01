@@ -136,16 +136,19 @@ const App: React.FC = () => {
     // 기존 데이터는 유지
   };
 
-  const handleUpdateDownload = async (downloadUrl: string) => {
+  const handleUpdateDownload = async (downloadUrl: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const result = await window.electronAPI?.downloadUpdate?.(downloadUrl);
       if (result?.success) {
         console.log('업데이트 다운로드 시작됨');
+        return { success: true };
       } else {
         console.error('업데이트 다운로드 실패:', result?.error);
+        return { success: false, error: result?.error || '다운로드 실패' };
       }
     } catch (error) {
       console.error('업데이트 다운로드 오류:', error);
+      return { success: false, error: error instanceof Error ? error.message : '알 수 없는 오류' };
     }
   };
 

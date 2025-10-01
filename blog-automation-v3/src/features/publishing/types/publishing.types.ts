@@ -11,8 +11,8 @@ export interface PublishStatus {
   success: boolean;
 }
 
-// 발행 결과 타입
-export interface PublishResult {
+// 발행 결과 타입 (UI용 - 상세 정보 포함)
+export interface PublishingResult {
   success: boolean;
   message: string;
   url?: string; // 발행된 글의 URL

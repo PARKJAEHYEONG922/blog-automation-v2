@@ -912,7 +912,7 @@ ipcMain.handle('app:download-update', async (event: any, downloadUrl: string) =>
                   
                   // Windows에서 직접 실행
                   const { exec } = require('child_process');
-                  exec(`"${filePath}"`, (error, stdout, stderr) => {
+                  exec(`"${filePath}"`, (error: any, stdout: any, stderr: any) => {
                     if (error) {
                       console.error('설치 프로그램 실행 오류:', error);
                     } else {
@@ -940,12 +940,12 @@ ipcMain.handle('app:download-update', async (event: any, downloadUrl: string) =>
                 }
               });
 
-              file.on('error', (err) => {
+              file.on('error', (err: any) => {
                 fs.unlink(filePath, () => {});
                 console.error('❌ 파일 쓰기 실패:', err);
                 resolve({ success: false, error: '파일 저장 실패: ' + err.message });
               });
-            }).on('error', (err) => {
+            }).on('error', (err: any) => {
               console.error('❌ 리다이렉트 요청 실패:', err);
               resolve({ success: false, error: '다운로드 실패: ' + err.message });
             });
@@ -986,7 +986,7 @@ ipcMain.handle('app:download-update', async (event: any, downloadUrl: string) =>
               
               // Windows에서 직접 실행
               const { exec } = require('child_process');
-              exec(`"${filePath}"`, (error, stdout, stderr) => {
+              exec(`"${filePath}"`, (error: any, stdout: any, stderr: any) => {
                 if (error) {
                   console.error('설치 프로그램 실행 오류:', error);
                 } else {
@@ -1014,7 +1014,7 @@ ipcMain.handle('app:download-update', async (event: any, downloadUrl: string) =>
             }
           });
 
-          file.on('error', (err) => {
+          file.on('error', (err: any) => {
             fs.unlink(filePath, () => {});
             console.error('❌ 파일 쓰기 실패:', err);
             resolve({ success: false, error: '파일 저장 실패: ' + err.message });
@@ -1023,7 +1023,7 @@ ipcMain.handle('app:download-update', async (event: any, downloadUrl: string) =>
           console.error('❌ HTTP 오류:', response.statusCode);
           resolve({ success: false, error: `다운로드 실패: HTTP ${response.statusCode}` });
         }
-      }).on('error', (err) => {
+      }).on('error', (err: any) => {
         console.error('❌ 다운로드 요청 실패:', err);
         resolve({ success: false, error: '다운로드 실패: ' + err.message });
       });
