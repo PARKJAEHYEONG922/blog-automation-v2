@@ -10,8 +10,10 @@ const mainConfig = {
     filename: 'main.js'
   },
   resolve: {
-    extensions: ['.ts', '.js']
-  },
+    extensions: ['.ts', '.js'],
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }},
   module: {
     rules: [
       {
@@ -45,8 +47,10 @@ const rendererConfig = {
     filename: 'renderer.js'
   },
   resolve: {
-    extensions: ['.ts', '.tsx', '.js', '.jsx']
-  },
+    extensions: ['.ts', '.tsx', '.js', '.jsx'],
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }},
   module: {
     rules: [
       {
@@ -82,8 +86,10 @@ const preloadConfig = {
     filename: 'preload.js'
   },
   resolve: {
-    extensions: ['.ts', '.js']
-  },
+    extensions: ['.ts', '.js'],
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }},
   module: {
     rules: [
       {

@@ -19,7 +19,15 @@
     "isolatedModules": true,
     "noEmit": false,
     "outDir": "./dist",
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/app/*": ["src/app/*"],
+      "@/features/*": ["src/features/*"],
+      "@/shared/*": ["src/shared/*"],
+      "@/assets/*": ["src/assets/*"]
+    }
   },
   "include": [
     "src"

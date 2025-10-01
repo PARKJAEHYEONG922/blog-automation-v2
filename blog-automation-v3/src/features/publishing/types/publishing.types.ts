@@ -1,28 +1,7 @@
 // 발행 관련 타입 정의
 
-// 워크플로우 데이터 타입 (임시 정의)
-export interface WorkflowData {
-  writingStylePaths: string[];
-  seoGuidePath: string;
-  topic: string;
-  selectedTitle: string;
-  mainKeyword: string;
-  subKeywords: string;
-  blogContent: string;
-  generatedContent?: string;
-  isAIGenerated: boolean;
-  generatedTitles: string[];
-  imagePrompts: any[];
-  imagePromptGenerationFailed: boolean;
-  publishedUrl?: string; // 발행된 글의 URL
-  publishPlatform?: string; // 발행된 플랫폼
-  selectedBoard?: string; // 선택된 게시판
-}
-
-// 이미지 URL 타입
-export interface ImageUrls {
-  [promptId: string]: string;
-}
+// 공통 타입을 재사용
+export type { WorkflowData, ImageUrls } from '../../../shared/types/common.types';
 
 // 발행 상태 타입
 export interface PublishStatus {
@@ -42,10 +21,10 @@ export interface PublishResult {
 
 // 플랫폼별 발행 컴포넌트 Props
 export interface PublishComponentProps {
-  data: WorkflowData;
+  data: import('../../../shared/types/common.types').WorkflowData;
   editedContent: string;
-  imageUrls: ImageUrls;
-  onComplete: (data: Partial<WorkflowData>) => void;
+  imageUrls: import('../../../shared/types/common.types').ImageUrls;
+  onComplete: (data: Partial<import('../../../shared/types/common.types').WorkflowData>) => void;
   copyToClipboard?: () => Promise<boolean>;
 }
 
@@ -78,4 +57,3 @@ export interface SavedAccount {
   username: string;
   lastUsed: number;
 }
-
