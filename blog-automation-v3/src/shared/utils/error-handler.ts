@@ -163,6 +163,7 @@ export const handleValidationError = (message: string, field?: string): AppError
 
 /**
  * 사용자에게 표시할 에러 메시지 alert
+ * @deprecated Deprecated: useDialog의 showAlert 사용 권장
  */
 export const showErrorAlert = (error: unknown, fallbackMessage?: string) => {
   const message = getErrorMessage(error, fallbackMessage);

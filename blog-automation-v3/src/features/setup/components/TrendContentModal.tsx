@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NaverTrendService, TrendContent } from '../../../shared/services/content/naver-trend-service';
 import { BlogTrendAnalyzer, TrendAnalysisResult, TrendAnalysisProgress } from '../../../shared/services/content/blog-trend-analyzer';
 import Button from '../../../shared/components/ui/Button';
+import { useDialog } from '../../../app/DialogContext';
 
 interface TrendContentModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ const TrendContentModal: React.FC<TrendContentModalProps> = ({
   date,
   onAnalysisComplete
 }) => {
+  const { showAlert } = useDialog();
   const [contents, setContents] = useState<TrendContent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ const TrendContentModal: React.FC<TrendContentModalProps> = ({
         return prev.filter(i => i !== index);
       } else {
         if (prev.length >= 3) {
-          alert('최대 3개까지만 선택할 수 있습니다.');
+          showAlert({ type: 'warning', message: '최대 3개까지만 선택할 수 있습니다.' });
           return prev;
         }
         return [...prev, index];
@@ -66,7 +68,7 @@ const TrendContentModal: React.FC<TrendContentModalProps> = ({
 
   const handleAnalyze = async () => {
     if (selectedIndices.length === 0) {
-      alert('분석할 블로그 글을 1개 이상 선택해주세요.');
+      showAlert({ type: 'warning', message: '분석할 블로그 글을 1개 이상 선택해주세요.' });
       return;
     }
 
@@ -97,7 +99,7 @@ const TrendContentModal: React.FC<TrendContentModalProps> = ({
 
     } catch (err) {
       setError((err as Error).message);
-      alert('분석 실패: ' + (err as Error).message);
+      showAlert({ type: 'error', message: '분석 실패: ' + (err as Error).message });
     } finally {
       setIsAnalyzing(false);
       setAnalysisProgress(null);

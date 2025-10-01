@@ -2,15 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { PublishComponentProps, PublishStatus, NaverCredentials, PublishOption, SavedAccount } from '../types/publishing.types';
 import { PublishManager } from '../services/publish-manager';
 import Button from '../../../shared/components/ui/Button';
+import { useDialog } from '../../../app/DialogContext';
 
-const NaverPublishUI: React.FC<PublishComponentProps> = ({ 
-  data, 
-  editedContent, 
-  imageUrls, 
+const NaverPublishUI: React.FC<PublishComponentProps> = ({
+  data,
+  editedContent,
+  imageUrls,
   onComplete,
-  copyToClipboard 
+  copyToClipboard
 }) => {
-  
+  const { showConfirm } = useDialog();
+
   // 상태 관리
   const [naverCredentials, setNaverCredentials] = useState<NaverCredentials>({
     username: '',
@@ -838,10 +840,13 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (confirm(`계정 "${account.username}"을(를) 삭제하시겠습니까?\n\n삭제하면 저장된 비밀번호와 게시판 목록도 함께 삭제됩니다.`)) {
+                            const confirmed = await showConfirm({
+                              message: `계정 "${account.username}"을(를) 삭제하시겠습니까?\n\n삭제하면 저장된 비밀번호와 게시판 목록도 함께 삭제됩니다.`
+                            });
+                            if (confirmed) {
                               deleteAccount(account.id);
                             }
                           }}
@@ -968,10 +973,13 @@ const NaverPublishUI: React.FC<PublishComponentProps> = ({
                             {/* 삭제 버튼 */}
                             <button
                               type="button"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                if (confirm(`게시판 "${board}"을(를) 삭제하시겠습니까?`)) {
+                                const confirmed = await showConfirm({
+                                  message: `게시판 "${board}"을(를) 삭제하시겠습니까?`
+                                });
+                                if (confirmed) {
                                   deleteBoardFromAccount(accountId, board);
                                 }
                               }}

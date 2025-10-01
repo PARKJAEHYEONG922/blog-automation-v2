@@ -7,6 +7,7 @@ import { ContentProcessor } from '../services/content-processor';
 import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
 import Button from '../../../shared/components/ui/Button';
 import '../../../shared/types/electron.types';
+import { useDialog } from '../../../app/DialogContext';
 
 interface Step2Props {
   content: string;
@@ -33,6 +34,7 @@ interface Step2Props {
 }
 
 const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, onGoBack, aiModelStatus }) => {
+  const { showAlert } = useDialog();
   const editorRef = useRef<HTMLDivElement>(null);
   const [originalContent, setOriginalContent] = useState<string>('');
   const [editedContent, setEditedContent] = useState<string>('');
@@ -404,36 +406,36 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
 
   const generateImagePrompts = async () => {
     if (imagePrompts.length === 0) {
-      alert('이미지 프롬프트가 없습니다. 1단계에서 이미지 프롬프트 생성이 실패했을 수 있습니다.');
+      showAlert({ type: 'error', message: '이미지 프롬프트가 없습니다. 1단계에서 이미지 프롬프트 생성이 실패했을 수 있습니다.' });
       return;
     }
 
     setIsGeneratingImages(true);
-    
+
     try {
       console.log(`🎨 이미지 생성 시작: ${imagePrompts.length}개 프롬프트 사용`);
-      
+
       // 1단계에서 생성된 각 프롬프트로 이미지 생성
       const generatedImages: {[key: string]: string} = {};
-      
+
       for (let i = 0; i < imagePrompts.length; i++) {
         const imagePrompt = imagePrompts[i];
         const imageKey = `이미지${i + 1}`;
-        
+
         console.log(`🖼️ 이미지 ${i + 1} 생성 중... 프롬프트: ${imagePrompt.prompt.substring(0, 50)}...`);
-        
+
         const imageUrl = await window.electronAPI.generateImage(imagePrompt.prompt);
         generatedImages[imageKey] = imageUrl;
-        
+
         console.log(`✅ 이미지 ${i + 1} 생성 완료`);
       }
-      
+
       setImages(generatedImages);
       console.log(`🎉 모든 이미지 생성 완료: ${Object.keys(generatedImages).length}개`);
-      
+
     } catch (error) {
       console.error('❌ 이미지 생성 실패:', error);
-      alert(`이미지 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      showAlert({ type: 'error', message: `이미지 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}` });
     } finally {
       setIsGeneratingImages(false);
     }
@@ -455,17 +457,17 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
 
   const handlePublish = () => {
     if (!selectedPlatform) {
-      alert('발행할 플랫폼을 선택해주세요.');
+      showAlert({ type: 'warning', message: '발행할 플랫폼을 선택해주세요.' });
       return;
     }
-    
+
     const finalContent = replaceImagesInContent();
-    
+
     if (selectedPlatform === 'naver') {
       // v2의 네이버 블로그 발행 로직 재사용
       window.electronAPI.publishBlog(finalContent);
     } else {
-      alert(`${getPlatformName(selectedPlatform)} 발행 기능은 곧 구현될 예정입니다.`);
+      showAlert({ type: 'info', message: `${getPlatformName(selectedPlatform)} 발행 기능은 곧 구현될 예정입니다.` });
     }
   };
   
@@ -762,7 +764,7 @@ const Step2Generation: React.FC<Step2Props> = ({ content, setupData, onReset, on
       
     } catch (error) {
       console.error('❌ 수정된 글 가져오기 실패:', error);
-      alert(`수정된 글 가져오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\nClaude Web에서 마크다운을 다시 복사해보세요.`);
+      showAlert({ type: 'error', message: `수정된 글 가져오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}\n\nClaude Web에서 마크다운을 다시 복사해보세요.` });
     } finally {
       setIsRefreshingContent(false);
     }

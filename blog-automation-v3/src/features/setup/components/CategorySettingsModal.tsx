@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NaverTrendService } from '../../../shared/services/content/naver-trend-service';
 import Button from '../../../shared/components/ui/Button';
+import { useDialog } from '../../../app/DialogContext';
 
 interface CategorySettingsModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface CategorySettingsModalProps {
 }
 
 const CategorySettingsModal: React.FC<CategorySettingsModalProps> = ({ isOpen, onClose, onSave }) => {
+  const { showAlert } = useDialog();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // 모달 열릴 때 현재 선택된 카테고리 불러오기
@@ -24,7 +26,7 @@ const CategorySettingsModal: React.FC<CategorySettingsModalProps> = ({ isOpen, o
       if (prev.includes(categoryValue)) {
         // 최소 1개는 선택되어야 함
         if (prev.length === 1) {
-          alert('최소 1개 이상의 카테고리를 선택해야 합니다.');
+          showAlert({ type: 'warning', message: '최소 1개 이상의 카테고리를 선택해야 합니다.' });
           return prev;
         }
         return prev.filter(v => v !== categoryValue);
@@ -43,7 +45,7 @@ const CategorySettingsModal: React.FC<CategorySettingsModalProps> = ({ isOpen, o
       NaverTrendService.saveSelectedCategories(selectedCategories);
       onSave();
     } catch (error) {
-      alert((error as Error).message);
+      showAlert({ type: 'error', message: (error as Error).message });
     }
   };
 
