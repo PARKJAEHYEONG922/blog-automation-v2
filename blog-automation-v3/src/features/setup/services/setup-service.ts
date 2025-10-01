@@ -214,13 +214,29 @@ class SetupServiceClass {
   ): Promise<{ writingStyles?: SavedDocument[]; seoGuides?: SavedDocument[] }> {
     try {
       if (type === 'writingStyle') {
-        // 말투 파일 삭제
-        await window.electronAPI.deleteFile(`/말투/${docName}`);
+        // 삭제할 문서 찾기
+        const documents = StorageService.getWritingStyles();
+        const docToDelete = documents.find(doc => doc.id === docId);
+
+        // Electron API로 파일 삭제
+        if (docToDelete?.filePath) {
+          await window.electronAPI.deleteDocument(docToDelete.filePath);
+        }
+
+        // 로컬 스토리지에서 삭제
         const updated = StorageService.deleteWritingStyle(docId);
         return { writingStyles: updated };
       } else {
-        // SEO 가이드 삭제
-        await window.electronAPI.deleteFile(`/seoGuide/${docName}`);
+        // 삭제할 문서 찾기
+        const documents = StorageService.getSeoGuides();
+        const docToDelete = documents.find(doc => doc.id === docId);
+
+        // Electron API로 파일 삭제
+        if (docToDelete?.filePath) {
+          await window.electronAPI.deleteDocument(docToDelete.filePath);
+        }
+
+        // 로컬 스토리지에서 삭제
         const updated = StorageService.deleteSeoGuide(docId);
         return { seoGuides: updated };
       }
