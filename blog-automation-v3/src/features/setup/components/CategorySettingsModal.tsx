@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { NaverTrendService } from '../../../shared/services/content/naver-trend-service';
-import Button from '../../../shared/components/ui/Button';
-import { useDialog } from '../../../app/DialogContext';
+import { NaverTrendService } from '@/shared/services/content/naver-trend-service';
+import Button from '@/shared/components/ui/Button';
+import { useDialog } from '@/app/DialogContext';
 
 interface CategorySettingsModalProps {
   isOpen: boolean;

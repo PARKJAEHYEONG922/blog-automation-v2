@@ -1,6 +1,6 @@
 // Setup 기능 관련 타입 정의
 
-import type { WorkflowData } from '../../../shared/types/common.types';
+import type { WorkflowData } from '@/shared/types/common.types';
 
 /**
  * SetupData는 WorkflowData의 Setup 단계 필수 필드만 포함

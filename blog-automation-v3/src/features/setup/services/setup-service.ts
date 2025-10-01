@@ -2,13 +2,13 @@
  * Setup 기능 관련 비즈니스 로직 서비스
  */
 
-import { StorageService, SavedDocument } from '../../../shared/services/storage/storage-service';
+import { StorageService, SavedDocument } from '@/shared/services/storage/storage-service';
 import {
   handleFileSystemError,
   handleAPIError,
   logError,
   getErrorMessage
-} from '../../../shared/utils/error-handler';
+} from '@/shared/utils/error-handler';
 
 export interface DocumentLoadResult {
   writingStyles: SavedDocument[];

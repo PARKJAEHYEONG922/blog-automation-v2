@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PublishComponentProps, PublishStatus, NaverCredentials, PublishOption, SavedAccount } from '../types/publishing.types';
 import { PublishManager } from '../services/publish-manager';
-import Button from '../../../shared/components/ui/Button';
-import { useDialog } from '../../../app/DialogContext';
+import Button from '@/shared/components/ui/Button';
+import { useDialog } from '@/app/DialogContext';
 
 const NaverPublishUI: React.FC<PublishComponentProps> = ({
   data,

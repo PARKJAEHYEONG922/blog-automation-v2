@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Button from '../../../shared/components/ui/Button';
+import Button from '@/shared/components/ui/Button';
 
 interface LLMSettingsProps {
   onClose: () => void;

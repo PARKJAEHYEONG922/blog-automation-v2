@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ConfirmDialog from './ConfirmDialog';
-import AlertDialog from '../../../shared/components/ui/AlertDialog';
+import AlertDialog from '@/shared/components/ui/AlertDialog';
 import DocumentUploadSection from './DocumentUploadSection';
 import KeywordInputSection from './KeywordInputSection';
 import TitleRecommendationSection from './TitleRecommendationSection';
 import GenerationProgressSection from './GenerationProgressSection';
 import ManualUploadSection from './ManualUploadSection';
-import { BlogPromptService } from '../../../shared/services/content/blog-prompt-service';
-import { BlogWritingService } from '../../../shared/services/content/blog-writing-service';
-import { TrendAnalysisResult } from '../../../shared/services/content/blog-trend-analyzer';
-import { StorageService, SavedDocument } from '../../../shared/services/storage/storage-service';
+import { BlogPromptService } from '@/shared/services/content/blog-prompt-service';
+import { BlogWritingService } from '@/shared/services/content/blog-writing-service';
+import { TrendAnalysisResult } from '@/shared/services/content/blog-trend-analyzer';
+import { StorageService, SavedDocument } from '@/shared/services/storage/storage-service';
 import { SetupService } from '../services/setup-service';
-import Button from '../../../shared/components/ui/Button';
-import { useDialog } from '../../../app/DialogContext';
+import Button from '@/shared/components/ui/Button';
+import { useDialog } from '@/app/DialogContext';
 
 interface Step1Props {
   onComplete: (data: {

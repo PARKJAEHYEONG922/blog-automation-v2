@@ -1,4 +1,4 @@
-import type { DownloadProgress } from '../../../shared/types/electron.types';
+import type { DownloadProgress } from '@/shared/types/electron.types';
 import React, { useState, useEffect } from 'react';
 
 interface UpdateInfo {

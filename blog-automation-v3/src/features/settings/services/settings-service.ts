@@ -8,7 +8,7 @@ import {
   handleAPIError,
   logError,
   getErrorMessage
-} from '../../../shared/utils/error-handler';
+} from '@/shared/utils/error-handler';
 
 export interface LLMConfig {
   provider: string;

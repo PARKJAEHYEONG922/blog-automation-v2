@@ -1,7 +1,7 @@
 // 발행 관련 타입 정의
 
 // 공통 타입을 재사용
-export type { WorkflowData, ImageUrls } from '../../../shared/types/common.types';
+export type { WorkflowData, ImageUrls } from '@/shared/types/common.types';
 
 // 발행 상태 타입
 export interface PublishStatus {
@@ -21,10 +21,10 @@ export interface PublishingResult {
 
 // 플랫폼별 발행 컴포넌트 Props
 export interface PublishComponentProps {
-  data: import('../../../shared/types/common.types').WorkflowData;
+  data: import('@/shared/types/common.types').WorkflowData;
   editedContent: string;
-  imageUrls: import('../../../shared/types/common.types').ImageUrls;
-  onComplete: (data: Partial<import('../../../shared/types/common.types').WorkflowData>) => void;
+  imageUrls: import('@/shared/types/common.types').ImageUrls;
+  onComplete: (data: Partial<import('@/shared/types/common.types').WorkflowData>) => void;
   copyToClipboard?: () => Promise<boolean>;
 }
 

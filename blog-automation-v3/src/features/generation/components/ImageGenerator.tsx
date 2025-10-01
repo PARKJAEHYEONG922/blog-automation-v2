@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Button from '../../../shared/components/ui/Button';
+import Button from '@/shared/components/ui/Button';
 
 interface ImagePrompt {
   index: number;

@@ -1,7 +1,7 @@
 // 네이버 블로그 자동화 로직
 
 import { BaseBrowserAutomation } from './base-automation';
-import type { LoginResult, PublishResult, INaverBlogAutomation } from '../../types/automation.types';
+import type { LoginResult, PublishResult, INaverBlogAutomation } from '@/shared/types/automation.types';
 // @ts-ignore
 import '../../types/electron.types';
 
