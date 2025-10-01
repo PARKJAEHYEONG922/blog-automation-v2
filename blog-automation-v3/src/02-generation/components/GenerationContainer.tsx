@@ -593,6 +593,12 @@ const Step2Generation: React.FC = () => {
           }}
           copyToClipboard={async () => {
             try {
+              // 원본 탭이면 자동편집 탭으로 전환
+              if (activeTab !== 'edited') {
+                setActiveTab('edited');
+                await new Promise(resolve => setTimeout(resolve, 100)); // DOM 업데이트 대기
+              }
+
               // editorRef (실제 DOM 요소)를 사용하여 복사
               if (editorRef.current) {
                 // HTML 형식으로 복사하기 위해 선택 영역 생성
@@ -601,13 +607,13 @@ const Step2Generation: React.FC = () => {
                 range.selectNodeContents(editorRef.current);
                 selection?.removeAllRanges();
                 selection?.addRange(range);
-                
+
                 // 복사 실행
                 const success = document.execCommand('copy');
-                
+
                 // 선택 해제
                 selection?.removeAllRanges();
-                
+
                 if (success) {
                   console.log('✅ HTML 형식으로 클립보드에 복사되었습니다! (editorRef 사용)');
                   return true;
