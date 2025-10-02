@@ -126,10 +126,10 @@ async function checkForUpdates(): Promise<{ hasUpdate: boolean; latestVersion?: 
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    height: 1000,
-    width: 1600,
-    minHeight: 800,
-    minWidth: 1200,
+    height: 900,
+    width: 1400,
+    minHeight: 700,
+    minWidth: 1000,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
