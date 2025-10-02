@@ -45,6 +45,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   // 이미지 상태 관리 (v2와 동일)
   const [imageStatus, setImageStatus] = useState<{ [key: number]: ImageStatus }>({});
   const [imageUrls, setImageUrls] = useState<{ [key: number]: string }>({});
+  const [imageFileNames, setImageFileNames] = useState<{ [key: number]: string }>({});
   
   // v2와 동일한 이미지 히스토리 관리
   const [imageHistory, setImageHistory] = useState<{ [key: number]: string[] }>(() => {
@@ -321,15 +322,26 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       const extension = blob.type.split('/')[1] || 'jpg';
       const filename = `blog-image-${imageIndex}-${timestamp}.${extension}`;
 
-      // Blob을 File 객체로 변환 (파일명 변경)
-      const file = new File([blob], filename, { type: blob.type });
+      // Blob을 ArrayBuffer로 변환
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const imageDataArray = Array.from(uint8Array);
 
-      // 파일을 URL로 변환
-      const imageUrl = URL.createObjectURL(file);
+      // 임시 파일로 저장
+      const saveResult = await window.electronAPI.saveTempFile(filename, imageDataArray);
+
+      if (!saveResult.success || !saveResult.filePath) {
+        throw new Error('파일 저장 실패');
+      }
+
+      console.log(`💾 임시 파일 저장됨: ${saveResult.filePath}`);
+
+      // 저장된 파일 경로를 imageUrls에 저장
+      const fileUrl = `file://${saveResult.filePath}`;
 
       // 기존 이미지가 있으면 히스토리에 저장하고 새 이미지 적용
       const currentUrl = imageUrls[imageIndex];
-      applyNewImage(imageIndex, imageUrl, currentUrl);
+      applyNewImage(imageIndex, fileUrl, currentUrl);
 
       console.log(`✅ 이미지 ${imageIndex} URL에서 가져오기 성공:`, filename);
 

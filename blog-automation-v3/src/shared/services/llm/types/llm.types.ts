@@ -8,6 +8,7 @@ export interface LLMConfig {
 }
 
 export interface LLMResponse {
+  match(arg0: RegExp): unknown;
   content: string;
   usage?: {
     promptTokens: number;

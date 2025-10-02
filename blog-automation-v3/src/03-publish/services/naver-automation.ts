@@ -724,10 +724,20 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
       const imageBuffer = await downloadResponse.arrayBuffer();
       const imageDataArray = Array.from(new Uint8Array(imageBuffer));
       
-      const fileExtension = imagePath.includes('.png') ? 'png' : 
-                           imagePath.includes('.gif') ? 'gif' : 
-                           imagePath.includes('.webp') ? 'webp' : 'jpg';
-      const fileName = `blog_image_upload.${fileExtension}`;
+      // imagePath가 file:// URL인 경우 실제 파일명 추출
+      let fileName = 'blog_image_upload.jpg';
+
+      if (imagePath.startsWith('file://')) {
+        const filePath = imagePath.replace('file://', '');
+        const pathParts = filePath.split(/[/\\]/);
+        fileName = pathParts[pathParts.length - 1];
+        console.log(`📝 파일명 추출: ${fileName}`);
+      } else {
+        const fileExtension = imagePath.includes('.png') ? 'png' :
+                             imagePath.includes('.gif') ? 'gif' :
+                             imagePath.includes('.webp') ? 'webp' : 'jpg';
+        fileName = `blog_image_upload.${fileExtension}`;
+      }
       
       const saveResult = await window.electronAPI.saveTempFile(fileName, imageDataArray);
       if (!saveResult.success || !saveResult.filePath) {
