@@ -136,15 +136,10 @@ export class BlogPromptService {
       prompt += `이 글들의 내용, 구조, 키워드 사용 방식을 참고하되, 그대로 베끼지 말고 새로운 관점과 정보를 추가하여 더 나은 콘텐츠를 작성해주세요.\n\n`;
 
       data.trendAnalysisCache.contents.forEach((content, index) => {
-        // 본문을 1500자로 제한
-        const truncatedContent = content.textContent.length > 1500
-          ? content.textContent.substring(0, 1500) + '...'
-          : content.textContent;
-
         prompt += `### [상위 블로그 ${index + 1}] ${content.title}\n`;
         prompt += `- URL: ${content.url}\n`;
         prompt += `- 글자수: ${content.contentLength}자\n\n`;
-        prompt += `${truncatedContent}\n\n`;
+        prompt += `${content.textContent}\n\n`;
         prompt += `---\n\n`;
       });
     }
