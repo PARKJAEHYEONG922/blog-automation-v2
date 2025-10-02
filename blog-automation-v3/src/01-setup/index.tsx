@@ -4,5 +4,5 @@
  */
 
 export { default as SetupContainer } from './components/SetupContainer';
-export { useSetup } from './useSetup';
-export type { UseSetupReturn } from './useSetup';
+export { useSetup } from './hooks/useSetup';
+export type { UseSetupReturn } from './hooks/useSetup';

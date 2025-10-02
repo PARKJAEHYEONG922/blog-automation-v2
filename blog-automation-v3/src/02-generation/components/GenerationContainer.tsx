@@ -9,7 +9,7 @@ import Button from '@/shared/components/ui/Button';
 import '@/shared/types/electron.types';
 import { useDialog } from '@/app/DialogContext';
 import { useWorkflow } from '@/app/WorkflowContext';
-import { useGeneration } from '../hooks/useGeneration';
+import { useGeneration } from '@/02-generation/hooks/useGeneration';
 
 const Step2Generation: React.FC = () => {
   const { showAlert } = useDialog();

@@ -9,15 +9,18 @@ AI 기반 블로그 자동화 도구 V3 - Step별 Feature 아키텍처
 blog-automation-v3/src/
 ├── 01-setup/              # Step 1: 설정 및 콘텐츠 생성
 │   ├── components/        # UI 컴포넌트들
+│   ├── hooks/             # 커스텀 훅
+│   │   └── useSetup.ts
 │   ├── services/          # 비즈니스 로직
-│   ├── useSetup.ts        # 커스텀 훅
 │   └── index.tsx
 │
 ├── 02-generation/         # Step 2: 콘텐츠 편집 및 이미지 생성
 │   ├── components/
+│   ├── hooks/
+│   │   └── useGeneration.ts
 │   ├── services/
-│   ├── useGeneration.ts
-│   └── index.tsx
+│   ├── types/
+│   └── index.ts
 │
 ├── 03-publish/            # Step 3: 발행
 │   ├── platforms/         # 플랫폼별 UI
