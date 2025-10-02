@@ -69,6 +69,8 @@ export interface UseGenerationReturn {
   copyToClipboard: () => Promise<boolean>;
   handleFontSizeChange: (newSize: string) => void;
   applyFontSizeToSelection: (fontSize: string) => void;
+  insertLink: () => void;
+  insertSeparator: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   handleClick: () => void;
 
@@ -430,6 +432,51 @@ export const useGeneration = (): UseGenerationReturn => {
     }
   }, [applyFontSizeToSelection]);
 
+  // 링크 삽입 함수 (네이버 카드형)
+  const insertLink = useCallback(() => {
+    const url = prompt('링크 URL을 입력하세요:');
+    if (!url || !url.trim()) return;
+
+    if (!editorRef.current) return;
+
+    // 네이버 블로그 스타일 카드형 링크 HTML
+    const linkCardHTML = `
+      <div style="border: 1px solid #ebebeb; border-radius: 12px; overflow: hidden; margin: 20px 0; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div style="padding: 16px 20px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 20px;">🔗</span>
+            <strong style="font-size: 15px; color: #333333; font-weight: 600;">링크</strong>
+          </div>
+          <a href="${url.trim()}" target="_blank" rel="noopener noreferrer" style="display: block; color: #03c75a; font-size: 13px; text-decoration: none; word-break: break-all; line-height: 1.5;">
+            ${url.trim()}
+          </a>
+        </div>
+      </div>
+    `;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      // 커서가 없으면 에디터 끝에 추가
+      editorRef.current.innerHTML += linkCardHTML;
+      updateCharCount();
+      return;
+    }
+
+    // 커서 위치에 링크 카드 삽입
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = linkCardHTML;
+    const fragment = document.createDocumentFragment();
+    while (tempDiv.firstChild) {
+      fragment.appendChild(tempDiv.firstChild);
+    }
+
+    range.insertNode(fragment);
+    updateCharCount();
+  }, [updateCharCount]);
+
   // 구분선 삽입 함수
   const insertSeparator = useCallback(() => {
     if (!editorRef.current) return;
@@ -604,6 +651,7 @@ export const useGeneration = (): UseGenerationReturn => {
     copyToClipboard,
     handleFontSizeChange,
     applyFontSizeToSelection,
+    insertLink,
     insertSeparator,
     handleKeyDown,
     handleClick,

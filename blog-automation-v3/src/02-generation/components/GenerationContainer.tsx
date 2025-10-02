@@ -60,6 +60,7 @@ const Step2Generation: React.FC = () => {
     copyToClipboard,
     handleFontSizeChange,
     applyFontSizeToSelection,
+    insertLink,
     insertSeparator,
     handleKeyDown,
     handleClick,
@@ -305,6 +306,22 @@ const Step2Generation: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                <button
+                  onClick={insertLink}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                  title="링크 카드 추가 (커서 위치에 삽입)"
+                >
+                  🔗 링크
+                </button>
 
                 <button
                   onClick={insertSeparator}
