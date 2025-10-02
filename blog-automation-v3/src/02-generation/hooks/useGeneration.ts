@@ -196,6 +196,9 @@ export const useGeneration = (): UseGenerationReturn => {
     setIsRegeneratingPrompts(true);
     setImagePromptError(null);
 
+    // 이미지 프롬프트 재생성 시 기존 생성된 이미지도 초기화
+    setImages({});
+
     try {
       console.log('🔄 이미지 프롬프트 재생성 시작');
       const result = await BlogWritingService.generateImagePrompts(currentContent);

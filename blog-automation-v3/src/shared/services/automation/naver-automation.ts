@@ -1300,58 +1300,7 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
             })()
           `, 'PostWriteForm.naver');
 
-          if (clickCardResult?.result?.success) {
-            const cardX = clickCardResult.result.centerX + offsetResult.result.offsetX;
-            const cardY = clickCardResult.result.centerY + offsetResult.result.offsetY;
-
-            console.log(`🖱️ 링크 카드 클릭: (${cardX}, ${cardY})`);
-            await window.electronAPI.playwrightClickAt(cardX, cardY);
-            await window.electronAPI.playwrightWaitTimeout(300);
-
-            // 6. 가운데 정렬 버튼 클릭
-            console.log(`🎨 가운데 정렬 버튼 클릭 중...`);
-
-            const alignCenterResult = await window.electronAPI.playwrightEvaluateInFrames(`
-              (function() {
-                try {
-                  // 가운데 정렬 버튼 찾기 (se-align-center-toolbar-button)
-                  const centerButton = document.querySelector('.se-align-center-toolbar-button');
-
-                  if (centerButton && centerButton.offsetParent !== null) {
-                    centerButton.scrollIntoView({ behavior: 'instant', block: 'center' });
-
-                    const rect = centerButton.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-
-                    return {
-                      success: true,
-                      centerX: centerX,
-                      centerY: centerY
-                    };
-                  } else {
-                    return { success: false, error: '가운데 정렬 버튼을 찾을 수 없음' };
-                  }
-                } catch (error) {
-                  return { success: false, error: error.message };
-                }
-              })()
-            `, 'PostWriteForm.naver');
-
-            if (alignCenterResult?.result?.success) {
-              const alignX = alignCenterResult.result.centerX + offsetResult.result.offsetX;
-              const alignY = alignCenterResult.result.centerY + offsetResult.result.offsetY;
-
-              console.log(`🖱️ 가운데 정렬 버튼 클릭: (${alignX}, ${alignY})`);
-              await window.electronAPI.playwrightClickAt(alignX, alignY);
-              console.log(`✅ 링크 카드 가운데 정렬 완료`);
-              await window.electronAPI.playwrightWaitTimeout(300);
-            } else {
-              console.warn(`⚠️ 가운데 정렬 버튼을 찾을 수 없음`);
-            }
-          } else {
-            console.warn(`⚠️ 링크 카드를 찾을 수 없음:`, clickCardResult?.result);
-          }
+          // 링크 카드 클릭 부분은 제거 (가운데 정렬 안 함)
 
           // 7. 원래 텍스트 링크 삭제 (링크 카드가 생성되었으므로 원본 텍스트는 제거)
           console.log(`🗑️ 원본 텍스트 링크 삭제 중...`);
@@ -1408,9 +1357,10 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
             const deleteRealX = deleteResult.result.centerX + offsetResult.result.offsetX;
             const deleteRealY = deleteResult.result.centerY + offsetResult.result.offsetY;
 
-            // 더블클릭으로 선택
+            // 더블클릭으로 선택 (빠르게 클릭해야 진짜 더블클릭으로 인식)
+            console.log(`🖱️ URL 텍스트 더블클릭: (${deleteRealX}, ${deleteRealY})`);
             await window.electronAPI.playwrightClickAt(deleteRealX, deleteRealY);
-            await window.electronAPI.playwrightWaitTimeout(100);
+            await window.electronAPI.playwrightWaitTimeout(50);
             await window.electronAPI.playwrightClickAt(deleteRealX, deleteRealY);
             await window.electronAPI.playwrightWaitTimeout(200);
 
@@ -1488,6 +1438,92 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
    */
   private async publishPost(option: 'immediate' | 'scheduled', scheduledTime?: string, boardCategory?: string): Promise<PublishResult> {
     try {
+      // 0단계: 전체 글 가운데 정렬
+      console.log('📐 전체 글 가운데 정렬 시작...');
+
+      // 전체 선택 (Ctrl+A)
+      await window.electronAPI.playwrightPress('Control+a');
+      await window.electronAPI.playwrightWaitTimeout(300);
+      console.log('✅ 전체 선택 완료');
+
+      // 정렬 드롭다운 버튼 찾아서 클릭
+      const alignDropdownResult = await window.electronAPI.playwrightEvaluateInFrames(`
+        (function() {
+          try {
+            const alignButton = document.querySelector('.se-property-toolbar-drop-down-button.se-align-left-toolbar-button');
+            if (alignButton && alignButton.offsetParent !== null) {
+              const rect = alignButton.getBoundingClientRect();
+              return {
+                success: true,
+                centerX: rect.left + rect.width / 2,
+                centerY: rect.top + rect.height / 2
+              };
+            }
+            return { success: false, error: '정렬 드롭다운 버튼을 찾을 수 없음' };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        })()
+      `, 'PostWriteForm.naver');
+
+      if (alignDropdownResult?.result?.success) {
+        // iframe offset 가져오기
+        const offsetResult = await window.electronAPI.playwrightEvaluate(`
+          (function() {
+            const iframe = document.querySelector('iframe[id="mainFrame"]');
+            if (iframe) {
+              const rect = iframe.getBoundingClientRect();
+              return { success: true, offsetX: rect.left, offsetY: rect.top };
+            }
+            return { success: false };
+          })()
+        `);
+
+        if (offsetResult?.result?.success) {
+          const dropdownX = alignDropdownResult.result.centerX + offsetResult.result.offsetX;
+          const dropdownY = alignDropdownResult.result.centerY + offsetResult.result.offsetY;
+
+          console.log(`🖱️ 정렬 드롭다운 클릭: (${dropdownX}, ${dropdownY})`);
+          await window.electronAPI.playwrightClickAt(dropdownX, dropdownY);
+          await window.electronAPI.playwrightWaitTimeout(300);
+
+          // 가운데 정렬 버튼 클릭
+          const centerAlignResult = await window.electronAPI.playwrightEvaluateInFrames(`
+            (function() {
+              try {
+                const centerButton = document.querySelector('.se-toolbar-option-align-center-button');
+                if (centerButton && centerButton.offsetParent !== null) {
+                  const rect = centerButton.getBoundingClientRect();
+                  return {
+                    success: true,
+                    centerX: rect.left + rect.width / 2,
+                    centerY: rect.top + rect.height / 2
+                  };
+                }
+                return { success: false, error: '가운데 정렬 버튼을 찾을 수 없음' };
+              } catch (error) {
+                return { success: false, error: error.message };
+              }
+            })()
+          `, 'PostWriteForm.naver');
+
+          if (centerAlignResult?.result?.success) {
+            const centerX = centerAlignResult.result.centerX + offsetResult.result.offsetX;
+            const centerY = centerAlignResult.result.centerY + offsetResult.result.offsetY;
+
+            console.log(`🖱️ 가운데 정렬 버튼 클릭: (${centerX}, ${centerY})`);
+            await window.electronAPI.playwrightClickAt(centerX, centerY);
+            await window.electronAPI.playwrightWaitTimeout(500);
+
+            console.log('✅ 전체 글 가운데 정렬 완료');
+          } else {
+            console.warn('⚠️ 가운데 정렬 버튼을 찾을 수 없음, 정렬 건너뜀');
+          }
+        }
+      } else {
+        console.warn('⚠️ 정렬 드롭다운 버튼을 찾을 수 없음, 정렬 건너뜀');
+      }
+
       // 1단계: 발행 버튼 클릭하여 발행 설정 팝업 열기
       console.log('📝 발행 버튼 클릭하여 팝업 열기...');
       const publishButtonResult = await window.electronAPI.playwrightClickInFrames('.publish_btn__m9KHH', 'PostWriteForm.naver');
