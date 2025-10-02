@@ -575,7 +575,9 @@ export const useGeneration = (): UseGenerationReturn => {
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      document.execCommand('insertHTML', false, '<br><br>');
+      // 네이버 블로그 스타일 문단 삽입 (중앙 정렬, 한 줄 간격)
+      const newLine = '<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);"><br></span></p>';
+      document.execCommand('insertHTML', false, newLine);
     }
   }, [applyFontSizeToSelection]);
 
