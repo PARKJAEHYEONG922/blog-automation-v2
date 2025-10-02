@@ -434,47 +434,89 @@ export const useGeneration = (): UseGenerationReturn => {
 
   // 링크 삽입 함수 (네이버 카드형)
   const insertLink = useCallback(() => {
-    const url = prompt('링크 URL을 입력하세요:');
-    if (!url || !url.trim()) return;
+    // Electron에서는 prompt를 사용할 수 없으므로 간단한 다이얼로그 생성
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;';
 
-    if (!editorRef.current) return;
-
-    // 네이버 블로그 스타일 카드형 링크 HTML
-    const linkCardHTML = `
-      <div style="border: 1px solid #ebebeb; border-radius: 12px; overflow: hidden; margin: 20px 0; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <div style="padding: 16px 20px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <span style="font-size: 20px;">🔗</span>
-            <strong style="font-size: 15px; color: #333333; font-weight: 600;">링크</strong>
-          </div>
-          <a href="${url.trim()}" target="_blank" rel="noopener noreferrer" style="display: block; color: #03c75a; font-size: 13px; text-decoration: none; word-break: break-all; line-height: 1.5;">
-            ${url.trim()}
-          </a>
-        </div>
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 400px;';
+    dialog.innerHTML = `
+      <div style="margin-bottom: 16px; font-size: 16px; font-weight: 600; color: #333;">링크 URL 입력</div>
+      <input type="text" id="url-input" placeholder="https://..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 16px; box-sizing: border-box;" />
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="url-cancel" style="padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; font-size: 14px;">취소</button>
+        <button id="url-ok" style="padding: 8px 16px; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer; font-size: 14px;">확인</button>
       </div>
     `;
 
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
-      // 커서가 없으면 에디터 끝에 추가
-      editorRef.current.innerHTML += linkCardHTML;
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    const input = document.getElementById('url-input') as HTMLInputElement;
+    const okBtn = document.getElementById('url-ok');
+    const cancelBtn = document.getElementById('url-cancel');
+
+    input.focus();
+
+    const cleanup = () => {
+      document.body.removeChild(overlay);
+    };
+
+    const handleInsert = () => {
+      const url = input.value.trim();
+      if (!url) {
+        cleanup();
+        return;
+      }
+
+      if (!editorRef.current) {
+        cleanup();
+        return;
+      }
+
+      // 네이버 블로그 스타일 카드형 링크 HTML
+      const linkCardHTML = `
+        <div style="border: 1px solid #ebebeb; border-radius: 12px; overflow: hidden; margin: 20px 0; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="padding: 16px 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 20px;">🔗</span>
+              <strong style="font-size: 15px; color: #333333; font-weight: 600;">링크</strong>
+            </div>
+            <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; color: #03c75a; font-size: 13px; text-decoration: none; word-break: break-all; line-height: 1.5;">
+              ${url}
+            </a>
+          </div>
+        </div>
+      `;
+
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        editorRef.current.innerHTML += linkCardHTML;
+      } else {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = linkCardHTML;
+        const fragment = document.createDocumentFragment();
+        while (tempDiv.firstChild) {
+          fragment.appendChild(tempDiv.firstChild);
+        }
+        range.insertNode(fragment);
+      }
+
       updateCharCount();
-      return;
-    }
+      cleanup();
+    };
 
-    // 커서 위치에 링크 카드 삽입
-    const range = selection.getRangeAt(0);
-    range.deleteContents();
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = linkCardHTML;
-    const fragment = document.createDocumentFragment();
-    while (tempDiv.firstChild) {
-      fragment.appendChild(tempDiv.firstChild);
-    }
-
-    range.insertNode(fragment);
-    updateCharCount();
+    okBtn?.addEventListener('click', handleInsert);
+    cancelBtn?.addEventListener('click', cleanup);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) cleanup();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleInsert();
+      if (e.key === 'Escape') cleanup();
+    });
   }, [updateCharCount]);
 
   // 구분선 삽입 함수
