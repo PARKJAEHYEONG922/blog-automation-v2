@@ -597,10 +597,10 @@ export const useGeneration = (): UseGenerationReturn => {
       range.deleteContents();
       range.insertNode(newParagraph);
 
-      // 커서를 새 문단 안으로 이동
+      // 커서를 새 문단 다음으로 이동 (밑으로 내려가도록)
       const newRange = document.createRange();
-      newRange.setStart(span, 0);
-      newRange.setEnd(span, 0);
+      newRange.setStartAfter(newParagraph);
+      newRange.setEndAfter(newParagraph);
       selection.removeAllRanges();
       selection.addRange(newRange);
     }
