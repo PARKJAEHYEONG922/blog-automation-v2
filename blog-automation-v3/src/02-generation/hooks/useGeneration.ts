@@ -380,31 +380,55 @@ export const useGeneration = (): UseGenerationReturn => {
     }
   }, [showAlert]);
 
-  // 폰트 크기 변경
-  const handleFontSizeChange = useCallback((newSize: string) => {
-    setCurrentFontSize(newSize);
-  }, []);
-
   // 선택 영역에 폰트 크기 적용
   const applyFontSizeToSelection = useCallback((fontSize: string) => {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+    if (!selection || selection.rangeCount === 0) {
+      console.warn('선택된 텍스트가 없습니다');
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    // 선택된 내용이 비어있으면 리턴
+    if (range.collapsed) {
+      console.warn('선택 영역이 비어있습니다');
+      return;
+    }
 
     // fontSizes에서 해당 폰트 정보 찾기
     const fontInfo = fontSizes.find(f => f.size === fontSize);
     if (!fontInfo) return;
 
-    const range = selection.getRangeAt(0);
-    const span = document.createElement('span');
-    span.style.fontSize = fontSize;
-    span.style.fontWeight = fontInfo.weight; // weight 적용
-
     try {
-      range.surroundContents(span);
+      // execCommand 방식으로 변경 (더 안정적)
+      document.execCommand('fontSize', false, '7');
+
+      // 방금 적용된 font 태그들을 찾아서 span으로 변경
+      const fontElements = editorRef.current?.querySelectorAll('font[size="7"]');
+      fontElements?.forEach((fontEl) => {
+        const span = document.createElement('span');
+        span.style.fontSize = fontSize;
+        span.style.fontWeight = fontInfo.weight; // weight 적용
+        span.innerHTML = fontEl.innerHTML;
+        fontEl.replaceWith(span);
+      });
+
+      updateCharCount();
     } catch (error) {
       console.error('폰트 크기 적용 실패:', error);
     }
-  }, []);
+  }, [updateCharCount]);
+
+  // 폰트 크기 변경 (select 변경 시 바로 적용)
+  const handleFontSizeChange = useCallback((newSize: string) => {
+    setCurrentFontSize(newSize);
+    // 선택된 텍스트가 있으면 바로 적용
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
+      applyFontSizeToSelection(newSize);
+    }
+  }, [applyFontSizeToSelection]);
 
   // 구분선 삽입 함수
   const insertSeparator = useCallback(() => {
@@ -444,11 +468,27 @@ export const useGeneration = (): UseGenerationReturn => {
 
   // 키보드 이벤트 핸들러
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Ctrl + 1/2/3/4 단축키로 글씨 크기 변경 (우선 처리)
+    if (e.ctrlKey && ['1', '2', '3', '4'].includes(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const fontSizeMap: { [key: string]: string } = {
+        '1': '24px', // 대제목
+        '2': '19px', // 소제목
+        '3': '16px', // 강조
+        '4': '15px'  // 일반
+      };
+      const fontSize = fontSizeMap[e.key];
+      applyFontSizeToSelection(fontSize);
+      setCurrentFontSize(fontSize);
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       document.execCommand('insertHTML', false, '<br><br>');
     }
-  }, []);
+  }, [applyFontSizeToSelection]);
 
   // 클릭 이벤트 핸들러
   const handleClick = useCallback(() => {

@@ -297,6 +297,7 @@ const Step2Generation: React.FC = () => {
                     fontSize: '14px',
                     cursor: 'pointer'
                   }}
+                  title="텍스트 드래그 후 글씨 크기 선택"
                 >
                   {fontSizes.map((font) => (
                     <option key={font.size} value={font.size}>
@@ -304,22 +305,6 @@ const Step2Generation: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                
-                {/* v2와 동일한 강제 적용 버튼 */}
-                <button
-                  onClick={() => applyFontSizeToSelection(currentFontSize)}
-                  style={{
-                    padding: '6px 12px',
-                    backgroundColor: '#f3f4f6',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                  title="현재 폰트 크기로 선택 영역 통일"
-                >
-                  적용
-                </button>
 
                 <button
                   onClick={insertSeparator}

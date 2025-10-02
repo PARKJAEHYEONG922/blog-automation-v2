@@ -287,24 +287,24 @@ export class ContentProcessor {
     // 마크다운 제거하여 실제 텍스트 길이 계산
     const plainText = text.replace(/\*\*([^*]+)\*\*/g, '$1');
 
-    if (plainText.length <= 28) {
+    if (plainText.length <= 25) {
       return [text];
     }
 
-    // 15-35자 구간에서 자를 위치 찾기 (범위 확장)
+    // 15-28자 구간에서 자를 위치 찾기
     let cutPosition = -1;
 
-    // 1순위: 마침표 (15-35자 구간)
-    for (let i = 15; i <= Math.min(35, plainText.length - 1); i++) {
+    // 1순위: 마침표 (15-28자 구간)
+    for (let i = 15; i <= Math.min(28, plainText.length - 1); i++) {
       if (plainText[i] === '.') {
         cutPosition = i + 1;
         break;
       }
     }
 
-    // 2순위: 쉼표 (15-35자 구간)
+    // 2순위: 쉼표 (15-28자 구간)
     if (cutPosition === -1) {
-      for (let i = 15; i <= Math.min(35, plainText.length - 1); i++) {
+      for (let i = 15; i <= Math.min(28, plainText.length - 1); i++) {
         if (plainText[i] === ',') {
           cutPosition = i + 1;
           break;
@@ -312,10 +312,10 @@ export class ContentProcessor {
       }
     }
 
-    // 3순위: 접속사 (15-32자 구간)
+    // 3순위: 접속사 (15-25자 구간)
     if (cutPosition === -1) {
       const conjunctions = ['그리고', '하지만', '또한', '따라서', '그런데', '그러나', '그래서', '또는', '그러면', '그럼', '이제', '이때'];
-      for (let i = 15; i <= Math.min(32, plainText.length - 3); i++) {
+      for (let i = 15; i <= Math.min(25, plainText.length - 3); i++) {
         const remaining = plainText.substring(i);
         for (const conj of conjunctions) {
           if (remaining.startsWith(conj)) {
@@ -327,9 +327,9 @@ export class ContentProcessor {
       }
     }
 
-    // 4순위: 공백 (20-30자 구간에서 뒤에서부터 찾기)
+    // 4순위: 공백 (20-25자 구간에서 뒤에서부터 찾기)
     if (cutPosition === -1) {
-      for (let i = Math.min(30, plainText.length - 1); i >= 20; i--) {
+      for (let i = Math.min(25, plainText.length - 1); i >= 20; i--) {
         if (plainText[i] === ' ') {
           cutPosition = i;
           break;
@@ -337,9 +337,9 @@ export class ContentProcessor {
       }
     }
 
-    // 5순위: 강제로 28자에서 자르기
+    // 5순위: 강제로 25자에서 자르기
     if (cutPosition === -1) {
-      cutPosition = 28;
+      cutPosition = 25;
     }
 
     if (cutPosition !== -1) {
