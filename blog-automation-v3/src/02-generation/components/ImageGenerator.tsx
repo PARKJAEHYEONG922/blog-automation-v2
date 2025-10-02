@@ -531,13 +531,31 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     if (imageUrl && imageUrl.startsWith('blob:')) {
       URL.revokeObjectURL(imageUrl);
     }
-    
-    setImageUrls(prev => {
-      const newUrls = { ...prev };
-      delete newUrls[imageIndex];
-      return newUrls;
-    });
-    setImageStatus(prev => ({ ...prev, [imageIndex]: 'empty' }));
+
+    // 히스토리에서 다음 이미지 가져오기
+    const history = imageHistory[imageIndex] || [];
+
+    if (history.length > 0) {
+      // 히스토리에 이미지가 있으면 다음 이미지로 교체
+      const nextImage = history[0];
+      const remainingHistory = history.slice(1);
+
+      setImageUrls(prev => ({ ...prev, [imageIndex]: nextImage }));
+      setImageHistory(prev => ({ ...prev, [imageIndex]: remainingHistory }));
+      setImageStatus(prev => ({ ...prev, [imageIndex]: 'completed' }));
+
+      console.log(`✅ 이미지 ${imageIndex} 제거 → 히스토리에서 다음 이미지 표시 (남은 히스토리: ${remainingHistory.length}개)`);
+    } else {
+      // 히스토리가 없으면 빈 상태로
+      setImageUrls(prev => {
+        const newUrls = { ...prev };
+        delete newUrls[imageIndex];
+        return newUrls;
+      });
+      setImageStatus(prev => ({ ...prev, [imageIndex]: 'empty' }));
+
+      console.log(`✅ 이미지 ${imageIndex} 제거 → 빈 상태`);
+    }
   };
 
   
