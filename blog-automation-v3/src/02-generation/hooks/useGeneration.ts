@@ -575,9 +575,34 @@ export const useGeneration = (): UseGenerationReturn => {
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      // 네이버 블로그 스타일 문단 삽입 (중앙 정렬, 한 줄 간격)
-      const newLine = '<p class="se-text-paragraph se-text-paragraph-align-center" style="line-height: 1.8;"><span class="se-ff-nanumgothic se-fs15" style="color: rgb(0, 0, 0);"><br></span></p>';
-      document.execCommand('insertHTML', false, newLine);
+
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const range = selection.getRangeAt(0);
+
+      // 네이버 블로그 스타일 빈 줄 생성
+      const newParagraph = document.createElement('p');
+      newParagraph.className = 'se-text-paragraph se-text-paragraph-align-center';
+      newParagraph.style.lineHeight = '1.8';
+
+      const span = document.createElement('span');
+      span.className = 'se-ff-nanumgothic se-fs15';
+      span.style.color = 'rgb(0, 0, 0)';
+      span.innerHTML = '&nbsp;'; // 빈 공백 문자로 빈 줄에서도 엔터 가능하게
+
+      newParagraph.appendChild(span);
+
+      // 현재 위치에 새 문단 삽입
+      range.deleteContents();
+      range.insertNode(newParagraph);
+
+      // 커서를 새 문단 안으로 이동
+      const newRange = document.createRange();
+      newRange.setStart(span, 0);
+      newRange.setEnd(span, 0);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
     }
   }, [applyFontSizeToSelection]);
 
