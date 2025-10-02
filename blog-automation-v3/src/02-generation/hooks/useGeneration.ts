@@ -432,9 +432,35 @@ export const useGeneration = (): UseGenerationReturn => {
     }
   }, [applyFontSizeToSelection]);
 
-  // 링크 삽입 함수 (네이버 카드형)
+  // 링크 삽입 함수
   const insertLink = useCallback(() => {
-    // Electron에서는 prompt를 사용할 수 없으므로 간단한 다이얼로그 생성
+    if (!editorRef.current) return;
+
+    // 현재 selection을 미리 저장 (단, 편집기 내부에 있을 때만)
+    const selection = window.getSelection();
+    let savedRange: Range | null = null;
+
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+
+      // selection이 편집기 내부에 있는지 확인
+      const isInsideEditor = editorRef.current.contains(
+        container.nodeType === Node.TEXT_NODE ? container.parentNode : container
+      );
+
+      if (!isInsideEditor) {
+        showAlert({ message: '편집기 내부를 클릭한 후 링크를 삽입해주세요.' });
+        return;
+      }
+
+      savedRange = range.cloneRange();
+    } else {
+      showAlert({ message: '편집기 내부를 클릭한 후 링크를 삽입해주세요.' });
+      return;
+    }
+
+    // 모달 생성
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;';
 
@@ -456,52 +482,57 @@ export const useGeneration = (): UseGenerationReturn => {
     const okBtn = document.getElementById('url-ok');
     const cancelBtn = document.getElementById('url-cancel');
 
-    input.focus();
+    input?.focus();
 
     const cleanup = () => {
-      document.body.removeChild(overlay);
+      if (document.body.contains(overlay)) {
+        document.body.removeChild(overlay);
+      }
     };
 
     const handleInsert = () => {
-      const url = input.value.trim();
+      const url = input?.value.trim();
       if (!url) {
         cleanup();
         return;
       }
 
-      if (!editorRef.current) {
-        cleanup();
-        return;
-      }
+      // 네이버 스타일 링크 카드 (회색 박스)
+      const linkCard = document.createElement('div');
+      linkCard.contentEditable = 'false';
+      linkCard.style.cssText = 'border: 1px solid #e5e5e5; border-radius: 8px; padding: 12px 16px; margin: 12px 0; background: #fafafa; display: inline-block; max-width: 100%; cursor: default;';
 
-      // 네이버 블로그 스타일 카드형 링크 HTML
-      const linkCardHTML = `
-        <div style="border: 1px solid #ebebeb; border-radius: 12px; overflow: hidden; margin: 20px 0; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <div style="padding: 16px 20px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <span style="font-size: 20px;">🔗</span>
-              <strong style="font-size: 15px; color: #333333; font-weight: 600;">링크</strong>
-            </div>
-            <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; color: #03c75a; font-size: 13px; text-decoration: none; word-break: break-all; line-height: 1.5;">
-              ${url}
-            </a>
-          </div>
-        </div>
-      `;
+      const link = document.createElement('a');
+      link.href = url;
+      link.textContent = url;
+      link.style.cssText = 'color: #03c75a; font-size: 14px; word-break: break-all; text-decoration: none;';
 
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        editorRef.current.innerHTML += linkCardHTML;
-      } else {
-        const range = selection.getRangeAt(0);
-        range.deleteContents();
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = linkCardHTML;
-        const fragment = document.createDocumentFragment();
-        while (tempDiv.firstChild) {
-          fragment.appendChild(tempDiv.firstChild);
+      linkCard.appendChild(link);
+
+      // 저장된 range 복원 또는 편집기 끝에 삽입
+      if (savedRange) {
+        const newSelection = window.getSelection();
+        if (newSelection) {
+          newSelection.removeAllRanges();
+          newSelection.addRange(savedRange);
+
+          savedRange.deleteContents();
+          savedRange.insertNode(linkCard);
+
+          // 다음 줄로 이동하기 위한 br 추가
+          const br = document.createElement('br');
+          savedRange.setStartAfter(linkCard);
+          savedRange.insertNode(br);
+
+          // 커서를 br 다음으로 이동
+          savedRange.setStartAfter(br);
+          savedRange.collapse(true);
         }
-        range.insertNode(fragment);
+      } else {
+        // 커서 위치가 없으면 편집기 끝에 추가
+        editorRef.current?.appendChild(linkCard);
+        const br = document.createElement('br');
+        editorRef.current?.appendChild(br);
       }
 
       updateCharCount();
@@ -513,7 +544,7 @@ export const useGeneration = (): UseGenerationReturn => {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) cleanup();
     });
-    input.addEventListener('keydown', (e) => {
+    input?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') handleInsert();
       if (e.key === 'Escape') cleanup();
     });
@@ -525,14 +556,21 @@ export const useGeneration = (): UseGenerationReturn => {
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
-      // 커서가 없으면 에디터 끝에 추가
-      const separator = '<hr style="border: none; border-top: 1px solid #666; margin: 16px 0; width: 30%;">';
-      editorRef.current.innerHTML += separator;
+      showAlert({ message: '편집기 내부를 클릭한 후 구분선을 삽입해주세요.' });
       return;
     }
 
-    // 커서 위치에 구분선 삽입
+    // 편집기 내부에 있는지 확인
     const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const isInsideEditor = editorRef.current.contains(
+      container.nodeType === Node.TEXT_NODE ? container.parentNode : container
+    );
+
+    if (!isInsideEditor) {
+      showAlert({ message: '편집기 내부를 클릭한 후 구분선을 삽입해주세요.' });
+      return;
+    }
 
     // 빈 줄 + 구분선 + 빈 줄 구조로 삽입
     const separatorHTML = `
@@ -581,26 +619,15 @@ export const useGeneration = (): UseGenerationReturn => {
 
       const range = selection.getRangeAt(0);
 
-      // 네이버 블로그 스타일 빈 줄 생성
-      const newParagraph = document.createElement('p');
-      newParagraph.className = 'se-text-paragraph se-text-paragraph-align-center';
-      newParagraph.style.lineHeight = '1.8';
-
-      const span = document.createElement('span');
-      span.className = 'se-ff-nanumgothic se-fs15';
-      span.style.color = 'rgb(0, 0, 0)';
-      span.innerHTML = '&nbsp;'; // 빈 공백 문자로 빈 줄에서도 엔터 가능하게
-
-      newParagraph.appendChild(span);
-
-      // 현재 위치에 새 문단 삽입
+      // <br> 태그 삽입 (한 칸 줄바꿈)
+      const br = document.createElement('br');
       range.deleteContents();
-      range.insertNode(newParagraph);
+      range.insertNode(br);
 
-      // 커서를 새 문단 다음으로 이동 (밑으로 내려가도록)
+      // 커서를 <br> 다음으로 이동
       const newRange = document.createRange();
-      newRange.setStartAfter(newParagraph);
-      newRange.setEndAfter(newParagraph);
+      newRange.setStartAfter(br);
+      newRange.collapse(true);
       selection.removeAllRanges();
       selection.addRange(newRange);
     }
