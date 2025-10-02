@@ -1223,7 +1223,204 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
           }
 
           console.log(`✅ URL 붙여넣기 완료 - 네이버가 자동으로 링크 카드로 변환`);
-          await window.electronAPI.playwrightWaitTimeout(2000); // 네이버 링크 카드 변환 대기
+
+          // 4-1. 네이버 링크 카드 변환 로딩 대기 (로딩 팝업이 나타났다가 사라질 때까지)
+          console.log(`⏳ 네이버 링크 카드 변환 로딩 대기 중...`);
+
+          const waitForLoadingResult = await window.electronAPI.playwrightEvaluateInFrames(`
+            (function() {
+              return new Promise((resolve) => {
+                const checkLoading = () => {
+                  const loadingPopup = document.querySelector('.se-popup-loading-icon');
+
+                  if (loadingPopup && loadingPopup.offsetParent !== null) {
+                    // 로딩 팝업이 보이는 상태 -> 사라질 때까지 대기
+                    console.log('🔄 로딩 팝업 감지됨, 사라질 때까지 대기...');
+
+                    const waitForHidden = setInterval(() => {
+                      const popup = document.querySelector('.se-popup-loading-icon');
+                      if (!popup || popup.offsetParent === null) {
+                        clearInterval(waitForHidden);
+                        console.log('✅ 로딩 팝업 사라짐, 링크 카드 변환 완료');
+                        resolve({ success: true, message: '로딩 완료' });
+                      }
+                    }, 100);
+
+                    // 최대 5초 대기
+                    setTimeout(() => {
+                      clearInterval(waitForHidden);
+                      resolve({ success: true, message: '타임아웃 (5초)' });
+                    }, 5000);
+                  } else {
+                    // 로딩 팝업이 없거나 이미 숨겨진 상태
+                    console.log('ℹ️ 로딩 팝업 없음 (이미 완료됨)');
+                    resolve({ success: true, message: '로딩 팝업 없음' });
+                  }
+                };
+
+                // 약간의 딜레이 후 체크 (로딩 팝업이 나타나는 시간 고려)
+                setTimeout(checkLoading, 300);
+              });
+            })()
+          `, 'PostWriteForm.naver');
+
+          console.log(`✅ 링크 카드 변환 로딩 완료:`, waitForLoadingResult?.result?.message);
+          await window.electronAPI.playwrightWaitTimeout(500); // 추가 안정화 대기
+
+          // 5. 생성된 링크 카드 찾아서 클릭 (정렬 툴바 표시)
+          console.log(`🎯 생성된 링크 카드 클릭 중...`);
+
+          const clickCardResult = await window.electronAPI.playwrightEvaluateInFrames(`
+            (function() {
+              try {
+                // se-module-oglink 클래스를 가진 링크 카드 찾기
+                const ogLinks = document.querySelectorAll('.se-module-oglink');
+
+                if (ogLinks.length > 0) {
+                  // 가장 마지막(최근) 링크 카드 선택
+                  const lastOgLink = ogLinks[ogLinks.length - 1];
+                  lastOgLink.scrollIntoView({ behavior: 'instant', block: 'center' });
+
+                  const rect = lastOgLink.getBoundingClientRect();
+                  const centerX = rect.left + rect.width / 2;
+                  const centerY = rect.top + rect.height / 2;
+
+                  return {
+                    success: true,
+                    centerX: centerX,
+                    centerY: centerY,
+                    totalCards: ogLinks.length
+                  };
+                } else {
+                  return { success: false, error: '링크 카드를 찾을 수 없음' };
+                }
+              } catch (error) {
+                return { success: false, error: error.message };
+              }
+            })()
+          `, 'PostWriteForm.naver');
+
+          if (clickCardResult?.result?.success) {
+            const cardX = clickCardResult.result.centerX + offsetResult.result.offsetX;
+            const cardY = clickCardResult.result.centerY + offsetResult.result.offsetY;
+
+            console.log(`🖱️ 링크 카드 클릭: (${cardX}, ${cardY})`);
+            await window.electronAPI.playwrightClickAt(cardX, cardY);
+            await window.electronAPI.playwrightWaitTimeout(300);
+
+            // 6. 가운데 정렬 버튼 클릭
+            console.log(`🎨 가운데 정렬 버튼 클릭 중...`);
+
+            const alignCenterResult = await window.electronAPI.playwrightEvaluateInFrames(`
+              (function() {
+                try {
+                  // 가운데 정렬 버튼 찾기 (se-align-center-toolbar-button)
+                  const centerButton = document.querySelector('.se-align-center-toolbar-button');
+
+                  if (centerButton && centerButton.offsetParent !== null) {
+                    centerButton.scrollIntoView({ behavior: 'instant', block: 'center' });
+
+                    const rect = centerButton.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+
+                    return {
+                      success: true,
+                      centerX: centerX,
+                      centerY: centerY
+                    };
+                  } else {
+                    return { success: false, error: '가운데 정렬 버튼을 찾을 수 없음' };
+                  }
+                } catch (error) {
+                  return { success: false, error: error.message };
+                }
+              })()
+            `, 'PostWriteForm.naver');
+
+            if (alignCenterResult?.result?.success) {
+              const alignX = alignCenterResult.result.centerX + offsetResult.result.offsetX;
+              const alignY = alignCenterResult.result.centerY + offsetResult.result.offsetY;
+
+              console.log(`🖱️ 가운데 정렬 버튼 클릭: (${alignX}, ${alignY})`);
+              await window.electronAPI.playwrightClickAt(alignX, alignY);
+              console.log(`✅ 링크 카드 가운데 정렬 완료`);
+              await window.electronAPI.playwrightWaitTimeout(300);
+            } else {
+              console.warn(`⚠️ 가운데 정렬 버튼을 찾을 수 없음`);
+            }
+          } else {
+            console.warn(`⚠️ 링크 카드를 찾을 수 없음:`, clickCardResult?.result);
+          }
+
+          // 7. 원래 텍스트 링크 삭제 (링크 카드가 생성되었으므로 원본 텍스트는 제거)
+          console.log(`🗑️ 원본 텍스트 링크 삭제 중...`);
+
+          // 다시 같은 링크 텍스트 찾아서 더블클릭 후 Delete
+          const deleteResult = await window.electronAPI.playwrightEvaluateInFrames(`
+            (function() {
+              try {
+                const searchText = "${url.replace(/"/g, '\\"').replace(/\//g, '\\/')}";
+
+                // TreeWalker로 DOM 순서대로 URL 텍스트 노드 찾기
+                let linkElements = [];
+                const walker = document.createTreeWalker(
+                  document.body,
+                  NodeFilter.SHOW_TEXT,
+                  null,
+                  false
+                );
+
+                let node;
+                while (node = walker.nextNode()) {
+                  if (node.textContent && node.textContent.includes(searchText)) {
+                    const parentElement = node.parentElement;
+                    if (parentElement) {
+                      linkElements.push(parentElement);
+                    }
+                  }
+                }
+
+                if (linkElements.length > 0) {
+                  const targetElement = linkElements[0];
+                  targetElement.scrollIntoView({ behavior: 'instant', block: 'center' });
+
+                  const rect = targetElement.getBoundingClientRect();
+                  const centerX = rect.left + rect.width / 2;
+                  const centerY = rect.top + rect.height / 2;
+
+                  return {
+                    success: true,
+                    centerX: centerX,
+                    centerY: centerY
+                  };
+                } else {
+                  return { success: false, error: '삭제할 링크 텍스트를 찾을 수 없음' };
+                }
+              } catch (error) {
+                return { success: false, error: error.message };
+              }
+            })()
+          `, 'PostWriteForm.naver');
+
+          if (deleteResult?.result?.success) {
+            // iframe 오프셋 적용
+            const deleteRealX = deleteResult.result.centerX + offsetResult.result.offsetX;
+            const deleteRealY = deleteResult.result.centerY + offsetResult.result.offsetY;
+
+            // 더블클릭으로 선택
+            await window.electronAPI.playwrightClickAt(deleteRealX, deleteRealY);
+            await window.electronAPI.playwrightWaitTimeout(100);
+            await window.electronAPI.playwrightClickAt(deleteRealX, deleteRealY);
+            await window.electronAPI.playwrightWaitTimeout(200);
+
+            // Delete 키로 삭제
+            await window.electronAPI.playwrightPress('Delete');
+            console.log(`✅ 원본 텍스트 링크 삭제 완료`);
+            await window.electronAPI.playwrightWaitTimeout(300);
+          } else {
+            console.log(`ℹ️ 삭제할 텍스트 링크를 찾지 못함 (이미 삭제되었을 수 있음)`);
+          }
 
         } catch (error) {
           console.error(`❌ 링크 ${i + 1} 처리 중 오류:`, error);
