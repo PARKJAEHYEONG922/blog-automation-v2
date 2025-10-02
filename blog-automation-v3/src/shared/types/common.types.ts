@@ -16,6 +16,18 @@ export interface WorkflowData {
   subKeywords: string;
   blogContent: string;
 
+  // Step1: 실시간 트렌드 분석 캐시 (크롤링 문서 참고용)
+  trendAnalysisCache?: {
+    contents: Array<{
+      title: string;
+      url: string;
+      textContent: string;
+      contentLength: number;
+    }>;
+    mainKeyword: string;
+    allTitles: string[];
+  };
+
   // Step2: 콘텐츠 생성
   generatedContent?: string;
   isAIGenerated: boolean;
