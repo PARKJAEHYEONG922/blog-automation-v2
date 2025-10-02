@@ -710,12 +710,6 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       setCropArea(null);
       setIsDragging(false);
 
-      showAlert({
-        type: 'success',
-        title: '✅ 자르기 완료',
-        message: '이미지가 성공적으로 잘렸습니다.'
-      });
-
     } catch (error) {
       console.error('이미지 크롭 실패:', error);
       showAlert({
