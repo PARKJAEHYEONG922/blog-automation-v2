@@ -296,11 +296,18 @@ export class ContentProcessor {
     // 15-28자 구간에서 자를 위치 찾기
     let cutPosition = -1;
 
-    // 1순위: 마침표 (15-28자 구간)
+    // 1순위: 마침표 (15-28자 구간) - 단, 소수점은 제외
     for (let i = 15; i <= Math.min(28, plainText.length - 1); i++) {
       if (plainText[i] === '.') {
-        cutPosition = i + 1;
-        break;
+        // 소수점 체크: 앞뒤가 숫자면 건너뛰기
+        const prevChar = i > 0 ? plainText[i - 1] : '';
+        const nextChar = i < plainText.length - 1 ? plainText[i + 1] : '';
+        const isDecimalPoint = /\d/.test(prevChar) && /\d/.test(nextChar);
+
+        if (!isDecimalPoint) {
+          cutPosition = i + 1;
+          break;
+        }
       }
     }
 
