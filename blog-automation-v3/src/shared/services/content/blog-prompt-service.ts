@@ -60,15 +60,20 @@ export class BlogPromptService {
   }): string {
     const subKeywordList = data.subKeywords.split(',').map(k => k.trim()).filter(k => k);
     let userPrompt = "";
-    
+
+    // 0. 현재 날짜 정보 추가
+    const now = new Date();
+    const currentDate = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
+    userPrompt += `**현재 날짜**: ${currentDate}\n\n`;
+
     // 1. 블로그 내용 (AI 역할 설정)
     if (data.blogContent.trim()) {
       userPrompt += `# AI 역할 설정\n${data.blogContent.trim()}\n\n`;
     }
-    
+
     // 2. 메인키워드 (필수)
     userPrompt += `**메인키워드**: ${data.mainKeyword}`;
-    
+
     // 3. 보조키워드 (있는 경우)
     if (subKeywordList.length > 0) {
       userPrompt += `\n**보조키워드**: ${subKeywordList.join(', ')}`;
