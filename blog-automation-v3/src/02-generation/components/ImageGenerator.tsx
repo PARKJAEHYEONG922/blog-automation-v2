@@ -3,8 +3,6 @@ import Button from '@/shared/components/ui/Button';
 import { GenerationAutomationService } from '@/02-generation/services/generation-automation-service';
 import { useDialog } from '@/app/DialogContext';
 import { IMAGE_GENERATION_OPTIONS } from '@/shared/utils/constants';
-import Cropper from 'react-easy-crop';
-import type { Area } from 'react-easy-crop';
 
 interface ImagePrompt {
   index: number;
@@ -94,15 +92,11 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     url: ''
   });
 
-  // 이미지 크롭 모드
+  // 이미지 크롭 모드 (드래그 방식)
   const [cropMode, setCropMode] = useState(false);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-
-  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
+  const [cropArea, setCropArea] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const cropImageRef = useRef<HTMLImageElement>(null);
   
   // Use aiModelStatus prop to determine current image provider and model
   useEffect(() => {
@@ -564,31 +558,85 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       imageIndex: 0
     });
     setCropMode(false);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
+    setCropArea(null);
+    setIsDragging(false);
   };
 
   // 크롭 시작
   const startCrop = () => {
     setCropMode(true);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
+    setCropArea(null);
+    setIsDragging(false);
   };
 
   // 크롭 취소
   const cancelCrop = () => {
     setCropMode(false);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
+    setCropArea(null);
+    setIsDragging(false);
+  };
+
+  // 마우스 다운 - 드래그 시작
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cropImageRef.current) return;
+
+    const rect = cropImageRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setIsDragging(true);
+    setCropArea({ startX: x, startY: y, endX: x, endY: y });
+  };
+
+  // 마우스 이동 - 드래그 중
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !cropArea || !cropImageRef.current) return;
+
+    const rect = cropImageRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setCropArea({ ...cropArea, endX: x, endY: y });
+  };
+
+  // 마우스 업 - 드래그 종료
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   // 크롭 완료 및 이미지 교체
   const completeCrop = async () => {
-    if (!croppedAreaPixels) return;
+    if (!cropArea || !cropImageRef.current) return;
 
     try {
       const imageUrl = previewModal.imageUrl;
       const imageIndex = previewModal.imageIndex;
+      const img = cropImageRef.current;
+
+      // 실제 이미지 크기 대비 표시된 이미지 크기 비율 계산
+      const scaleX = img.naturalWidth / img.width;
+      const scaleY = img.naturalHeight / img.height;
+
+      // 크롭 영역 계산 (음수 처리)
+      const x = Math.min(cropArea.startX, cropArea.endX);
+      const y = Math.min(cropArea.startY, cropArea.endY);
+      const width = Math.abs(cropArea.endX - cropArea.startX);
+      const height = Math.abs(cropArea.endY - cropArea.startY);
+
+      if (width < 10 || height < 10) {
+        showAlert({
+          type: 'error',
+          title: '❌ 영역이 너무 작습니다',
+          message: '더 큰 영역을 선택해주세요.'
+        });
+        return;
+      }
+
+      // 실제 이미지 좌표로 변환
+      const cropX = x * scaleX;
+      const cropY = y * scaleY;
+      const cropWidth = width * scaleX;
+      const cropHeight = height * scaleY;
 
       // Canvas로 크롭된 이미지 생성
       const image = new Image();
@@ -604,19 +652,19 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      canvas.width = croppedAreaPixels.width;
-      canvas.height = croppedAreaPixels.height;
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
 
       ctx.drawImage(
         image,
-        croppedAreaPixels.x,
-        croppedAreaPixels.y,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
         0,
         0,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height
+        cropWidth,
+        cropHeight
       );
 
       // Canvas를 Blob으로 변환
@@ -659,8 +707,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
       // 크롭 모드 종료
       setCropMode(false);
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
+      setCropArea(null);
+      setIsDragging(false);
 
       showAlert({
         type: 'success',
@@ -1217,17 +1265,64 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
             {/* 메인 이미지 */}
             <div style={{ position: 'relative', marginBottom: '20px', width: '1152px', height: '60vh' }}>
               {cropMode ? (
-                // 크롭 모드
-                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                  <Cropper
-                    image={previewModal.imageUrl}
-                    crop={crop}
-                    zoom={zoom}
-                    aspect={undefined}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
-                    onCropComplete={onCropComplete}
+                // 크롭 모드 - 드래그로 영역 선택
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'crosshair',
+                    userSelect: 'none'
+                  }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                >
+                  <img
+                    ref={cropImageRef}
+                    src={previewModal.imageUrl}
+                    alt={`이미지 ${previewModal.imageIndex}`}
+                    style={{
+                      maxWidth: '1152px',
+                      maxHeight: '60vh',
+                      objectFit: 'contain',
+                      pointerEvents: 'none'
+                    }}
                   />
+
+                  {/* 크롭 영역 표시 */}
+                  {cropArea && (
+                    <>
+                      {/* 반투명 오버레이 */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          pointerEvents: 'none'
+                        }}
+                      />
+
+                      {/* 선택 영역 (투명) */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `${Math.min(cropArea.startX, cropArea.endX)}px`,
+                          top: `${Math.min(cropArea.startY, cropArea.endY)}px`,
+                          width: `${Math.abs(cropArea.endX - cropArea.startX)}px`,
+                          height: `${Math.abs(cropArea.endY - cropArea.startY)}px`,
+                          border: '2px solid #10b981',
+                          backgroundColor: 'transparent',
+                          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    </>
+                  )}
                 </div>
               ) : (
                 // 일반 이미지 보기
