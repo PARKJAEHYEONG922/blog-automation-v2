@@ -432,7 +432,7 @@ export class ClaudeWebService {
       // 2단계: 내용 변화 모니터링 (3초 간격)
       let previousContent = '';
       let noChangeCount = 0;
-      const maxNoChangeCount = 4; // 10초 대기 (3초 * 3 + 1초 여유)
+      const maxNoChangeCount = 2; // 6초 대기 (3초 * 2)
       
       while (noChangeCount < maxNoChangeCount) {
         await this.page.waitForTimeout(3000);
