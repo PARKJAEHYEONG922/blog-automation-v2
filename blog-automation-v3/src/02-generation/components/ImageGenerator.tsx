@@ -79,6 +79,17 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   const [imageQuality, setImageQuality] = useState<'low' | 'medium' | 'high'>('high');
   const [imageSize, setImageSize] = useState<'512x768' | '768x512' | '1024x1024' | '1024x1536' | '1536x1024'>('1024x1024');
   const [imageStyle, setImageStyle] = useState<'photographic' | 'illustration' | 'minimalist' | 'natural'>('photographic');
+
+  // URL 입력 모달
+  const [urlInputModal, setUrlInputModal] = useState<{
+    isOpen: boolean;
+    imageIndex: number;
+    url: string;
+  }>({
+    isOpen: false,
+    imageIndex: 0,
+    url: ''
+  });
   
   // Use aiModelStatus prop to determine current image provider and model
   useEffect(() => {
@@ -244,21 +255,40 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     }, 1500);
   };
 
-  // URL에서 이미지 가져오기
-  const handleImageFromURL = async (imageIndex: number) => {
-    try {
-      // 프롬프트로 URL 입력받기
-      const url = window.prompt(
-        '이미지 URL을 붙여넣으세요:\n\n💡 이미지 우클릭 → "이미지 주소 복사" 후 여기에 붙여넣기 (Ctrl+V)',
-        ''
-      );
+  // URL 입력 모달 열기
+  const openUrlInputModal = (imageIndex: number) => {
+    setUrlInputModal({
+      isOpen: true,
+      imageIndex,
+      url: ''
+    });
+  };
 
-      // 취소 또는 빈 값
-      if (!url || !url.trim()) {
+  // URL 입력 모달 닫기
+  const closeUrlInputModal = () => {
+    setUrlInputModal({
+      isOpen: false,
+      imageIndex: 0,
+      url: ''
+    });
+  };
+
+  // URL에서 이미지 가져오기
+  const handleImageFromURL = async () => {
+    const { imageIndex, url } = urlInputModal;
+
+    try {
+      const trimmedUrl = url.trim();
+
+      // 빈 값 확인
+      if (!trimmedUrl) {
+        showAlert({
+          type: 'error',
+          title: '❌ 오류',
+          message: 'URL을 입력해주세요.'
+        });
         return;
       }
-
-      const trimmedUrl = url.trim();
 
       // URL 형식인지 확인
       if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
@@ -302,6 +332,9 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       applyNewImage(imageIndex, imageUrl, currentUrl);
 
       console.log(`✅ 이미지 ${imageIndex} URL에서 가져오기 성공:`, filename);
+
+      // 모달 닫기
+      closeUrlInputModal();
 
     } catch (error) {
       console.error('이미지 URL 가져오기 실패:', error);
@@ -960,9 +993,9 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
                         {/* 이미지 붙여넣기 버튼 */}
                         <button
-                          onClick={() => handleImageFromURL(imageIndex)}
+                          onClick={() => openUrlInputModal(imageIndex)}
                           style={buttonStyle('#10b981')}
-                          title="클립보드에서 이미지 URL을 가져옵니다"
+                          title="이미지 URL을 입력하여 가져옵니다"
                         >
                           📋 이미지 붙여넣기
                         </button>
@@ -1330,6 +1363,114 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                   🆕 새 이미지 사용
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* URL 입력 모달 */}
+      {urlInputModal.isOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1002
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '600px',
+            width: '90%'
+          }}>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              marginBottom: '16px',
+              color: '#1f2937'
+            }}>
+              📋 이미지 URL 붙여넣기
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              marginBottom: '24px'
+            }}>
+              💡 이미지 우클릭 → "이미지 주소 복사" 후 아래에 붙여넣으세요 (Ctrl+V)
+            </p>
+
+            <input
+              type="text"
+              value={urlInputModal.url}
+              onChange={(e) => setUrlInputModal(prev => ({ ...prev, url: e.target.value }))}
+              placeholder="https://example.com/image.jpg"
+              autoFocus
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleImageFromURL();
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                fontSize: '14px',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                outline: 'none',
+                transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#10b981'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+            />
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={closeUrlInputModal}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4b5563'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6b7280'}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleImageFromURL}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+              >
+                ✅ 확인
+              </button>
             </div>
           </div>
         </div>
