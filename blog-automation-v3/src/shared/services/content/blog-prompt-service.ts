@@ -107,20 +107,16 @@ export class BlogPromptService {
     let prompt = '';
     
     // 첨부된 파일에 따른 구체적인 설명
-    if (data.writingStyleCount > 0 && data.hasSeoGuide) {
-      if (data.writingStyleCount === 1) {
-        prompt += `1번 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요. 2번 문서는 네이버 상위 노출을 위한 SEO 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
-      } else {
-        prompt += `1~${data.writingStyleCount}번 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요. ${data.writingStyleCount + 1}번 문서는 네이버 상위 노출을 위한 SEO 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
-      }
-    } else if (data.writingStyleCount > 0) {
-      if (data.writingStyleCount === 1) {
-        prompt += `첨부한 1번 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요.\n\n`;
-      } else {
-        prompt += `첨부한 1~${data.writingStyleCount}번 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요.\n\n`;
-      }
-    } else if (data.hasSeoGuide) {
-      prompt += `첨부한 SEO 문서는 네이버 상위 노출을 위한 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
+    // 말투: 0~2개, SEO: 무조건 1개
+    if (data.writingStyleCount === 0 && data.hasSeoGuide) {
+      // 말투 없음 + SEO 1개
+      prompt += `1번 문서는 네이버 상위 노출을 위한 SEO 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
+    } else if (data.writingStyleCount === 1 && data.hasSeoGuide) {
+      // 말투 1개 + SEO 1개
+      prompt += `1번 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요. 2번 문서는 네이버 상위 노출을 위한 SEO 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
+    } else if (data.writingStyleCount === 2 && data.hasSeoGuide) {
+      // 말투 2개 + SEO 1개
+      prompt += `1~2번 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요. 3번 문서는 네이버 상위 노출을 위한 SEO 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
     }
     
     // 현재 날짜 추가
