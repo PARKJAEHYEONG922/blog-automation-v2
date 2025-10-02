@@ -49,7 +49,7 @@ export class ClaudeWebService {
       const automationProfileDir = path.join(os.homedir(), 'AppData', 'Local', 'BlogAutomation', 'Chrome_Profile');
 
       // 자동화용 Chrome을 별도 프로필로 실행 (동적 포트 사용 + 큰 창 크기)
-      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=${this.debugPort} --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check --disable-background-timer-throttling --window-size=1600,1000 --window-position=100,100`);
+      exec(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --remote-debugging-port=${this.debugPort} --user-data-dir="${automationProfileDir}" --no-first-run --no-default-browser-check --disable-background-timer-throttling --window-size=1400,900 --window-position=100,100`);
 
       // Chrome 시작 대기
       await new Promise(resolve => setTimeout(resolve, 5000));
@@ -74,8 +74,8 @@ export class ClaudeWebService {
         await this.page.goto('https://claude.ai/');
       }
       
-      // Chrome 실행시 이미 큰 창으로 설정됨 (1600x1000)
-      console.log('Chrome이 1600x1000 창 크기로 실행됨');
+      // Chrome 실행시 이미 큰 창으로 설정됨 (1400x900)
+      console.log('Chrome이 1400x900 창 크기로 실행됨');
       
       // 로그인 상태 확인 및 대기
       let currentUrl = this.page.url();
