@@ -247,15 +247,25 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   // URL에서 이미지 가져오기
   const handleImageFromURL = async (imageIndex: number) => {
     try {
-      // 클립보드에서 텍스트 읽기
-      const text = await navigator.clipboard.readText();
+      // 프롬프트로 URL 입력받기
+      const url = window.prompt(
+        '이미지 URL을 붙여넣으세요:\n\n💡 이미지 우클릭 → "이미지 주소 복사" 후 여기에 붙여넣기 (Ctrl+V)',
+        ''
+      );
+
+      // 취소 또는 빈 값
+      if (!url || !url.trim()) {
+        return;
+      }
+
+      const trimmedUrl = url.trim();
 
       // URL 형식인지 확인
-      if (!text.startsWith('http://') && !text.startsWith('https://')) {
+      if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
         showAlert({
           type: 'error',
           title: '❌ 오류',
-          message: '클립보드에 유효한 이미지 URL이 없습니다.\n\n이미지 우클릭 → "이미지 주소 복사" 후 다시 시도해주세요.'
+          message: '유효한 이미지 URL이 아닙니다.\n\nhttp:// 또는 https://로 시작하는 URL을 입력해주세요.'
         });
         return;
       }
@@ -263,7 +273,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       setImageStatus(prev => ({ ...prev, [imageIndex]: 'uploading' }));
 
       // URL에서 이미지 다운로드
-      const response = await fetch(text);
+      const response = await fetch(trimmedUrl);
       if (!response.ok) {
         throw new Error('이미지를 가져올 수 없습니다');
       }
