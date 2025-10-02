@@ -5,16 +5,6 @@ export interface BlogPromptData {
   blogContent: string;
   writingStyleCount: number;
   hasSeoGuide: boolean;
-  trendAnalysisCache?: {
-    contents: Array<{
-      title: string;
-      url: string;
-      textContent: string;
-      contentLength: number;
-    }>;
-    mainKeyword: string;
-    allTitles: string[];
-  };
 }
 
 export class BlogPromptService {
@@ -127,21 +117,6 @@ export class BlogPromptService {
       prompt += `첨부한 말투 문서는 제 블로그의 실제 글쓰기 스타일입니다. 이 문체, 어조, 표현 방식을 정확히 모방해서 작성해주세요.\n\n`;
     } else if (data.hasSeoGuide) {
       prompt += `첨부한 SEO 문서는 네이버 상위 노출을 위한 가이드입니다. 이를 참고해서 노출이 잘되도록 글을 작성해주세요.\n\n`;
-    }
-
-    // 실시간 트렌드 분석 크롤링 문서 추가
-    if (data.trendAnalysisCache && data.trendAnalysisCache.contents.length > 0) {
-      prompt += `## 📊 **상위 랭크 블로그 참고 자료**\n\n`;
-      prompt += `아래는 "${data.trendAnalysisCache.mainKeyword}" 키워드로 검색했을 때 상위에 노출된 인기 블로그 글들입니다.\n`;
-      prompt += `이 글들의 내용, 구조, 키워드 사용 방식을 참고하되, 그대로 베끼지 말고 새로운 관점과 정보를 추가하여 더 나은 콘텐츠를 작성해주세요.\n\n`;
-
-      data.trendAnalysisCache.contents.forEach((content, index) => {
-        prompt += `### [상위 블로그 ${index + 1}] ${content.title}\n`;
-        prompt += `- URL: ${content.url}\n`;
-        prompt += `- 글자수: ${content.contentLength}자\n\n`;
-        prompt += `${content.textContent}\n\n`;
-        prompt += `---\n\n`;
-      });
     }
     
     // 현재 날짜 추가

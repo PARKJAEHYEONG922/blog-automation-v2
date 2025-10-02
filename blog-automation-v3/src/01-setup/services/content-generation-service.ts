@@ -12,16 +12,6 @@ export interface ContentGenerationParams {
   blogContent: string;
   selectedWritingStyles: SavedDocument[];
   selectedSeoGuide: SavedDocument;
-  trendAnalysisCache?: {
-    contents: Array<{
-      title: string;
-      url: string;
-      textContent: string;
-      contentLength: number;
-    }>;
-    mainKeyword: string;
-    allTitles: string[];
-  };
 }
 
 export interface ImagePromptGenerationResult {
@@ -83,7 +73,7 @@ class ContentGenerationServiceClass {
    * Claude Web으로 콘텐츠 생성
    */
   async generateWithClaudeWeb(params: ContentGenerationParams, onStepChange: (step: string) => void): Promise<string> {
-    const { finalTitle, mainKeyword, subKeywords, blogContent, selectedWritingStyles, selectedSeoGuide, trendAnalysisCache } = params;
+    const { finalTitle, mainKeyword, subKeywords, blogContent, selectedWritingStyles, selectedSeoGuide } = params;
 
     onStepChange('클로드 웹 브라우저 열기...');
     await window.electronAPI.openClaudeWeb();
@@ -97,8 +87,7 @@ class ContentGenerationServiceClass {
       subKeywords,
       blogContent,
       writingStyleCount: selectedWritingStyles.length,
-      hasSeoGuide: !!selectedSeoGuide,
-      trendAnalysisCache
+      hasSeoGuide: !!selectedSeoGuide
     });
 
     await window.electronAPI.sendToClaudeWeb(

@@ -345,8 +345,7 @@ export const useSetup = (): UseSetupReturn => {
           subKeywords,
           blogContent,
           selectedWritingStyles,
-          selectedSeoGuide: selectedSeoGuide!,
-          trendAnalysisCache: trendAnalysisCache || undefined
+          selectedSeoGuide: selectedSeoGuide!
         },
         setGenerationStep
       );
@@ -368,8 +367,7 @@ export const useSetup = (): UseSetupReturn => {
           isAIGenerated: true,
           generatedTitles: generatedTitles,
           imagePrompts: imageResult.imagePrompts,
-          imagePromptGenerationFailed: imageResult.failed,
-          trendAnalysisCache: trendAnalysisCache || undefined
+          imagePromptGenerationFailed: imageResult.failed
         });
 
         // Step2 전환 알림 다이얼로그
@@ -428,8 +426,7 @@ export const useSetup = (): UseSetupReturn => {
         generatedContent: content,
         isAIGenerated: false,
         imagePrompts: imageResult.imagePrompts,
-        imagePromptGenerationFailed: imageResult.failed,
-        trendAnalysisCache: trendAnalysisCache || undefined
+        imagePromptGenerationFailed: imageResult.failed
       });
 
       // Step2 전환 알림 다이얼로그
