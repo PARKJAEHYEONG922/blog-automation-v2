@@ -230,18 +230,78 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   // 이미지 업로드 처리 (기존 이미지를 히스토리에 저장)
   const handleImageUpload = (imageIndex: number, file: File | null) => {
     if (!file) return;
-    
+
     setImageStatus(prev => ({ ...prev, [imageIndex]: 'uploading' }));
-    
+
     // 파일을 URL로 변환 (브라우저에서 표시하기 위해)
     const imageUrl = URL.createObjectURL(file);
-    
+
     // 업로드 시뮬레이션
     setTimeout(() => {
       // 기존 이미지가 있으면 히스토리에 저장하고 새 이미지 적용
       const currentUrl = imageUrls[imageIndex];
       applyNewImage(imageIndex, imageUrl, currentUrl);
     }, 1500);
+  };
+
+  // URL에서 이미지 가져오기
+  const handleImageFromURL = async (imageIndex: number) => {
+    try {
+      // 클립보드에서 텍스트 읽기
+      const text = await navigator.clipboard.readText();
+
+      // URL 형식인지 확인
+      if (!text.startsWith('http://') && !text.startsWith('https://')) {
+        showAlert({
+          type: 'error',
+          title: '❌ 오류',
+          message: '클립보드에 유효한 이미지 URL이 없습니다.\n\n이미지 우클릭 → "이미지 주소 복사" 후 다시 시도해주세요.'
+        });
+        return;
+      }
+
+      setImageStatus(prev => ({ ...prev, [imageIndex]: 'uploading' }));
+
+      // URL에서 이미지 다운로드
+      const response = await fetch(text);
+      if (!response.ok) {
+        throw new Error('이미지를 가져올 수 없습니다');
+      }
+
+      const blob = await response.blob();
+
+      // 이미지 타입 확인
+      if (!blob.type.startsWith('image/')) {
+        throw new Error('이미지 파일이 아닙니다');
+      }
+
+      // 새로운 파일명 생성 (blog-image-{순서}-{날짜}.{확장자})
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const extension = blob.type.split('/')[1] || 'jpg';
+      const filename = `blog-image-${imageIndex}-${timestamp}.${extension}`;
+
+      // Blob을 File 객체로 변환 (파일명 변경)
+      const file = new File([blob], filename, { type: blob.type });
+
+      // 파일을 URL로 변환
+      const imageUrl = URL.createObjectURL(file);
+
+      // 기존 이미지가 있으면 히스토리에 저장하고 새 이미지 적용
+      const currentUrl = imageUrls[imageIndex];
+      applyNewImage(imageIndex, imageUrl, currentUrl);
+
+      console.log(`✅ 이미지 ${imageIndex} URL에서 가져오기 성공:`, filename);
+
+    } catch (error) {
+      console.error('이미지 URL 가져오기 실패:', error);
+      setImageStatus(prev => ({ ...prev, [imageIndex]: 'empty' }));
+      showAlert({
+        type: 'error',
+        title: '❌ 이미지 가져오기 실패',
+        message: `이미지를 가져오는데 실패했습니다.\n\n${error instanceof Error ? error.message : '알 수 없는 오류'}`
+      });
+    }
   };
   
   // v2와 동일한 이미지 히스토리 관리 함수들
@@ -870,7 +930,8 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                       <div style={{
                         display: 'flex',
                         gap: '8px',
-                        marginTop: '12px'
+                        marginTop: '12px',
+                        flexWrap: 'wrap'
                       }}>
                         {/* 이미지 업로드 버튼 */}
                         <input
@@ -886,7 +947,16 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                         >
                           📁 이미지 업로드
                         </label>
-                        
+
+                        {/* 이미지 붙여넣기 버튼 */}
+                        <button
+                          onClick={() => handleImageFromURL(imageIndex)}
+                          style={buttonStyle('#10b981')}
+                          title="클립보드에서 이미지 URL을 가져옵니다"
+                        >
+                          📋 이미지 붙여넣기
+                        </button>
+
                         {/* AI 이미지 생성 버튼 */}
                         <button
                           onClick={() => handleAIImageGeneration(imageIndex)}
@@ -909,7 +979,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                             }} />
                           )}
                         </button>
-                        
+
                         {/* 제거 버튼 (완료된 이미지만) */}
                         {status === 'completed' && (
                           <button
