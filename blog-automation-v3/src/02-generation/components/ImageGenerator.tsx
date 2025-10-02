@@ -3,6 +3,8 @@ import Button from '@/shared/components/ui/Button';
 import { GenerationAutomationService } from '@/02-generation/services/generation-automation-service';
 import { useDialog } from '@/app/DialogContext';
 import { IMAGE_GENERATION_OPTIONS } from '@/shared/utils/constants';
+import Cropper from 'react-easy-crop';
+import type { Area } from 'react-easy-crop';
 
 interface ImagePrompt {
   index: number;
@@ -91,6 +93,16 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     imageIndex: 0,
     url: ''
   });
+
+  // 이미지 크롭 모드
+  const [cropMode, setCropMode] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
+  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
   
   // Use aiModelStatus prop to determine current image provider and model
   useEffect(() => {
@@ -551,8 +563,121 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       imageUrl: '',
       imageIndex: 0
     });
+    setCropMode(false);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
   };
-  
+
+  // 크롭 시작
+  const startCrop = () => {
+    setCropMode(true);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
+  // 크롭 취소
+  const cancelCrop = () => {
+    setCropMode(false);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
+  // 크롭 완료 및 이미지 교체
+  const completeCrop = async () => {
+    if (!croppedAreaPixels) return;
+
+    try {
+      const imageUrl = previewModal.imageUrl;
+      const imageIndex = previewModal.imageIndex;
+
+      // Canvas로 크롭된 이미지 생성
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = imageUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      canvas.width = croppedAreaPixels.width;
+      canvas.height = croppedAreaPixels.height;
+
+      ctx.drawImage(
+        image,
+        croppedAreaPixels.x,
+        croppedAreaPixels.y,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height,
+        0,
+        0,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height
+      );
+
+      // Canvas를 Blob으로 변환
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Blob conversion failed'));
+        }, 'image/png');
+      });
+
+      // Blob을 ArrayBuffer로 변환하여 파일로 저장
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const imageDataArray = Array.from(uint8Array);
+
+      // 커스텀 파일명 생성
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const fileName = `blog-image-${imageIndex}-cropped-${timestamp}.png`;
+
+      // 임시 파일로 저장
+      const saveResult = await window.electronAPI.saveTempFile(fileName, imageDataArray);
+
+      if (!saveResult.success || !saveResult.filePath) {
+        throw new Error('파일 저장 실패');
+      }
+
+      console.log(`✂️ 크롭된 이미지 저장: ${saveResult.filePath}`);
+
+      // 이미지 교체 (기존 이미지는 히스토리에 추가)
+      const fileUrl = `file://${saveResult.filePath}`;
+      const currentUrl = imageUrls[imageIndex];
+      applyNewImage(imageIndex, fileUrl, currentUrl);
+
+      // 프리뷰 모달 업데이트
+      setPreviewModal(prev => ({
+        ...prev,
+        imageUrl: fileUrl
+      }));
+
+      // 크롭 모드 종료
+      setCropMode(false);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+
+      showAlert({
+        type: 'success',
+        title: '✅ 자르기 완료',
+        message: '이미지가 성공적으로 잘렸습니다.'
+      });
+
+    } catch (error) {
+      console.error('이미지 크롭 실패:', error);
+      showAlert({
+        type: 'error',
+        title: '❌ 자르기 실패',
+        message: `이미지를 자르는데 실패했습니다.\n\n${error instanceof Error ? error.message : '알 수 없는 오류'}`
+      });
+    }
+  };
+
   // 빈 이미지 모두 AI 생성 (정지 기능 포함)
   const handleGenerateAllEmpty = async () => {
     if (!hasImageClient || isGeneratingAll) return;
@@ -1090,18 +1215,34 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* 메인 이미지 */}
-            <div style={{ position: 'relative', marginBottom: '20px' }}>
-              <img 
-                src={previewModal.imageUrl}
-                alt={`이미지 ${previewModal.imageIndex}`}
-                style={{
-                  maxWidth: '1152px',
-                  maxHeight: '60vh',
-                  objectFit: 'contain',
-                  borderRadius: '8px'
-                }}
-              />
-              
+            <div style={{ position: 'relative', marginBottom: '20px', width: '1152px', height: '60vh' }}>
+              {cropMode ? (
+                // 크롭 모드
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <Cropper
+                    image={previewModal.imageUrl}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={undefined}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={onCropComplete}
+                  />
+                </div>
+              ) : (
+                // 일반 이미지 보기
+                <img
+                  src={previewModal.imageUrl}
+                  alt={`이미지 ${previewModal.imageIndex}`}
+                  style={{
+                    maxWidth: '1152px',
+                    maxHeight: '60vh',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                  }}
+                />
+              )}
+
               {/* 닫기 버튼 */}
               <button
                 onClick={closePreviewModal}
@@ -1116,38 +1257,104 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                   width: '40px',
                   height: '40px',
                   fontSize: '20px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  zIndex: 10
                 }}
               >
                 ✕
               </button>
-              
-              {/* 저장 버튼 (v2 원본처럼 우하단에 배치) */}
-              <button
-                onClick={() => downloadImage(previewModal.imageUrl, previewModal.imageIndex)}
-                style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  right: '16px',
-                  backgroundColor: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'background-color 0.2s',
-                  zIndex: 10
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-              >
-                💾 저장
-              </button>
+
+              {/* 하단 버튼들 */}
+              <div style={{
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+                display: 'flex',
+                gap: '12px',
+                zIndex: 10
+              }}>
+                {cropMode ? (
+                  // 크롭 모드 버튼들
+                  <>
+                    <button
+                      onClick={cancelCrop}
+                      style={{
+                        backgroundColor: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4b5563'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6b7280'}
+                    >
+                      ❌ 취소
+                    </button>
+                    <button
+                      onClick={completeCrop}
+                      style={{
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                    >
+                      ✂️ 자르기 완료
+                    </button>
+                  </>
+                ) : (
+                  // 일반 모드 버튼들
+                  <>
+                    <button
+                      onClick={startCrop}
+                      style={{
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+                    >
+                      ✂️ 자르기
+                    </button>
+                    <button
+                      onClick={() => downloadImage(previewModal.imageUrl, previewModal.imageIndex)}
+                      style={{
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    >
+                      💾 저장
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             
             {/* 이미지 갤러리 (히스토리가 있는 경우) */}
