@@ -356,7 +356,7 @@ export const useGeneration = (): UseGenerationReturn => {
     }
   }, [originalContent, processMarkdown, updateCharCount, showAlert]);
 
-  // 클립보드에 복사
+  // 클립보드에 HTML 형식으로 복사 (발행 시와 동일한 방식)
   const copyToClipboard = useCallback(async (): Promise<boolean> => {
     if (!editorRef.current) {
       showAlert({ type: 'error', message: '에디터가 로드되지 않았습니다.' });
@@ -364,17 +364,25 @@ export const useGeneration = (): UseGenerationReturn => {
     }
 
     try {
-      const htmlContent = editorRef.current.innerHTML;
+      // HTML 형식으로 복사하기 위해 선택 영역 생성
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
 
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': new Blob([htmlContent], { type: 'text/html' }),
-          'text/plain': new Blob([editorRef.current.innerText], { type: 'text/plain' })
-        })
-      ]);
+      // HTML 복사 실행
+      const success = document.execCommand('copy');
 
-      showAlert({ type: 'success', message: 'HTML 형식으로 클립보드에 복사되었습니다!' });
-      return true;
+      // 선택 해제
+      selection?.removeAllRanges();
+
+      if (success) {
+        showAlert({ type: 'success', message: 'HTML 형식으로 클립보드에 복사되었습니다!' });
+        return true;
+      } else {
+        throw new Error('복사 명령 실행 실패');
+      }
     } catch (error) {
       showAlert({ type: 'error', message: '클립보드 복사에 실패했습니다.' });
       console.error('클립보드 복사 실패:', error);
@@ -500,6 +508,8 @@ export const useGeneration = (): UseGenerationReturn => {
       // 네이버 스타일 링크 카드 (회색 박스)
       const linkCard = document.createElement('div');
       linkCard.contentEditable = 'false';
+      linkCard.className = 'blog-link-card'; // 식별자 추가
+      linkCard.setAttribute('data-link-url', url); // URL 저장
       linkCard.style.cssText = 'border: 1px solid #e5e5e5; border-radius: 8px; padding: 12px 16px; margin: 12px 0; background: #fafafa; display: inline-block; max-width: 100%; cursor: default;';
 
       const link = document.createElement('a');

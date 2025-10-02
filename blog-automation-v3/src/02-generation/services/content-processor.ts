@@ -293,28 +293,71 @@ export class ContentProcessor {
       return [text];
     }
 
+    // 따옴표/괄호 경계 찾기 (경계 근처에서는 자르면 안됨)
+    const quoteBoundaries: number[] = [];
+    const quoteChars = ['"', '(', ')', '[', ']', '{', '}', '「', '」', '『', '』'];
+
+    for (let i = 0; i < plainText.length; i++) {
+      if (quoteChars.includes(plainText[i])) {
+        quoteBoundaries.push(i);
+      }
+    }
+
+    // 따옴표/괄호 바로 앞뒤 2자 이내는 자르지 않기
+    const isNearQuoteBoundary = (pos: number): boolean => {
+      return quoteBoundaries.some(boundary => Math.abs(pos - boundary) <= 2);
+    };
+
+    // URL 패턴 찾기 (http://, https://, www. 등)
+    const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9.-]+\.(com|net|org|kr|go\.kr|co\.kr|edu|gov)[^\s]*)/g;
+    const urlRanges: Array<{start: number, end: number}> = [];
+    let urlMatch;
+    while ((urlMatch = urlPattern.exec(plainText)) !== null) {
+      urlRanges.push({
+        start: urlMatch.index,
+        end: urlMatch.index + urlMatch[0].length
+      });
+    }
+
+    // URL 안에서 자르려고 하는지 체크
+    const isInsideUrl = (pos: number): boolean => {
+      return urlRanges.some(range => pos > range.start && pos < range.end);
+    };
+
     // 15-28자 구간에서 자를 위치 찾기
     let cutPosition = -1;
 
-    // 1순위: 마침표 (15-28자 구간) - 단, 소수점은 제외
+    // 1순위: 마침표 + 여운 표현 (..., .~) (15-28자 구간)
     for (let i = 15; i <= Math.min(28, plainText.length - 1); i++) {
       if (plainText[i] === '.') {
+        // 따옴표/괄호 경계 근처면 스킵
+        if (isNearQuoteBoundary(i)) continue;
+        // URL 안이면 스킵
+        if (isInsideUrl(i)) continue;
+
         // 소수점 체크: 앞뒤가 숫자면 건너뛰기
         const prevChar = i > 0 ? plainText[i - 1] : '';
         const nextChar = i < plainText.length - 1 ? plainText[i + 1] : '';
         const isDecimalPoint = /\d/.test(prevChar) && /\d/.test(nextChar);
 
         if (!isDecimalPoint) {
-          cutPosition = i + 1;
+          // ... 이나 .~ 같은 여운 표현이면 완전히 포함 후 자르기
+          let endPos = i + 1;
+          while (endPos < plainText.length && /[.\s~]/.test(plainText[endPos])) {
+            endPos++;
+          }
+          cutPosition = endPos;
           break;
         }
       }
     }
 
-    // 2순위: 쉼표 (15-28자 구간)
+    // 2순위: 느낌표/물음표 (15-28자 구간)
     if (cutPosition === -1) {
       for (let i = 15; i <= Math.min(28, plainText.length - 1); i++) {
-        if (plainText[i] === ',') {
+        if (/[!?]/.test(plainText[i])) {
+          if (isNearQuoteBoundary(i)) continue;
+          if (isInsideUrl(i)) continue;
           cutPosition = i + 1;
           break;
         }
@@ -325,6 +368,8 @@ export class ContentProcessor {
     if (cutPosition === -1) {
       const conjunctions = ['그리고', '하지만', '또한', '따라서', '그런데', '그러나', '그래서', '또는', '그러면', '그럼', '이제', '이때'];
       for (let i = 15; i <= Math.min(25, plainText.length - 3); i++) {
+        if (isNearQuoteBoundary(i)) continue;
+        if (isInsideUrl(i)) continue;
         const remaining = plainText.substring(i);
         for (const conj of conjunctions) {
           if (remaining.startsWith(conj)) {
@@ -336,19 +381,44 @@ export class ContentProcessor {
       }
     }
 
-    // 4순위: 공백 (20-25자 구간에서 뒤에서부터 찾기)
+    // 4순위: 쉼표 (15-28자 구간) - 단, 숫자 사이는 제외
+    if (cutPosition === -1) {
+      for (let i = 15; i <= Math.min(28, plainText.length - 1); i++) {
+        if (plainText[i] === ',') {
+          if (isNearQuoteBoundary(i)) continue;
+          if (isInsideUrl(i)) continue;
+
+          // 숫자, 쉼표, 숫자 패턴 체크 (예: 2,030)
+          const prevChar = i > 0 ? plainText[i - 1] : '';
+          const nextChar = i < plainText.length - 1 ? plainText[i + 1] : '';
+          const isNumberComma = /\d/.test(prevChar) && /\d/.test(nextChar);
+
+          if (!isNumberComma) {
+            cutPosition = i + 1;
+            break;
+          }
+        }
+      }
+    }
+
+    // 5순위: 공백 (20-25자 구간에서 뒤에서부터 찾기)
     if (cutPosition === -1) {
       for (let i = Math.min(25, plainText.length - 1); i >= 20; i--) {
         if (plainText[i] === ' ') {
+          if (isNearQuoteBoundary(i)) continue;
+          if (isInsideUrl(i)) continue;
           cutPosition = i;
           break;
         }
       }
     }
 
-    // 5순위: 강제로 25자에서 자르기
+    // 6순위: 강제로 25자에서 자르기 (따옴표 경계, URL 피해서)
     if (cutPosition === -1) {
       cutPosition = 25;
+      while (cutPosition < plainText.length && (isNearQuoteBoundary(cutPosition) || isInsideUrl(cutPosition))) {
+        cutPosition++;
+      }
     }
 
     if (cutPosition !== -1) {
@@ -382,9 +452,6 @@ export class ContentProcessor {
         }
       }
 
-      // 강조로 시작하는지 확인
-      const startsWithBold = text.trim().startsWith('**');
-
       // 자를 위치가 강조 영역 안에 있는지 확인
       let insideBold = false;
       let boldRange: {start: number, end: number} | null = null;
@@ -400,8 +467,8 @@ export class ContentProcessor {
       let firstPart: string;
       let secondPart: string;
 
-      // 강조로 시작하고 + 강조 영역 안에서 잘라야 하는 경우만 특별 처리
-      if (startsWithBold && insideBold && boldRange) {
+      // 강조 영역 안에서 자르려고 하면 강조 끝까지 포함해서 자르기
+      if (insideBold && boldRange) {
         // 강조 끝까지 포함해서 자르기
         firstPart = text.substring(0, boldRange.end).trim();
         secondPart = text.substring(boldRange.end).trim();

@@ -150,7 +150,7 @@ ${data.blogContent.trim()}
 
     prompt += `
 **📅 현재 날짜**
-${currentDate}일 기준으로 작성, 최신성이 중요한 글이면 최신 정보 반영
+${currentDate}일 기준으로 작성, 최신 정보 무조건 확인 후 반영
 
 ---
 

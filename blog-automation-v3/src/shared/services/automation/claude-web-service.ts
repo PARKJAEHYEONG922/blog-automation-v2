@@ -377,14 +377,14 @@ export class ClaudeWebService {
           const nowHasArtifact = await this.page.$('#markdown-artifact');
           
           if (aiCompleted && !nowHasArtifact) {
-            console.log('🔄 AI 사고 완료 감지! 아티팩트 생성 여유시간 10초 대기 중...');
-            
-            // 10초 여유시간 후 아티팩트 재확인
-            await this.page.waitForTimeout(10000);
+            console.log('🔄 AI 사고 완료 감지! 아티팩트 생성 여유시간 5초 대기 중...');
+
+            // 5초 여유시간 후 아티팩트 재확인
+            await this.page.waitForTimeout(5000);
             const finalArtifactCheck = await this.page.$('#markdown-artifact');
-            
+
             if (!finalArtifactCheck) {
-              console.log('✅ 10초 후에도 아티팩트 없음 → 일반 채팅으로 글 생성 완료!');
+              console.log('✅ 5초 후에도 아티팩트 없음 → 일반 채팅으로 글 생성 완료!');
               console.log('복사는 copyContent()에서 처리됩니다.');
               
               // 일반 채팅 완료 - 함수 종료

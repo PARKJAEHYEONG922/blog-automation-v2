@@ -532,13 +532,11 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
         return false;
       }
 
-      // 이미지 처리 (있는 경우)
-      if (imageUrls && Object.keys(imageUrls).length > 0) {
-        console.log('🖼️ 이미지 처리 시작...');
-        const imagesProcessed = await this.processImagesInContent(content, imageUrls);
-        if (!imagesProcessed) {
-          console.warn('⚠️ 이미지 처리 실패, 하지만 계속 진행');
-        }
+      // 이미지/링크 처리 (항상 실행)
+      console.log('🖼️ 이미지/링크 처리 시작...');
+      const imagesProcessed = await this.processImagesInContent(content, imageUrls || {});
+      if (!imagesProcessed) {
+        console.warn('⚠️ 이미지/링크 처리 실패, 하지만 계속 진행');
       }
 
       console.log('✅ 콘텐츠 입력 완료');
@@ -792,6 +790,8 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
     try {
       if (!imageUrls || Object.keys(imageUrls).length === 0) {
         console.log('ℹ️ 업로드할 이미지가 없습니다.');
+        // 이미지가 없어도 링크 처리는 해야 하므로 여기서 바로 링크 처리 호출
+        await this.replaceLinkCardsInContent(content);
         return true;
       }
 
@@ -799,7 +799,7 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
       const validImages = Object.entries(imageUrls)
         .filter(([key, url]) => url && url.trim() !== '')
         .map(([key, url]) => ({ index: parseInt(key), url: url as string }));
-      
+
       const imageCount = validImages.length;
       if (imageCount > 0) {
         console.log(`📸 ${imageCount}개 이미지를 자동으로 업로드합니다...`);
@@ -1021,11 +1021,220 @@ export class NaverBlogAutomation extends BaseBrowserAutomation implements INaver
 
         console.log(`🎉 ${imageCount}개 이미지 자동 업로드 프로세스 완료`);
       }
+
+      // 이미지 처리 후 링크 처리 시작
+      await this.replaceLinkCardsInContent(content);
+
       return true;
 
     } catch (error) {
       console.error('❌ 이미지 처리 실패:', error);
       return false;
+    }
+  }
+
+  /**
+   * 링크 카드 자동 변환 (이미지 처리 후 실행)
+   */
+  private async replaceLinkCardsInContent(content: string): Promise<void> {
+    try {
+      console.log('🔗 링크 카드 자동 변환 시작...');
+
+      // 네이버 에디터 iframe 안에서 실제 URL 텍스트 찾기
+      const findUrlsResult = await window.electronAPI.playwrightEvaluateInFrames(`
+        (function() {
+          try {
+            const body = document.body;
+            const textContent = body.innerText || body.textContent || '';
+
+            // URL 패턴 찾기
+            const urlPattern = /https?:\\/\\/[^\\s]+/g;
+            const urls = textContent.match(urlPattern);
+
+            if (!urls || urls.length === 0) {
+              return { success: false, urls: [] };
+            }
+
+            // 중복 제거
+            const uniqueUrls = [...new Set(urls)];
+
+            return {
+              success: true,
+              urls: uniqueUrls,
+              count: uniqueUrls.length
+            };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        })()
+      `, 'PostWriteForm.naver');
+
+      if (!findUrlsResult?.result?.success || !findUrlsResult?.result?.urls || findUrlsResult.result.urls.length === 0) {
+        console.log('ℹ️ 변환할 링크가 없습니다.');
+        return;
+      }
+
+      const links = findUrlsResult.result.urls;
+      console.log(`📋 발견된 링크 개수: ${links.length}개`);
+
+      // 각 링크에 대해 더블클릭 + URL 붙여넣기
+      for (let i = 0; i < links.length; i++) {
+        const url = links[i];
+        console.log(`\n🔗 링크 ${i + 1}/${links.length} 처리 중: ${url}`);
+
+        try {
+          // 1. 네이버 에디터에서 링크 텍스트 찾기 (URL 그대로)
+          console.log(`🔍 네이버 에디터에서 "${url}" 텍스트 검색 중...`);
+
+          const findResult = await window.electronAPI.playwrightEvaluateInFrames(`
+            (function() {
+              try {
+                const searchText = "${url.replace(/"/g, '\\"').replace(/\//g, '\\/')}";
+                console.log('링크 찾기 시작:', searchText);
+
+                // TreeWalker로 DOM 순서대로 URL 텍스트 노드 찾기
+                let linkElements = [];
+                const walker = document.createTreeWalker(
+                  document.body,
+                  NodeFilter.SHOW_TEXT,
+                  null,
+                  false
+                );
+
+                let node;
+                while (node = walker.nextNode()) {
+                  if (node.textContent && node.textContent.includes(searchText)) {
+                    const parentElement = node.parentElement;
+                    if (parentElement) {
+                      linkElements.push(parentElement);
+                      console.log('발견된 링크 요소:', parentElement.textContent.trim());
+                    }
+                  }
+                }
+
+                console.log('링크 텍스트를 포함하는 요소 개수:', linkElements.length);
+
+                if (linkElements.length > 0) {
+                  const targetElement = linkElements[0];
+                  console.log('링크 요소:', targetElement.textContent.trim());
+
+                  // 스크롤해서 화면에 보이게 하기
+                  targetElement.scrollIntoView({ behavior: 'instant', block: 'center' });
+
+                  // 좌표 계산
+                  const rect = targetElement.getBoundingClientRect();
+                  const centerX = rect.left + rect.width / 2;
+                  const centerY = rect.top + rect.height / 2;
+
+                  console.log('링크 좌표:', { x: centerX, y: centerY });
+
+                  return {
+                    success: true,
+                    elementText: targetElement.textContent.trim(),
+                    centerX: centerX,
+                    centerY: centerY,
+                    totalFound: linkElements.length
+                  };
+                } else {
+                  return {
+                    success: false,
+                    error: '링크 요소를 찾을 수 없음',
+                    found: linkElements.length,
+                    searchFor: searchText
+                  };
+                }
+              } catch (error) {
+                console.error('링크 찾기 오류:', error);
+                return { success: false, error: error.message };
+              }
+            })()
+          `, 'PostWriteForm.naver');
+
+          if (!findResult?.result?.success) {
+            console.warn(`⚠️ 링크 "${url}" 찾기 실패:`, findResult?.result);
+            continue;
+          }
+
+          console.log(`✅ 링크 텍스트 위치 찾음: (${findResult.result.centerX}, ${findResult.result.centerY})`);
+
+          // 2. iframe 오프셋 계산 후 더블클릭
+          const offsetResult = await window.electronAPI.playwrightEvaluate(`
+            (function() {
+              try {
+                const iframe = document.querySelector('iframe[src*="PostWriteForm.naver"]') ||
+                              document.querySelector('iframe');
+                if (iframe) {
+                  const rect = iframe.getBoundingClientRect();
+                  return { success: true, offsetX: rect.left, offsetY: rect.top };
+                }
+                return { success: false, error: 'iframe을 찾을 수 없음' };
+              } catch (error) {
+                return { success: false, error: error.message };
+              }
+            })()
+          `);
+
+          if (!offsetResult?.result?.success) {
+            console.warn(`⚠️ iframe 오프셋 계산 실패`);
+            continue;
+          }
+
+          const realX = findResult.result.centerX + offsetResult.result.offsetX;
+          const realY = findResult.result.centerY + offsetResult.result.offsetY;
+
+          console.log(`🖱️ 링크 더블클릭 좌표: (${realX}, ${realY})`);
+
+          // 실제 마우스 더블클릭
+          const firstClick = await window.electronAPI.playwrightClickAt(realX, realY);
+          if (!firstClick.success) {
+            console.warn(`⚠️ 링크 첫 번째 클릭 실패`);
+            continue;
+          }
+
+          await window.electronAPI.playwrightWaitTimeout(100);
+
+          const secondClick = await window.electronAPI.playwrightClickAt(realX, realY);
+          if (!secondClick.success) {
+            console.warn(`⚠️ 링크 두 번째 클릭 실패`);
+            continue;
+          }
+
+          console.log(`✅ 링크 더블클릭 완료`);
+          await window.electronAPI.playwrightWaitTimeout(300);
+
+          // 3. URL을 클립보드에 복사
+          console.log(`📋 URL 클립보드에 복사 중: ${url}`);
+
+          const clipboardResult = await window.electronAPI.playwrightSetClipboard(url);
+          if (!clipboardResult.success) {
+            console.warn(`⚠️ URL 클립보드 복사 실패`);
+            continue;
+          }
+
+          console.log(`✅ URL 클립보드 복사 완료`);
+
+          // 4. Ctrl+V로 URL 붙여넣기 (네이버가 자동으로 카드로 변환)
+          console.log(`📋 URL 붙여넣기 중...`);
+
+          const pasteResult = await window.electronAPI.playwrightPress('Control+v');
+          if (!pasteResult.success) {
+            console.warn(`⚠️ URL 붙여넣기 실패`);
+            continue;
+          }
+
+          console.log(`✅ URL 붙여넣기 완료 - 네이버가 자동으로 링크 카드로 변환`);
+          await window.electronAPI.playwrightWaitTimeout(2000); // 네이버 링크 카드 변환 대기
+
+        } catch (error) {
+          console.error(`❌ 링크 ${i + 1} 처리 중 오류:`, error);
+          continue;
+        }
+      }
+
+      console.log(`🎉 ${links.length}개 링크 카드 자동 변환 프로세스 완료`);
+
+    } catch (error) {
+      console.error('❌ 링크 카드 변환 실패:', error);
     }
   }
 

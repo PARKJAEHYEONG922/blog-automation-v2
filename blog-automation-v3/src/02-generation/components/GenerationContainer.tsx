@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import WorkSummary from './WorkSummary';
 import ImageGenerator from './ImageGenerator';
@@ -125,29 +125,20 @@ const Step2Generation: React.FC = () => {
     }
   }, [content]);
 
-  // 편집된 콘텐츠가 변경될 때 에디터에 반영 (초기 로딩 시에만)
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  // 에디터 초기화 여부 추적 (한 번만 초기화)
+  const isEditorPopulatedRef = useRef(false);
+
+  // editedContent가 처음 생성될 때만 에디터에 반영
   useEffect(() => {
-    if (editedContent && editorRef.current && isInitialLoad) {
+    if (editedContent && editorRef.current && !isEditorPopulatedRef.current) {
       editorRef.current.innerHTML = editedContent;
+      isEditorPopulatedRef.current = true;
       // DOM 업데이트 완료 후 글자 수 계산
       setTimeout(() => {
         updateCharCount();
       }, 100);
-      setIsInitialLoad(false);
     }
-  }, [editedContent, isInitialLoad]);
-
-  // activeTab이 'edited'로 변경될 때도 에디터에 콘텐츠 반영
-  useEffect(() => {
-    if (activeTab === 'edited' && editedContent && editorRef.current) {
-      editorRef.current.innerHTML = editedContent;
-      // 약간의 지연 후 글자 수 업데이트 (DOM 업데이트 완료 후)
-      setTimeout(() => {
-        updateCharCount();
-      }, 100);
-    }
-  }, [activeTab]);
+  }, [editedContent]);
 
   // 1단계에서 전달된 이미지 프롬프트들 초기화
   useEffect(() => {
@@ -380,59 +371,61 @@ const Step2Generation: React.FC = () => {
           </div>
         )}
 
-        {/* v2와 완전 동일한 편집기 */}
+        {/* v2와 완전 동일한 편집기 - 탭 전환 시에도 DOM 유지 */}
         <div style={{
           border: '1px solid #e5e7eb',
           borderRadius: '0 8px 8px 8px',
           backgroundColor: '#ffffff',
           minHeight: '400px'
         }}>
-          {activeTab === 'edited' ? (
-            <div
-              ref={editorRef}
-              id="step3-editor"
-              contentEditable
-              style={{
-                width: '100%',
-                minHeight: '400px',
-                maxHeight: '600px',
-                padding: '16px',
-                border: 'none',
-                borderRadius: '0 8px 8px 8px',
-                fontSize: '15px',
-                lineHeight: '1.8',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                backgroundColor: 'white',
-                position: 'relative',
-                zIndex: 1,
-                overflowY: 'auto',
-                outline: 'none'
-              }}
-              onInput={handleContentChange}
-              onKeyDown={handleKeyDown}
-              onClick={handleClick}
-              suppressContentEditableWarning={true}
-            />
-          ) : (
-            <div
-              style={{
-                padding: '20px',
-                fontSize: '15px',
-                lineHeight: '1.7',
-                height: '500px',
-                maxHeight: '500px',
-                overflowY: 'auto',
-                color: '#374151',
-                backgroundColor: '#f9fafb',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                border: '1px solid #e5e7eb'
-              }}
-            >
-              {originalContent || workflowData.generatedContent || '원본 콘텐츠가 없습니다.'}
-            </div>
-          )}
+          {/* 자동편집 에디터 - 항상 렌더링하되 display로 숨김 */}
+          <div
+            ref={editorRef}
+            id="step3-editor"
+            contentEditable
+            style={{
+              display: activeTab === 'edited' ? 'block' : 'none',
+              width: '100%',
+              minHeight: '400px',
+              maxHeight: '600px',
+              padding: '16px',
+              border: 'none',
+              borderRadius: '0 8px 8px 8px',
+              fontSize: '15px',
+              lineHeight: '1.8',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              backgroundColor: 'white',
+              position: 'relative',
+              zIndex: 1,
+              overflowY: 'auto',
+              outline: 'none'
+            }}
+            onInput={handleContentChange}
+            onKeyDown={handleKeyDown}
+            onClick={handleClick}
+            suppressContentEditableWarning={true}
+          />
+
+          {/* 원본 콘텐츠 뷰어 - 항상 렌더링하되 display로 숨김 */}
+          <div
+            style={{
+              display: activeTab === 'original' ? 'block' : 'none',
+              padding: '20px',
+              fontSize: '15px',
+              lineHeight: '1.7',
+              height: '500px',
+              maxHeight: '500px',
+              overflowY: 'auto',
+              color: '#374151',
+              backgroundColor: '#f9fafb',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              border: '1px solid #e5e7eb'
+            }}
+          >
+            {originalContent || workflowData.generatedContent || '원본 콘텐츠가 없습니다.'}
+          </div>
         </div>
 
         {/* v2와 동일한 CSS 스타일 */}
